@@ -340,6 +340,10 @@ const Users = () => {
                 "Placement Coordinator",
             project_manager:
                 "Project Manager",
+
+            // NEW ROLES
+            employee: "Employee",
+            intern: "Intern",
         };
 
         return roles[role] || role;
@@ -551,6 +555,7 @@ const Users = () => {
                         setRoleFilter(e.target.value)
                     }
                 >
+
                     <option value="">
                         All Roles
                     </option>
@@ -574,6 +579,17 @@ const Users = () => {
                     <option value="project_manager">
                         Project Manager
                     </option>
+
+                    {/* NEW ROLES */}
+
+                    <option value="employee">
+                        Employee
+                    </option>
+
+                    <option value="intern">
+                        Intern
+                    </option>
+
                 </select>
 
                 <select
@@ -583,6 +599,7 @@ const Users = () => {
                         setStatusFilter(e.target.value)
                     }
                 >
+
                     <option value="">
                         All Status
                     </option>
@@ -594,6 +611,7 @@ const Users = () => {
                     <option value="inactive">
                         Inactive
                     </option>
+
                 </select>
 
                 <button
@@ -621,6 +639,7 @@ const Users = () => {
 
                     <div>
                         <h5>Users</h5>
+
                         <span>
                             Showing {filteredUsers.length} of{" "}
                             {users.length} users
@@ -655,13 +674,17 @@ const Users = () => {
                                         colSpan="8"
                                         className="text-center py-5"
                                     >
+
                                         <div className="empty-users">
+
                                             <i className="bi bi-people"></i>
 
                                             <p>
                                                 No users found
                                             </p>
+
                                         </div>
+
                                     </td>
                                 </tr>
 
@@ -677,15 +700,19 @@ const Users = () => {
                                             </td>
 
                                             <td>
+
                                                 <div className="user-info">
 
                                                     <div className="user-avatar">
+
                                                         {user.fullName
                                                             ?.charAt(0)
                                                             ?.toUpperCase()}
+
                                                     </div>
 
                                                     <div>
+
                                                         <strong>
                                                             {user.fullName}
                                                         </strong>
@@ -696,9 +723,11 @@ const Users = () => {
                                                                 Administrator
                                                             </small>
                                                         )}
+
                                                     </div>
 
                                                 </div>
+
                                             </td>
 
                                             <td>
@@ -706,6 +735,7 @@ const Users = () => {
                                             </td>
 
                                             <td>
+
                                                 <span
                                                     className={`role-badge role-${user.role}`}
                                                 >
@@ -713,6 +743,7 @@ const Users = () => {
                                                         user.role
                                                     )}
                                                 </span>
+
                                             </td>
 
                                             <td>
@@ -722,91 +753,115 @@ const Users = () => {
                                             </td>
 
                                             <td>
-                                                <span
-                                                    className={`user-status ${
+
+                                                <button
+                                                    type="button"
+                                                    className={`status-badge ${
                                                         user.isActive
                                                             ? "active"
                                                             : "inactive"
                                                     }`}
+                                                    onClick={() =>
+                                                        user.role !==
+                                                        "super_admin" &&
+                                                        handleStatusToggle(
+                                                            user
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        user.role ===
+                                                        "super_admin"
+                                                    }
+                                                    title={
+                                                        user.role ===
+                                                        "super_admin"
+                                                            ? "Super Admin status cannot be changed"
+                                                            : user.isActive
+                                                            ? "Click to deactivate"
+                                                            : "Click to activate"
+                                                    }
                                                 >
-                                                    <i className="bi bi-circle-fill"></i>
+
+                                                    <span className="status-dot"></span>
 
                                                     {user.isActive
                                                         ? "Active"
                                                         : "Inactive"}
-                                                </span>
+
+                                                </button>
+
                                             </td>
 
                                             <td>
+
                                                 {user.lastLogin
                                                     ? new Date(
                                                           user.lastLogin
                                                       ).toLocaleString(
-                                                          "en-IN"
+                                                          "en-IN",
+                                                          {
+                                                              day: "2-digit",
+                                                              month: "short",
+                                                              year: "numeric",
+                                                              hour: "2-digit",
+                                                              minute: "2-digit",
+                                                          }
                                                       )
                                                     : "Never"}
+
                                             </td>
 
                                             <td>
 
-                                                {user.role !==
-                                                    "super_admin" && (
-                                                    <div className="user-actions">
+                                                <div className="user-actions">
 
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-sm btn-outline-primary"
-                                                            title="Edit User"
-                                                            onClick={() =>
-                                                                openEditModal(
-                                                                    user
-                                                                )
-                                                            }
-                                                        >
-                                                            <i className="bi bi-pencil"></i>
-                                                        </button>
+                                                    {user.role !==
+                                                        "super_admin" && (
+                                                        <>
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-sm btn-outline-primary"
+                                                                title="Edit User"
+                                                                onClick={() =>
+                                                                    openEditModal(
+                                                                        user
+                                                                    )
+                                                                }
+                                                            >
+                                                                <i className="bi bi-pencil"></i>
+                                                            </button>
 
-                                                        <button
-                                                            type="button"
-                                                            className={`btn btn-sm ${
-                                                                user.isActive
-                                                                    ? "btn-outline-danger"
-                                                                    : "btn-outline-success"
-                                                            }`}
-                                                            title={
-                                                                user.isActive
-                                                                    ? "Deactivate User"
-                                                                    : "Activate User"
-                                                            }
-                                                            onClick={() =>
-                                                                handleStatusToggle(
-                                                                    user
-                                                                )
-                                                            }
-                                                        >
-                                                            <i
-                                                                className={`bi ${
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-sm btn-outline-secondary"
+                                                                title={
                                                                     user.isActive
-                                                                        ? "bi-person-x"
-                                                                        : "bi-person-check"
-                                                                }`}
-                                                            ></i>
-                                                        </button>
+                                                                        ? "Deactivate User"
+                                                                        : "Activate User"
+                                                                }
+                                                                onClick={() =>
+                                                                    handleStatusToggle(
+                                                                        user
+                                                                    )
+                                                                }
+                                                            >
+                                                                <i
+                                                                    className={`bi ${
+                                                                        user.isActive
+                                                                            ? "bi-person-x"
+                                                                            : "bi-person-check"
+                                                                    }`}
+                                                                ></i>
+                                                            </button>
+                                                        </>
+                                                    )}
 
-                                                    </div>
-                                                )}
-
-                                                {user.role ===
-                                                    "super_admin" && (
-                                                    <span className="protected-user">
-                                                        <i className="bi bi-shield-lock me-1"></i>
-                                                        Protected
-                                                    </span>
-                                                )}
+                                                </div>
 
                                             </td>
 
                                         </tr>
+
                                     )
                                 )
                             )}
@@ -842,6 +897,7 @@ const Users = () => {
                         <div className="users-modal-header">
 
                             <div>
+
                                 <h4>
                                     {editingUser
                                         ? "Edit User"
@@ -853,6 +909,7 @@ const Users = () => {
                                         ? "Update user information and access"
                                         : "Create a new company user"}
                                 </p>
+
                             </div>
 
                             <button
@@ -889,7 +946,6 @@ const Users = () => {
 
                                     <label className="form-label">
                                         Full Name
-                                        <span>*</span>
                                     </label>
 
                                     <input
@@ -897,15 +953,9 @@ const Users = () => {
                                         name="fullName"
                                         className="form-control"
                                         placeholder="Enter full name"
-                                        value={
-                                            form.fullName
-                                        }
-                                        onChange={
-                                            handleChange
-                                        }
-                                        disabled={
-                                            formLoading
-                                        }
+                                        value={form.fullName}
+                                        onChange={handleChange}
+                                        disabled={formLoading}
                                     />
 
                                 </div>
@@ -915,8 +965,7 @@ const Users = () => {
                                 <div className="mb-3">
 
                                     <label className="form-label">
-                                        Email
-                                        <span>*</span>
+                                        Email Address
                                     </label>
 
                                     <input
@@ -924,15 +973,9 @@ const Users = () => {
                                         name="email"
                                         className="form-control"
                                         placeholder="Enter email address"
-                                        value={
-                                            form.email
-                                        }
-                                        onChange={
-                                            handleChange
-                                        }
-                                        disabled={
-                                            formLoading
-                                        }
+                                        value={form.email}
+                                        onChange={handleChange}
+                                        disabled={formLoading}
                                     />
 
                                 </div>
@@ -945,8 +988,10 @@ const Users = () => {
 
                                         Password
 
-                                        {!editingUser && (
-                                            <span>*</span>
+                                        {editingUser && (
+                                            <small className="text-muted ms-2">
+                                                Leave blank to keep current password
+                                            </small>
                                         )}
 
                                     </label>
@@ -957,52 +1002,41 @@ const Users = () => {
                                         className="form-control"
                                         placeholder={
                                             editingUser
-                                                ? "Leave blank to keep current password"
+                                                ? "Enter new password"
                                                 : "Enter password"
                                         }
-                                        value={
-                                            form.password
-                                        }
-                                        onChange={
-                                            handleChange
-                                        }
-                                        disabled={
-                                            formLoading
-                                        }
+                                        value={form.password}
+                                        onChange={handleChange}
+                                        disabled={formLoading}
                                     />
-
-                                    {!editingUser && (
-                                        <small className="form-help">
-                                            Minimum 6 characters
-                                        </small>
-                                    )}
 
                                 </div>
 
-                                <div className="users-form-row">
+                                {/* Role + Company */}
 
-                                    {/* Role */}
+                                <div className="row">
 
-                                    <div className="mb-3">
+                                    <div className="col-md-6 mb-3">
 
                                         <label className="form-label">
                                             Role
-                                            <span>*</span>
                                         </label>
 
                                         <select
                                             name="role"
                                             className="form-select"
-                                            value={
-                                                form.role
-                                            }
-                                            onChange={
-                                                handleChange
-                                            }
+                                            value={form.role}
+                                            onChange={handleChange}
                                             disabled={
-                                                formLoading
+                                                formLoading ||
+                                                editingUser?.role ===
+                                                    "super_admin"
                                             }
                                         >
+
+                                            <option value="">
+                                                Select Role
+                                            </option>
 
                                             <option value="counselor">
                                                 Counselor
@@ -1024,30 +1058,35 @@ const Users = () => {
                                                 Project Manager
                                             </option>
 
+                                            {/* NEW ROLES */}
+
+                                            <option value="employee">
+                                                Employee
+                                            </option>
+
+                                            <option value="intern">
+                                                Intern
+                                            </option>
+
                                         </select>
 
                                     </div>
 
-                                    {/* Company */}
-
-                                    <div className="mb-3">
+                                    <div className="col-md-6 mb-3">
 
                                         <label className="form-label">
                                             Company
-                                            <span>*</span>
                                         </label>
 
                                         <select
                                             name="company"
                                             className="form-select"
-                                            value={
-                                                form.company
-                                            }
-                                            onChange={
-                                                handleChange
-                                            }
+                                            value={form.company}
+                                            onChange={handleChange}
                                             disabled={
-                                                formLoading
+                                                formLoading ||
+                                                editingUser?.role ===
+                                                    "super_admin"
                                             }
                                         >
 
@@ -1056,9 +1095,7 @@ const Users = () => {
                                             </option>
 
                                             {companies.map(
-                                                (
-                                                    company
-                                                ) => (
+                                                (company) => (
                                                     <option
                                                         key={
                                                             company._id

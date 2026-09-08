@@ -18,6 +18,8 @@ const placementRoutes = require("./routes/placementRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 // const uploadRoutes = require("./routes/uploadRoutes");
 const userRoutes = require("./routes/userRoutes");
+const workTaskRoutes = require("./routes/workTaskRoutes");
+const workLogRoutes = require("./routes/workLogRoutes");
 
 // Middleware
 app.use(cors());
@@ -49,6 +51,10 @@ app.use("/api/reports", reportRoutes);
 // app.use("/api/upload", uploadRoutes);
 
 app.use("/api/users", userRoutes);
+
+app.use("/api/work-tasks", workTaskRoutes);
+
+app.use("/api/work-logs", workLogRoutes);
 
 // Uploaded Files
 // app.use("/uploads", express.static("uploads"));

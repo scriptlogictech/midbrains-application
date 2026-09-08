@@ -29,6 +29,11 @@ import Reports from "../pages/reports/Reports";
 
 import Users from "../pages/users/Users";
 
+// Work Management
+import WorkManagement from "../pages/work/WorkManagement";
+import MyWork from "../pages/work/MyWork";
+
+
 const AppRoutes = () => {
     return (
         <BrowserRouter>
@@ -66,7 +71,7 @@ const AppRoutes = () => {
                     }
                 />
 
-
+                {/* Follow-ups */}
                 <Route
                     path="/dashboard/:companyId/followups"
                     element={
@@ -76,6 +81,7 @@ const AppRoutes = () => {
                     }
                 />
 
+                {/* Admissions */}
                 <Route
                     path="/dashboard/:companyId/admissions"
                     element={
@@ -85,7 +91,7 @@ const AppRoutes = () => {
                     }
                 />
 
-
+                {/* Internships */}
                 <Route
                     path="/dashboard/:companyId/internships"
                     element={
@@ -95,6 +101,7 @@ const AppRoutes = () => {
                     }
                 />
 
+                {/* Corporate Training */}
                 <Route
                     path="/dashboard/:companyId/corporate-training"
                     element={
@@ -104,6 +111,7 @@ const AppRoutes = () => {
                     }
                 />
 
+                {/* Projects */}
                 <Route
                     path="/dashboard/:companyId/projects"
                     element={
@@ -113,6 +121,7 @@ const AppRoutes = () => {
                     }
                 />
 
+                {/* Placements */}
                 <Route
                     path="/dashboard/:companyId/placements"
                     element={
@@ -122,25 +131,49 @@ const AppRoutes = () => {
                     }
                 />
 
+                {/* Reports */}
                 <Route
                     path="/dashboard/:companyId/reports"
                     element={
-
                         <DashboardLayout>
                             <Reports />
                         </DashboardLayout>
-
                     }
                 />
 
+                {/* User Management */}
                 <Route
                     path="/dashboard/:companyId/users"
                     element={
-                        
-                            <DashboardLayout>
-                                <Users />
-                            </DashboardLayout>
-                            
+                        <DashboardLayout>
+                            <Users />
+                        </DashboardLayout>
+                    }
+                />
+
+                {/* ========================================= */}
+                {/* WORK MANAGEMENT - SUPER ADMIN */}
+                {/* ========================================= */}
+
+                <Route
+                    path="/dashboard/:companyId/work"
+                    element={
+                        <DashboardLayout>
+                            <WorkManagement />
+                        </DashboardLayout>
+                    }
+                />
+
+                {/* ========================================= */}
+                {/* MY WORK - EMPLOYEE / INTERN */}
+                {/* ========================================= */}
+
+                <Route
+                    path="/dashboard/:companyId/my-work"
+                    element={
+                        <DashboardLayout>
+                            <MyWork />
+                        </DashboardLayout>
                     }
                 />
 

@@ -25,7 +25,9 @@ const userSchema = new mongoose.Schema({
       "hr",
       "trainer",
       "placement_coordinator",
-      "project_manager"
+      "project_manager",
+      "employee",
+      "intern"
     ],
     default: "counselor"
   },

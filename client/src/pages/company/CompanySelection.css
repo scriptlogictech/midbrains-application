@@ -1,4 +1,4 @@
-```css
+
 /* =========================================================
    COMPANY SELECTION PAGE
    Modern CRM / SaaS UI
@@ -8,39 +8,70 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+
   background:
-    radial-gradient(circle at 10% 10%, rgba(79, 70, 229, 0.08), transparent 28%),
-    radial-gradient(circle at 90% 20%, rgba(14, 165, 233, 0.08), transparent 30%),
-    linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    radial-gradient(
+      circle at 10% 10%,
+      rgba(79, 70, 229, 0.08),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 90% 20%,
+      rgba(14, 165, 233, 0.08),
+      transparent 30%
+    ),
+    linear-gradient(
+      135deg,
+      #f8fafc 0%,
+      #f1f5f9 100%
+    );
+
   color: #172033;
-  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+
+  font-family:
+    "Inter",
+    "Segoe UI",
+    Arial,
+    sans-serif;
+
   position: relative;
   overflow-x: hidden;
 }
 
-/* Decorative background circles */
+
+/* =========================================================
+   DECORATIVE BACKGROUND
+========================================================= */
 
 .company-page::before,
 .company-page::after {
   content: "";
+
   position: fixed;
+
   width: 320px;
   height: 320px;
+
   border-radius: 50%;
+
   pointer-events: none;
+
   z-index: 0;
+
   filter: blur(10px);
 }
 
 .company-page::before {
   top: 120px;
   left: -180px;
+
   background: rgba(99, 102, 241, 0.07);
 }
 
 .company-page::after {
   right: -180px;
   bottom: 100px;
+
   background: rgba(14, 165, 233, 0.07);
 }
 
@@ -52,14 +83,19 @@
 .company-header {
   width: 100%;
   min-height: 82px;
+
   padding: 0 6%;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
+
   gap: 30px;
 
   background: rgba(255, 255, 255, 0.88);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+
+  border-bottom:
+    1px solid rgba(226, 232, 240, 0.9);
 
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -69,11 +105,14 @@
 }
 
 
-/* Brand */
+/* =========================================================
+   BRAND
+========================================================= */
 
 .brand-section {
   display: flex;
   align-items: center;
+
   gap: 13px;
 }
 
@@ -87,11 +126,12 @@
 
   border-radius: 12px;
 
-  background: linear-gradient(
-    135deg,
-    #4f46e5,
-    #6366f1
-  );
+  background:
+    linear-gradient(
+      135deg,
+      #4f46e5,
+      #6366f1
+    );
 
   color: white;
 
@@ -107,7 +147,9 @@
   margin: 0;
 
   font-size: 19px;
+
   font-weight: 750;
+
   letter-spacing: -0.4px;
 
   color: #172033;
@@ -117,17 +159,21 @@
   margin: 3px 0 0;
 
   font-size: 11px;
+
   color: #64748b;
 
   letter-spacing: 0.15px;
 }
 
 
-/* User */
+/* =========================================================
+   USER SECTION
+========================================================= */
 
 .user-section {
   display: flex;
   align-items: center;
+
   gap: 12px;
 }
 
@@ -141,15 +187,17 @@
 
   border-radius: 50%;
 
-  background: linear-gradient(
-    135deg,
-    #4f46e5,
-    #7c3aed
-  );
+  background:
+    linear-gradient(
+      135deg,
+      #4f46e5,
+      #7c3aed
+    );
 
   color: white;
 
   font-size: 15px;
+
   font-weight: 700;
 
   box-shadow:
@@ -159,12 +207,15 @@
 .user-info {
   display: flex;
   flex-direction: column;
+
   min-width: 90px;
 }
 
 .user-info strong {
   font-size: 13px;
+
   color: #1e293b;
+
   font-weight: 700;
 }
 
@@ -172,6 +223,7 @@
   margin-top: 2px;
 
   font-size: 11px;
+
   color: #64748b;
 
   text-transform: capitalize;
@@ -187,7 +239,9 @@
 }
 
 
-/* Logout */
+/* =========================================================
+   LOGOUT
+========================================================= */
 
 .logout-btn {
   border: none;
@@ -197,16 +251,20 @@
 
   display: flex;
   align-items: center;
+  justify-content: center;
+
   gap: 7px;
 
   border-radius: 9px;
 
   background: #f8fafc;
+
   color: #475569;
 
   border: 1px solid #e2e8f0;
 
   font-size: 12px;
+
   font-weight: 600;
 
   cursor: pointer;
@@ -224,6 +282,7 @@
 
 .logout-btn:hover {
   background: #fef2f2;
+
   color: #dc2626;
 
   border-color: #fecaca;
@@ -245,13 +304,15 @@
 
 .company-main {
   width: 100%;
+
   max-width: 1250px;
 
   margin: 0 auto;
 
-  padding: 55px 30px 70px;
+  padding: 15px 30px 70px;
 
   position: relative;
+
   z-index: 1;
 
   flex: 1;
@@ -264,11 +325,13 @@
 
 .company-heading {
   text-align: center;
-  margin-bottom: 48px;
+
+  margin-bottom: 8px;
 }
 
 .welcome-text {
   display: inline-flex;
+
   align-items: center;
   justify-content: center;
 
@@ -276,11 +339,13 @@
 
   border-radius: 30px;
 
-  background: rgba(79, 70, 229, 0.08);
+  background:
+    rgba(79, 70, 229, 0.08);
 
   color: #4f46e5;
 
   font-size: 10px;
+
   font-weight: 800;
 
   letter-spacing: 1.5px;
@@ -291,7 +356,8 @@
 .company-heading h1 {
   margin: 0;
 
-  font-size: clamp(32px, 4vw, 46px);
+  font-size:
+    clamp(32px, 4vw, 46px);
 
   line-height: 1.1;
 
@@ -322,11 +388,12 @@
 
   border-radius: 10px;
 
-  background: linear-gradient(
-    90deg,
-    #4f46e5,
-    #8b5cf6
-  );
+  background:
+    linear-gradient(
+      90deg,
+      #4f46e5,
+      #8b5cf6
+    );
 }
 
 
@@ -337,10 +404,11 @@
 .company-grid {
   display: grid;
 
-  grid-template-columns: repeat(
-    auto-fit,
-    minmax(280px, 1fr)
-  );
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(280px, 1fr)
+    );
 
   gap: 25px;
 
@@ -358,11 +426,13 @@
   min-height: 390px;
 
   display: flex;
+
   flex-direction: column;
 
   overflow: hidden;
 
-  background: rgba(255, 255, 255, 0.94);
+  background:
+    rgba(255, 255, 255, 0.94);
 
   border: 1px solid #e2e8f0;
 
@@ -372,13 +442,14 @@
     0 8px 25px rgba(15, 23, 42, 0.05);
 
   transition:
-    transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 0.35s
+      cubic-bezier(0.2, 0.8, 0.2, 1),
     box-shadow 0.35s ease,
     border-color 0.35s ease;
 }
 
 
-/* Top gradient line */
+/* Top gradient */
 
 .company-card::before {
   content: "";
@@ -391,17 +462,19 @@
   width: 100%;
   height: 4px;
 
-  background: linear-gradient(
-    90deg,
-    #4f46e5,
-    #8b5cf6
-  );
+  background:
+    linear-gradient(
+      90deg,
+      #4f46e5,
+      #8b5cf6
+    );
 
   transform: scaleX(0);
 
   transform-origin: left;
 
-  transition: transform 0.35s ease;
+  transition:
+    transform 0.35s ease;
 }
 
 .company-card:hover::before {
@@ -411,7 +484,8 @@
 .company-card:hover {
   transform: translateY(-9px);
 
-  border-color: rgba(99, 102, 241, 0.25);
+  border-color:
+    rgba(99, 102, 241, 0.25);
 
   box-shadow:
     0 22px 45px rgba(15, 23, 42, 0.11);
@@ -423,13 +497,14 @@
 ========================================================= */
 
 .company-logo-area {
-  min-height: 155px;
+  min-height: 120px;
 
   display: flex;
+
   align-items: center;
   justify-content: center;
 
-  padding: 25px;
+  /* padding: 25px; */
 
   background:
     linear-gradient(
@@ -438,50 +513,45 @@
       #eef2ff
     );
 
-  border-bottom: 1px solid #eef2f7;
+  border-bottom:
+    1px solid #eef2f7;
 
   position: relative;
 }
+
+
+/* Background glow */
 
 .company-logo-area::after {
   content: "";
 
   position: absolute;
 
-  width: 130px;
-  height: 130px;
+  width: 150px;
+  height: 150px;
 
   border-radius: 50%;
 
-  background: rgba(99, 102, 241, 0.07);
+  background:
+    rgba(99, 102, 241, 0.07);
 
   filter: blur(5px);
 }
 
 
-/* Logo wrapper */
+/* =========================================================
+   LOGO WRAPPER
+========================================================= */
 
 .logo-wrapper {
-  width: 125px;
-  height: 105px;
-
   display: flex;
+
   align-items: center;
   justify-content: center;
 
   position: relative;
+
   z-index: 1;
-
-  background: white;
-
-  border-radius: 16px;
-
-  padding: 15px;
-
-  border: 1px solid #e5e7eb;
-
-  box-shadow:
-    0 8px 20px rgba(15, 23, 42, 0.07);
 
   transition:
     transform 0.35s ease,
@@ -496,15 +566,23 @@
 }
 
 
-/* Logo */
+/* =========================================================
+   COMPANY LOGO
+========================================================= */
 
 .company-logo {
+  width: auto;
+
   max-width: 100%;
-  max-height: 75px;
+
+  max-height: 90px;
 
   object-fit: contain;
 
-  transition: transform 0.35s ease;
+  display: block;
+
+  transition:
+    transform 0.35s ease;
 }
 
 .company-card:hover .company-logo {
@@ -512,22 +590,32 @@
 }
 
 
-/* Specific logo adjustments */
+/* =========================================================
+   INDIVIDUAL LOGO SIZES
+========================================================= */
 
 .logo-mbt {
-  max-width: 110px;
+  max-width: 230px;
+
+  max-height: 90px;
 }
 
 .logo-msi {
-  max-width: 100px;
+  max-width: 340px;
+
+  max-height: 90px;
 }
 
 .logo-millionis {
-  max-width: 105px;
+  max-width: 145px;
+
+  max-height: 90px;
 }
 
 .logo-default {
-  max-width: 105px;
+  max-width: 145px;
+
+  max-height: 90px;
 }
 
 
@@ -539,9 +627,11 @@
   flex: 1;
 
   display: flex;
+
   flex-direction: column;
 
-  padding: 25px 25px 23px;
+  padding:
+    25px 25px 23px;
 }
 
 .company-content h3 {
@@ -567,7 +657,8 @@
 }
 
 .company-description {
-  margin: 12px 0 23px;
+  margin:
+    12px 0 23px;
 
   color: #64748b;
 
@@ -591,6 +682,7 @@
   min-height: 45px;
 
   display: flex;
+
   align-items: center;
   justify-content: center;
 
@@ -600,11 +692,12 @@
 
   border-radius: 10px;
 
-  background: linear-gradient(
-    135deg,
-    #4f46e5,
-    #6366f1
-  );
+  background:
+    linear-gradient(
+      135deg,
+      #4f46e5,
+      #6366f1
+    );
 
   color: white;
 
@@ -637,21 +730,26 @@
   position: absolute;
 
   top: 0;
+
   left: -100%;
 
   width: 70%;
+
   height: 100%;
 
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.25),
-    transparent
-  );
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.25),
+      transparent
+    );
 
-  transform: skewX(-20deg);
+  transform:
+    skewX(-20deg);
 
-  transition: left 0.5s ease;
+  transition:
+    left 0.5s ease;
 }
 
 .dashboard-btn:hover::before {
@@ -685,23 +783,21 @@
    CARD COLOR VARIATIONS
 ========================================================= */
 
+
 /* MBT */
 
 .card-mbt .company-logo-area {
   background:
-    linear-gradient(
-      135deg,
-      #f5f7ff,
-      #eef2ff
-    );
+    midnightblue;
 }
 
 .card-mbt .dashboard-btn {
-  background: linear-gradient(
-    135deg,
-    #4f46e5,
-    #6366f1
-  );
+  background:
+    linear-gradient(
+      135deg,
+      #4f46e5,
+      #6366f1
+    );
 }
 
 
@@ -709,11 +805,7 @@
 
 .card-msi .company-logo-area {
   background:
-    linear-gradient(
-      135deg,
-      #f0fdfa,
-      #ecfeff
-    );
+    powderblue;
 }
 
 .card-msi .company-tagline {
@@ -721,30 +813,28 @@
 }
 
 .card-msi .dashboard-btn {
-  background: linear-gradient(
-    135deg,
-    #0891b2,
-    #06b6d4
-  );
+  background:
+    linear-gradient(
+      135deg,
+      #0891b2,
+      #06b6d4
+    );
 
   box-shadow:
     0 7px 18px rgba(6, 182, 212, 0.2);
 }
 
 .card-msi:hover {
-  border-color: rgba(6, 182, 212, 0.25);
+  border-color:
+    rgba(6, 182, 212, 0.25);
 }
 
 
-/* Millionis */
+/* MT */
 
 .card-mt .company-logo-area {
   background:
-    linear-gradient(
-      135deg,
-      #faf5ff,
-      #f5f3ff
-    );
+    antiquewhite;
 }
 
 .card-mt .company-tagline {
@@ -752,18 +842,20 @@
 }
 
 .card-mt .dashboard-btn {
-  background: linear-gradient(
-    135deg,
-    #7c3aed,
-    #8b5cf6
-  );
+  background:
+    linear-gradient(
+      135deg,
+      #7c3aed,
+      #8b5cf6
+    );
 
   box-shadow:
     0 7px 18px rgba(124, 58, 237, 0.2);
 }
 
 .card-mt:hover {
-  border-color: rgba(124, 58, 237, 0.25);
+  border-color:
+    rgba(124, 58, 237, 0.25);
 }
 
 
@@ -772,13 +864,17 @@
 ========================================================= */
 
 .state-box {
-  width: min(100%, 500px);
+  width:
+    min(100%, 500px);
 
-  margin: 40px auto;
+  margin:
+    40px auto;
 
-  padding: 45px 30px;
+  padding:
+    45px 30px;
 
   display: flex;
+
   flex-direction: column;
 
   align-items: center;
@@ -786,9 +882,11 @@
 
   text-align: center;
 
-  background: rgba(255, 255, 255, 0.92);
+  background:
+    rgba(255, 255, 255, 0.92);
 
-  border: 1px solid #e2e8f0;
+  border:
+    1px solid #e2e8f0;
 
   border-radius: 18px;
 
@@ -797,7 +895,8 @@
 }
 
 .state-box p {
-  margin: 14px 0 0;
+  margin:
+    14px 0 0;
 
   color: #64748b;
 
@@ -811,19 +910,24 @@
 }
 
 
-/* Loading spinner */
+/* =========================================================
+   LOADING SPINNER
+========================================================= */
 
 .spinner-border {
   width: 38px;
   height: 38px;
 
-  border: 3px solid #e0e7ff;
+  border:
+    3px solid #e0e7ff;
 
-  border-top-color: #4f46e5;
+  border-top-color:
+    #4f46e5;
 
   border-radius: 50%;
 
-  animation: spin 0.8s linear infinite;
+  animation:
+    spin 0.8s linear infinite;
 }
 
 @keyframes spin {
@@ -852,7 +956,8 @@
 .retry-btn {
   margin-top: 18px;
 
-  padding: 10px 20px;
+  padding:
+    10px 20px;
 
   border: none;
 
@@ -877,7 +982,8 @@
 .retry-btn:hover {
   background: #dc2626;
 
-  transform: translateY(-2px);
+  transform:
+    translateY(-2px);
 
   box-shadow:
     0 7px 16px rgba(239, 68, 68, 0.2);
@@ -891,7 +997,8 @@
 .feature-section {
   margin-top: 55px;
 
-  padding: 24px 28px;
+  padding:
+    24px 28px;
 
   display: grid;
 
@@ -900,9 +1007,11 @@
 
   gap: 20px;
 
-  background: rgba(255, 255, 255, 0.72);
+  background:
+    rgba(255, 255, 255, 0.72);
 
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  border:
+    1px solid rgba(226, 232, 240, 0.9);
 
   border-radius: 16px;
 
@@ -929,7 +1038,8 @@
 .feature-item:hover {
   background: #f8fafc;
 
-  transform: translateY(-2px);
+  transform:
+    translateY(-2px);
 }
 
 .feature-icon {
@@ -965,7 +1075,8 @@
 }
 
 .feature-item p {
-  margin: 4px 0 0;
+  margin:
+    4px 0 0;
 
   color: #94a3b8;
 
@@ -982,7 +1093,8 @@
 .company-footer {
   min-height: 60px;
 
-  padding: 0 6%;
+  padding:
+    0 6%;
 
   display: flex;
 
@@ -992,9 +1104,11 @@
 
   gap: 20px;
 
-  background: rgba(255, 255, 255, 0.85);
+  background:
+    rgba(255, 255, 255, 0.85);
 
-  border-top: 1px solid #e2e8f0;
+  border-top:
+    1px solid #e2e8f0;
 
   color: #94a3b8;
 
@@ -1035,7 +1149,7 @@
 
 
 /* =========================================================
-   RESPONSIVE - TABLET
+   TABLET
 ========================================================= */
 
 @media (max-width: 900px) {
@@ -1045,12 +1159,16 @@
   }
 
   .company-main {
-    padding: 45px 25px 55px;
+    padding:
+      45px 25px 55px;
   }
 
   .company-grid {
     grid-template-columns:
-      repeat(2, minmax(250px, 1fr));
+      repeat(
+        2,
+        minmax(250px, 1fr)
+      );
   }
 
   .feature-section {
@@ -1064,7 +1182,7 @@
 
 
 /* =========================================================
-   RESPONSIVE - MOBILE
+   MOBILE
 ========================================================= */
 
 @media (max-width: 650px) {
@@ -1072,7 +1190,8 @@
   .company-header {
     min-height: auto;
 
-    padding: 15px 20px;
+    padding:
+      15px 20px;
 
     align-items: flex-start;
   }
@@ -1120,7 +1239,8 @@
   }
 
   .company-main {
-    padding: 38px 18px 45px;
+    padding:
+      38px 18px 45px;
   }
 
   .company-heading {
@@ -1155,24 +1275,49 @@
     min-height: 370px;
   }
 
+  /* Bigger mobile logo area */
+
   .company-logo-area {
-    min-height: 140px;
+    min-height: 165px;
+  }
+
+  .company-logo {
+    max-height: 85px;
+  }
+
+  .logo-mbt {
+    max-width: 145px;
+  }
+
+  .logo-msi {
+    max-width: 135px;
+  }
+
+  .logo-millionis {
+    max-width: 140px;
+  }
+
+  .logo-default {
+    max-width: 140px;
   }
 
   .company-content {
-    padding: 22px;
+    padding:
+      22px;
   }
 
   .feature-section {
     margin-top: 38px;
 
-    padding: 18px;
+    padding:
+      18px;
 
     gap: 5px;
   }
 
   .company-footer {
-    padding: 15px 20px;
+    padding:
+      15px 20px;
 
     flex-direction: column;
 
@@ -1212,6 +1357,14 @@
   .feature-item {
     gap: 10px;
   }
+
+  .company-logo-area {
+    min-height: 155px;
+  }
+
+  .company-logo {
+    max-height: 80px;
+  }
 }
 
 
@@ -1220,21 +1373,29 @@
 ========================================================= */
 
 button:focus-visible {
-  outline: 3px solid rgba(99, 102, 241, 0.3);
+  outline:
+    3px solid rgba(99, 102, 241, 0.3);
 
   outline-offset: 3px;
 }
 
 
-/* Reduce animation for users who prefer less motion */
+/* =========================================================
+   REDUCE MOTION
+========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
 
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    animation-duration:
+      0.01ms !important;
+
+    animation-iteration-count:
+      1 !important;
+
+    transition-duration:
+      0.01ms !important;
   }
 }

@@ -7,6 +7,8 @@ const allowedRoles = [
   "trainer",
   "placement_coordinator",
   "project_manager",
+  "employee",
+  "intern"
 ];
 
 // ========================================
@@ -198,7 +200,7 @@ exports.updateUser = async (req, res) => {
       password,
       role,
       company,
-    } = req.body 
+    } = req.body
 
     const user = await User.findById(id);
 

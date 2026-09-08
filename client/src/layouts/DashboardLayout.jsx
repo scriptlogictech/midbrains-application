@@ -30,61 +30,90 @@ const DashboardLayout = ({ children }) => {
         "trainer",
         "placement_coordinator",
         "project_manager",
+        "employee",
+        "intern",
       ],
     },
+
     {
       label: "Leads",
       icon: "bi-people-fill",
       path: `/dashboard/${companyId}/leads`,
       roles: ["super_admin", "counselor"],
     },
+
     {
       label: "Follow-ups",
       icon: "bi-calendar-check",
       path: `/dashboard/${companyId}/followups`,
       roles: ["super_admin", "counselor"],
     },
+
     {
       label: "Admissions",
       icon: "bi-person-check-fill",
       path: `/dashboard/${companyId}/admissions`,
       roles: ["super_admin", "counselor"],
     },
+
     {
       label: "Internships",
       icon: "bi-mortarboard-fill",
       path: `/dashboard/${companyId}/internships`,
       roles: ["super_admin", "trainer"],
     },
+
     {
       label: "Corporate Training",
       icon: "bi-building-fill",
       path: `/dashboard/${companyId}/corporate-training`,
       roles: ["super_admin", "trainer"],
     },
+
     {
       label: "Projects",
       icon: "bi-kanban-fill",
       path: `/dashboard/${companyId}/projects`,
       roles: ["super_admin", "project_manager"],
     },
+
     {
       label: "Placements",
       icon: "bi-briefcase-fill",
       path: `/dashboard/${companyId}/placements`,
       roles: ["super_admin", "placement_coordinator"],
     },
+
     {
       label: "Reports",
       icon: "bi-bar-chart-fill",
       path: `/dashboard/${companyId}/reports`,
       roles: ["super_admin"],
     },
+
     {
       label: "User Management",
       icon: "bi-person-gear",
       path: `/dashboard/${companyId}/users`,
       roles: ["super_admin"],
+    },
+
+    // ==========================================
+    // Work Management
+    // ==========================================
+
+    {
+      label: "Work Management",
+      icon: "bi-clipboard-check",
+      path: `/dashboard/${companyId}/work`,
+      roles: ["super_admin"],
+    },
+
+    {
+      label: "My Work",
+      icon: "bi-clipboard-check",
+      path: `/dashboard/${companyId}/my-work`,
+      roles: ["employee", "intern"],
     },
   ];
 
