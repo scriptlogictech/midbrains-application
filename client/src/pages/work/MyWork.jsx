@@ -61,8 +61,38 @@ const MyWork = () => {
                 getMyWorkLogs(),
             ]);
 
-            setTasks(taskResponse?.data || []);
-            setWorkLogs(logResponse?.data || []);
+            console.log("My Work Response:", taskResponse);
+            console.log("My Work Logs Response:", logResponse);
+
+            /*
+             * Backend may return:
+             *
+             * {
+             *     success: true,
+             *     tasks: [...]
+             * }
+             *
+             * OR:
+             *
+             * {
+             *     success: true,
+             *     data: [...]
+             * }
+             *
+             * So support both formats.
+             */
+
+            setTasks(
+                taskResponse?.tasks ||
+                taskResponse?.data ||
+                []
+            );
+
+            setWorkLogs(
+                logResponse?.logs ||
+                logResponse?.data ||
+                []
+            );
 
         } catch (error) {
             console.error("My Work Error:", error);
