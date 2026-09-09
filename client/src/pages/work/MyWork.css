@@ -713,3 +713,267 @@
     }
 
 }
+
+
+
+/* =========================================================
+   MY WORK - HEADER ACTIONS
+========================================================= */
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-actions .primary-btn,
+.header-actions .secondary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+
+/* =========================================================
+   SELF WORK BADGE
+========================================================= */
+
+.task-title-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.self-work-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    background: #eef2ff;
+    color: #4f46e5;
+    border: 1px solid #c7d2fe;
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   SELF WORK TIME
+========================================================= */
+
+.self-work-time {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-top: 18px;
+    padding: 15px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+}
+
+.self-work-time > div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.self-work-time span {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.self-work-time strong {
+    font-size: 14px;
+    color: #111827;
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   BUTTON SPINNER
+========================================================= */
+
+.button-spinner {
+    width: 15px;
+    height: 15px;
+    border: 2px solid rgba(255, 255, 255, 0.45);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    display: inline-block;
+    animation: buttonSpin 0.7s linear infinite;
+}
+
+@keyframes buttonSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+
+/* =========================================================
+   READONLY HOURS INPUT
+========================================================= */
+
+.form-group input[readonly] {
+    background: #f8fafc;
+    cursor: not-allowed;
+    color: #374151;
+}
+
+
+/* =========================================================
+   SELF WORK MODAL
+========================================================= */
+
+.large-modal {
+    max-width: 760px;
+}
+
+.large-modal .form-group {
+    margin-bottom: 18px;
+}
+
+.large-modal .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+}
+
+.large-modal .form-group label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.large-modal .form-group input,
+.large-modal .form-group select,
+.large-modal .form-group textarea {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #111827;
+    background: #ffffff;
+    outline: none;
+    transition: border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.large-modal .form-group input:focus,
+.large-modal .form-group select:focus,
+.large-modal .form-group textarea:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.large-modal .form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.large-modal .form-group input::placeholder,
+.large-modal .form-group textarea::placeholder {
+    color: #9ca3af;
+}
+
+
+/* =========================================================
+   MODAL ACTION BUTTONS
+========================================================= */
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+.modal-actions .primary-btn,
+.modal-actions .cancel-btn {
+    min-height: 42px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+}
+
+
+/* =========================================================
+   MOBILE RESPONSIVE
+========================================================= */
+
+@media (max-width: 768px) {
+
+    .my-work-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 18px;
+    }
+
+    .header-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .header-actions .primary-btn,
+    .header-actions .secondary-btn {
+        width: 100%;
+    }
+
+    .self-work-time {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .large-modal .form-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .modal-actions .primary-btn,
+    .modal-actions .cancel-btn {
+        width: 100%;
+    }
+
+}
+
+
+@media (max-width: 480px) {
+
+    .task-title-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .self-work-badge {
+        font-size: 10px;
+    }
+
+    .self-work-time {
+        padding: 12px;
+    }
+
+    .self-work-time strong {
+        font-size: 13px;
+    }
+
+}

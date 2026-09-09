@@ -1,538 +1,848 @@
 const WorkTask = require("../models/WorkTask");
 const User = require("../models/User");
-const Company = require("../models/Company");
 
-// ========================================
-// CREATE WORK TASK
-// Super Admin only
-// ========================================
+/* =========================================================
+   CREATE WORK TASK - SUPER ADMIN
+========================================================= */
 
-exports.createWorkTask = async (req, res) => {
-  try {
-    const {
-      company,
-      title,
-      description,
-      assignedTo,
-      priority,
-      startDate,
-      deadline,
-      estimatedHours,
-      remarks,
-    } = req.body;
+const createWorkTask = async (req, res) => {
+    try {
+        const {
+            company,
+            title,
+            description,
+            assignedTo,
+            priority,
+            status,
+            progress,
+            startDate,
+            deadline,
+            estimatedHours,
+            remarks,
+        } = req.body;
 
-    if (
-      !company ||
-      !title ||
-      !assignedTo ||
-      !startDate ||
-      !deadline
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Company, title, assigned employee/intern, start date and deadline are required",
-      });
+        if (
+            !company ||
+            !title ||
+            !assignedTo ||
+            !startDate ||
+            !deadline
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Company, title, assigned user, start date and deadline are required.",
+            });
+        }
+
+        const assignedUser = await User.findOne({
+            _id: assignedTo,
+            company,
+            isActive: true,
+            role: {
+                $in: ["employee", "intern"],
+            },
+        });
+
+        if (!assignedUser) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Assigned user must be an active employee or intern of the selected company.",
+            });
+        }
+
+        if (new Date(deadline) < new Date(startDate)) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Deadline cannot be before start date.",
+            });
+        }
+
+        const task = await WorkTask.create({
+            company,
+            title: title.trim(),
+            description: description?.trim(),
+            workType: "assigned",
+
+            assignedTo,
+
+            assignedBy: req.user._id,
+            createdBy: req.user._id,
+
+            priority: priority || "medium",
+            status: status || "pending",
+            progress:
+                progress !== undefined
+                    ? Number(progress)
+                    : 0,
+
+            startDate,
+            deadline,
+
+            estimatedHours:
+                estimatedHours !== undefined
+                    ? Number(estimatedHours)
+                    : 0,
+
+            remarks: remarks?.trim(),
+        });
+
+        const populatedTask = await WorkTask.findById(
+            task._id
+        )
+            .populate(
+                "assignedTo",
+                "fullName email role"
+            )
+            .populate(
+                "assignedBy",
+                "fullName email role"
+            )
+            .populate(
+                "createdBy",
+                "fullName email role"
+            )
+            .populate(
+                "company",
+                "companyName companyCode"
+            );
+
+        return res.status(201).json({
+            success: true,
+            message: "Work task created successfully.",
+            task: populatedTask,
+        });
+    } catch (error) {
+        console.error(
+            "Create Work Task Error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to create work task.",
+        });
     }
-
-    // Check company
-    const companyExists = await Company.findById(company);
-
-    if (!companyExists) {
-      return res.status(404).json({
-        success: false,
-        message: "Company not found",
-      });
-    }
-
-    // Check assigned user
-    const assignedUser = await User.findById(assignedTo);
-
-    if (!assignedUser) {
-      return res.status(404).json({
-        success: false,
-        message: "Assigned employee/intern not found",
-      });
-    }
-
-    // Only employee or intern can receive work
-    if (
-      assignedUser.role !== "employee" &&
-      assignedUser.role !== "intern"
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Work can only be assigned to an employee or intern",
-      });
-    }
-
-    // User must belong to same company
-    if (
-      !assignedUser.company ||
-      assignedUser.company.toString() !== company.toString()
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Employee/intern does not belong to the selected company",
-      });
-    }
-
-    if (!assignedUser.isActive) {
-      return res.status(400).json({
-        success: false,
-        message: "Cannot assign work to an inactive employee/intern",
-      });
-    }
-
-    // Validate dates
-    if (new Date(deadline) < new Date(startDate)) {
-      return res.status(400).json({
-        success: false,
-        message: "Deadline cannot be before start date",
-      });
-    }
-
-    const task = await WorkTask.create({
-      company,
-      title,
-      description,
-      assignedTo,
-      assignedBy: req.user._id,
-      priority: priority || "medium",
-      status: "pending",
-      progress: 0,
-      startDate,
-      deadline,
-      estimatedHours: estimatedHours || 0,
-      remarks,
-    });
-
-    const populatedTask = await WorkTask.findById(task._id)
-      .populate("company", "companyName companyCode")
-      .populate("assignedTo", "fullName email role")
-      .populate("assignedBy", "fullName email role");
-
-    res.status(201).json({
-      success: true,
-      message: "Work assigned successfully",
-      task: populatedTask,
-    });
-  } catch (error) {
-    console.error("Create Work Task Error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
 };
 
 
-// ========================================
-// GET ALL WORK TASKS
-// Super Admin
-// ========================================
+/* =========================================================
+   CREATE SELF WORK - EMPLOYEE / INTERN
+========================================================= */
 
-exports.getWorkTasks = async (req, res) => {
-  try {
-    const { companyId, assignedTo, status, priority } = req.query;
+const createSelfWork = async (req, res) => {
+    try {
+        const {
+            title,
+            description,
+            date,
+            startTime,
+            endTime,
+            hoursWorked,
+            progress,
+            status,
+            priority,
+            remarks,
+        } = req.body;
 
-    const filter = {};
+        if (!title || !date || !startTime || !endTime) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Title, date, start time and end time are required.",
+            });
+        }
 
-    if (companyId) {
-      filter.company = companyId;
+        if (
+            !req.user.company ||
+            !req.user._id
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "User company information is missing.",
+            });
+        }
+
+        /*
+         * Employee/Intern can only create work
+         * for themselves.
+         */
+
+        let calculatedHours = 0;
+
+        const start = startTime.split(":");
+        const end = endTime.split(":");
+
+        if (
+            start.length === 2 &&
+            end.length === 2
+        ) {
+            const startMinutes =
+                Number(start[0]) * 60 +
+                Number(start[1]);
+
+            const endMinutes =
+                Number(end[0]) * 60 +
+                Number(end[1]);
+
+            let difference =
+                endMinutes - startMinutes;
+
+            /*
+             * Supports work crossing midnight.
+             */
+            if (difference < 0) {
+                difference += 24 * 60;
+            }
+
+            calculatedHours =
+                Number(
+                    (difference / 60).toFixed(2)
+                );
+        }
+
+        const finalHours =
+            hoursWorked !== undefined &&
+            hoursWorked !== ""
+                ? Number(hoursWorked)
+                : calculatedHours;
+
+        let finalProgress =
+            progress !== undefined
+                ? Number(progress)
+                : 0;
+
+        if (finalProgress < 0) {
+            finalProgress = 0;
+        }
+
+        if (finalProgress > 100) {
+            finalProgress = 100;
+        }
+
+        let finalStatus = status || "pending";
+
+        if (finalProgress === 100) {
+            finalStatus = "completed";
+        } else if (finalProgress > 0) {
+            finalStatus = "in_progress";
+        }
+
+        /*
+         * For self work:
+         *
+         * startDate = selected date
+         * deadline  = selected date
+         */
+
+        const workDate = new Date(date);
+
+        const task = await WorkTask.create({
+            company: req.user.company,
+
+            title: title.trim(),
+            description: description?.trim(),
+
+            workType: "self",
+
+            assignedTo: req.user._id,
+
+            /*
+             * No Super Admin assignment.
+             */
+            assignedBy: null,
+
+            createdBy: req.user._id,
+
+            priority: priority || "medium",
+
+            status: finalStatus,
+
+            progress: finalProgress,
+
+            startDate: workDate,
+            deadline: workDate,
+
+            startTime,
+            endTime,
+
+            estimatedHours: 0,
+
+            hoursWorked: finalHours,
+
+            remarks: remarks?.trim(),
+        });
+
+        const populatedTask =
+            await WorkTask.findById(task._id)
+                .populate(
+                    "assignedTo",
+                    "fullName email role"
+                )
+                .populate(
+                    "createdBy",
+                    "fullName email role"
+                )
+                .populate(
+                    "company",
+                    "companyName companyCode"
+                );
+
+        return res.status(201).json({
+            success: true,
+            message:
+                "Your work has been added successfully.",
+            task: populatedTask,
+        });
+    } catch (error) {
+        console.error(
+            "Create Self Work Error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Failed to add your work.",
+        });
     }
-
-    if (assignedTo) {
-      filter.assignedTo = assignedTo;
-    }
-
-    if (status) {
-      filter.status = status;
-    }
-
-    if (priority) {
-      filter.priority = priority;
-    }
-
-    const tasks = await WorkTask.find(filter)
-      .populate("company", "companyName companyCode")
-      .populate("assignedTo", "fullName email role")
-      .populate("assignedBy", "fullName email role")
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      count: tasks.length,
-      tasks,
-    });
-  } catch (error) {
-    console.error("Get Work Tasks Error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
 };
 
 
-// ========================================
-// GET MY WORK
-// Employee / Intern
-// ========================================
+/* =========================================================
+   GET ALL WORK TASKS - SUPER ADMIN
+========================================================= */
 
-exports.getMyWork = async (req, res) => {
-  try {
-    const tasks = await WorkTask.find({
-      assignedTo: req.user._id,
-      company: req.user.company,
-    })
-      .populate("company", "companyName companyCode")
-      .populate("assignedBy", "fullName email role")
-      .sort({
-        status: 1,
-        deadline: 1,
-      });
+const getWorkTasks = async (req, res) => {
+    try {
+        const {
+            companyId,
+            assignedTo,
+            status,
+            priority,
+            workType,
+        } = req.query;
 
-    res.status(200).json({
-      success: true,
-      count: tasks.length,
-      tasks,
-    });
-  } catch (error) {
-    console.error("Get My Work Error:", error);
+        const filter = {};
 
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
+        if (companyId) {
+            filter.company = companyId;
+        }
+
+        if (assignedTo) {
+            filter.assignedTo = assignedTo;
+        }
+
+        if (status) {
+            filter.status = status;
+        }
+
+        if (priority) {
+            filter.priority = priority;
+        }
+
+        if (workType) {
+            filter.workType = workType;
+        }
+
+        const tasks = await WorkTask.find(filter)
+            .populate(
+                "assignedTo",
+                "fullName email role"
+            )
+            .populate(
+                "assignedBy",
+                "fullName email role"
+            )
+            .populate(
+                "createdBy",
+                "fullName email role"
+            )
+            .populate(
+                "company",
+                "companyName companyCode"
+            )
+            .sort({
+                createdAt: -1,
+            });
+
+        return res.status(200).json({
+            success: true,
+            tasks,
+        });
+    } catch (error) {
+        console.error(
+            "Get Work Tasks Error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Failed to fetch work tasks.",
+        });
+    }
 };
 
 
-// ========================================
-// GET SINGLE WORK TASK
-// ========================================
+/* =========================================================
+   GET MY WORK - EMPLOYEE / INTERN
+========================================================= */
 
-exports.getWorkTaskById = async (req, res) => {
-  try {
-    const { id } = req.params;
+const getMyWork = async (req, res) => {
+    try {
+        const tasks = await WorkTask.find({
+            assignedTo: req.user._id,
+            company: req.user.company,
+        })
+            .populate(
+                "assignedBy",
+                "fullName email role"
+            )
+            .populate(
+                "createdBy",
+                "fullName email role"
+            )
+            .populate(
+                "company",
+                "companyName companyCode"
+            )
+            .sort({
+                startDate: -1,
+                createdAt: -1,
+            });
 
-    const task = await WorkTask.findById(id)
-      .populate("company", "companyName companyCode")
-      .populate("assignedTo", "fullName email role")
-      .populate("assignedBy", "fullName email role");
-
-    if (!task) {
-      return res.status(404).json({
-        success: false,
-        message: "Work task not found",
-      });
-    }
-
-    // Employee / Intern can only see their own task
-    if (
-      req.user.role === "employee" ||
-      req.user.role === "intern"
-    ) {
-      if (
-        task.assignedTo._id.toString() !==
-        req.user._id.toString()
-      ) {
-        return res.status(403).json({
-          success: false,
-          message: "Access denied",
+        return res.status(200).json({
+            success: true,
+            tasks,
         });
-      }
+    } catch (error) {
+        console.error(
+            "Get My Work Error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Failed to fetch your work.",
+        });
     }
-
-    res.status(200).json({
-      success: true,
-      task,
-    });
-  } catch (error) {
-    console.error("Get Work Task Error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
 };
 
 
-// ========================================
-// UPDATE WORK TASK
-// Super Admin
-// ========================================
+/* =========================================================
+   GET SINGLE WORK TASK
+========================================================= */
 
-exports.updateWorkTask = async (req, res) => {
-  try {
-    const { id } = req.params;
+const getWorkTaskById = async (req, res) => {
+    try {
+        const task =
+            await WorkTask.findById(req.params.id)
+                .populate(
+                    "assignedTo",
+                    "fullName email role"
+                )
+                .populate(
+                    "assignedBy",
+                    "fullName email role"
+                )
+                .populate(
+                    "createdBy",
+                    "fullName email role"
+                )
+                .populate(
+                    "company",
+                    "companyName companyCode"
+                );
 
-    const {
-      title,
-      description,
-      assignedTo,
-      priority,
-      startDate,
-      deadline,
-      estimatedHours,
-      remarks,
-    } = req.body;
+        if (!task) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    "Work task not found.",
+            });
+        }
 
-    const task = await WorkTask.findById(id);
+        /*
+         * Employee/Intern can only see
+         * their own work.
+         */
 
-    if (!task) {
-      return res.status(404).json({
-        success: false,
-        message: "Work task not found",
-      });
-    }
+        if (
+            ["employee", "intern"].includes(
+                req.user.role
+            )
+        ) {
+            if (
+                String(task.assignedTo?._id) !==
+                    String(req.user._id) ||
+                String(task.company?._id) !==
+                    String(req.user.company)
+            ) {
+                return res.status(403).json({
+                    success: false,
+                    message:
+                        "You are not authorized to view this work.",
+                });
+            }
+        }
 
-    if (title !== undefined) {
-      task.title = title;
-    }
-
-    if (description !== undefined) {
-      task.description = description;
-    }
-
-    if (priority !== undefined) {
-      if (
-        !["low", "medium", "high", "urgent"].includes(priority)
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid priority",
+        return res.status(200).json({
+            success: true,
+            task,
         });
-      }
+    } catch (error) {
+        console.error(
+            "Get Work Task Error:",
+            error
+        );
 
-      task.priority = priority;
-    }
-
-    if (startDate !== undefined) {
-      task.startDate = startDate;
-    }
-
-    if (deadline !== undefined) {
-      task.deadline = deadline;
-    }
-
-    if (estimatedHours !== undefined) {
-      task.estimatedHours = estimatedHours;
-    }
-
-    if (remarks !== undefined) {
-      task.remarks = remarks;
-    }
-
-    // Reassign employee/intern
-    if (assignedTo !== undefined) {
-      const assignedUser = await User.findById(assignedTo);
-
-      if (!assignedUser) {
-        return res.status(404).json({
-          success: false,
-          message: "Employee/intern not found",
+        return res.status(500).json({
+            success: false,
+            message:
+                "Failed to fetch work task.",
         });
-      }
-
-      if (
-        assignedUser.role !== "employee" &&
-        assignedUser.role !== "intern"
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Work can only be assigned to an employee or intern",
-        });
-      }
-
-      if (
-        !assignedUser.company ||
-        assignedUser.company.toString() !==
-          task.company.toString()
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Employee/intern does not belong to this company",
-        });
-      }
-
-      task.assignedTo = assignedTo;
     }
-
-    const finalStartDate = new Date(task.startDate);
-    const finalDeadline = new Date(task.deadline);
-
-    if (finalDeadline < finalStartDate) {
-      return res.status(400).json({
-        success: false,
-        message: "Deadline cannot be before start date",
-      });
-    }
-
-    await task.save();
-
-    const updatedTask = await WorkTask.findById(task._id)
-      .populate("company", "companyName companyCode")
-      .populate("assignedTo", "fullName email role")
-      .populate("assignedBy", "fullName email role");
-
-    res.status(200).json({
-      success: true,
-      message: "Work task updated successfully",
-      task: updatedTask,
-    });
-  } catch (error) {
-    console.error("Update Work Task Error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
 };
 
 
-// ========================================
-// UPDATE WORK STATUS / PROGRESS
-// Employee / Intern
-// ========================================
+/* =========================================================
+   UPDATE WORK TASK - SUPER ADMIN
+========================================================= */
 
-exports.updateWorkProgress = async (req, res) => {
-  try {
-    const { id } = req.params;
+const updateWorkTask = async (req, res) => {
+    try {
+        const task =
+            await WorkTask.findById(req.params.id);
 
-    const {
-      progress,
-      status,
-    } = req.body;
+        if (!task) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    "Work task not found.",
+            });
+        }
 
-    const task = await WorkTask.findById(id);
+        const {
+            company,
+            title,
+            description,
+            assignedTo,
+            priority,
+            status,
+            progress,
+            startDate,
+            deadline,
+            estimatedHours,
+            remarks,
+        } = req.body;
 
-    if (!task) {
-      return res.status(404).json({
-        success: false,
-        message: "Work task not found",
-      });
-    }
+        if (
+            assignedTo &&
+            String(assignedTo) !==
+                String(task.assignedTo)
+        ) {
+            const assignedUser =
+                await User.findOne({
+                    _id: assignedTo,
+                    company:
+                        company || task.company,
+                    isActive: true,
+                    role: {
+                        $in: [
+                            "employee",
+                            "intern",
+                        ],
+                    },
+                });
 
-    // Employee / Intern can only update their own task
-    if (
-      task.assignedTo.toString() !==
-      req.user._id.toString()
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: "You can only update your assigned work",
-      });
-    }
+            if (!assignedUser) {
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Assigned user must be an active employee or intern of the selected company.",
+                });
+            }
+        }
 
-    if (progress !== undefined) {
-      const numericProgress = Number(progress);
+        const finalStartDate =
+            startDate || task.startDate;
 
-      if (
-        Number.isNaN(numericProgress) ||
-        numericProgress < 0 ||
-        numericProgress > 100
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: "Progress must be between 0 and 100",
+        const finalDeadline =
+            deadline || task.deadline;
+
+        if (
+            new Date(finalDeadline) <
+            new Date(finalStartDate)
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Deadline cannot be before start date.",
+            });
+        }
+
+        task.company =
+            company || task.company;
+
+        task.title =
+            title?.trim() || task.title;
+
+        task.description =
+            description?.trim();
+
+        task.assignedTo =
+            assignedTo || task.assignedTo;
+
+        task.priority =
+            priority || task.priority;
+
+        task.status =
+            status || task.status;
+
+        if (progress !== undefined) {
+            task.progress = Number(progress);
+
+            if (task.progress === 100) {
+                task.status = "completed";
+            } else if (
+                task.progress > 0
+            ) {
+                task.status = "in_progress";
+            } else {
+                task.status = "pending";
+            }
+        }
+
+        task.startDate = finalStartDate;
+        task.deadline = finalDeadline;
+
+        if (
+            estimatedHours !== undefined
+        ) {
+            task.estimatedHours =
+                Number(estimatedHours);
+        }
+
+        task.remarks =
+            remarks?.trim();
+
+        await task.save();
+
+        const updatedTask =
+            await WorkTask.findById(task._id)
+                .populate(
+                    "assignedTo",
+                    "fullName email role"
+                )
+                .populate(
+                    "assignedBy",
+                    "fullName email role"
+                )
+                .populate(
+                    "createdBy",
+                    "fullName email role"
+                )
+                .populate(
+                    "company",
+                    "companyName companyCode"
+                );
+
+        return res.status(200).json({
+            success: true,
+            message:
+                "Work task updated successfully.",
+            task: updatedTask,
         });
-      }
+    } catch (error) {
+        console.error(
+            "Update Work Task Error:",
+            error
+        );
 
-      task.progress = numericProgress;
-
-      if (numericProgress === 100) {
-        task.status = "completed";
-      } else if (numericProgress > 0) {
-        task.status = "in_progress";
-      } else {
-        task.status = "pending";
-      }
-    }
-
-    if (status !== undefined) {
-      const allowedStatuses = [
-        "pending",
-        "in_progress",
-        "on_hold",
-        "completed",
-      ];
-
-      if (!allowedStatuses.includes(status)) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid status",
+        return res.status(500).json({
+            success: false,
+            message:
+                "Failed to update work task.",
         });
-      }
-
-      task.status = status;
-
-      if (status === "completed") {
-        task.progress = 100;
-      }
     }
-
-    await task.save();
-
-    const updatedTask = await WorkTask.findById(task._id)
-      .populate("company", "companyName companyCode")
-      .populate("assignedTo", "fullName email role")
-      .populate("assignedBy", "fullName email role");
-
-    res.status(200).json({
-      success: true,
-      message: "Work progress updated successfully",
-      task: updatedTask,
-    });
-  } catch (error) {
-    console.error("Update Work Progress Error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
 };
 
 
-// ========================================
-// DELETE WORK TASK
-// Super Admin
-// ========================================
+/* =========================================================
+   UPDATE WORK PROGRESS - EMPLOYEE / INTERN
+========================================================= */
 
-exports.deleteWorkTask = async (req, res) => {
-  try {
-    const { id } = req.params;
+const updateWorkProgress = async (
+    req,
+    res
+) => {
+    try {
+        const { progress, remarks } =
+            req.body;
 
-    const task = await WorkTask.findById(id);
+        const task =
+            await WorkTask.findById(
+                req.params.id
+            );
 
-    if (!task) {
-      return res.status(404).json({
-        success: false,
-        message: "Work task not found",
-      });
+        if (!task) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    "Work task not found.",
+            });
+        }
+
+        /*
+         * Employee/Intern can only update
+         * their own work.
+         */
+
+        if (
+            String(task.assignedTo) !==
+                String(req.user._id) ||
+            String(task.company) !==
+                String(req.user.company)
+        ) {
+            return res.status(403).json({
+                success: false,
+                message:
+                    "You are not authorized to update this work.",
+            });
+        }
+
+        const numericProgress =
+            Number(progress);
+
+        if (
+            Number.isNaN(
+                numericProgress
+            ) ||
+            numericProgress < 0 ||
+            numericProgress > 100
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Progress must be between 0 and 100.",
+            });
+        }
+
+        task.progress =
+            numericProgress;
+
+        if (
+            numericProgress === 100
+        ) {
+            task.status = "completed";
+        } else if (
+            numericProgress > 0
+        ) {
+            task.status = "in_progress";
+        } else {
+            task.status = "pending";
+        }
+
+        if (remarks !== undefined) {
+            task.remarks =
+                remarks?.trim();
+        }
+
+        await task.save();
+
+        const updatedTask =
+            await WorkTask.findById(
+                task._id
+            )
+                .populate(
+                    "assignedTo",
+                    "fullName email role"
+                )
+                .populate(
+                    "createdBy",
+                    "fullName email role"
+                )
+                .populate(
+                    "company",
+                    "companyName companyCode"
+                );
+
+        return res.status(200).json({
+            success: true,
+            message:
+                "Work progress updated successfully.",
+            task: updatedTask,
+        });
+    } catch (error) {
+        console.error(
+            "Update Work Progress Error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Failed to update work progress.",
+        });
     }
+};
 
-    await WorkTask.findByIdAndDelete(id);
 
-    res.status(200).json({
-      success: true,
-      message: "Work task deleted successfully",
-    });
-  } catch (error) {
-    console.error("Delete Work Task Error:", error);
+/* =========================================================
+   DELETE WORK TASK - SUPER ADMIN
+========================================================= */
 
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
+const deleteWorkTask = async (req, res) => {
+    try {
+        const task =
+            await WorkTask.findById(
+                req.params.id
+            );
+
+        if (!task) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    "Work task not found.",
+            });
+        }
+
+        await WorkTask.findByIdAndDelete(
+            req.params.id
+        );
+
+        return res.status(200).json({
+            success: true,
+            message:
+                "Work task deleted successfully.",
+        });
+    } catch (error) {
+        console.error(
+            "Delete Work Task Error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Failed to delete work task.",
+        });
+    }
+};
+
+
+module.exports = {
+    createWorkTask,
+    createSelfWork,
+    getWorkTasks,
+    getMyWork,
+    getWorkTaskById,
+    updateWorkTask,
+    updateWorkProgress,
+    deleteWorkTask,
 };

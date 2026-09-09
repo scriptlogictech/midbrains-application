@@ -1,85 +1,118 @@
 const mongoose = require("mongoose");
 
 const workTaskSchema = new mongoose.Schema(
-  {
-    company: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Company",
-      required: true,
-    },
+    {
+        company: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Company",
+            required: true,
+        },
 
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+        title: {
+            type: String,
+            required: true,
+            trim: true,
+        },
 
-    description: {
-      type: String,
-      trim: true,
-    },
+        description: {
+            type: String,
+            trim: true,
+        },
 
-    assignedTo: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+        /*
+         * assigned = task created by Super Admin
+         * self     = work created by Employee/Intern for themselves
+         */
+        workType: {
+            type: String,
+            enum: ["assigned", "self"],
+            default: "assigned",
+        },
 
-    assignedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+        assignedTo: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+        },
 
-    priority: {
-      type: String,
-      enum: ["low", "medium", "high", "urgent"],
-      default: "medium",
-    },
+        assignedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+        },
 
-    status: {
-      type: String,
-      enum: [
-        "pending",
-        "in_progress",
-        "on_hold",
-        "completed",
-        "cancelled",
-      ],
-      default: "pending",
-    },
+        priority: {
+            type: String,
+            enum: ["low", "medium", "high", "urgent"],
+            default: "medium",
+        },
 
-    progress: {
-      type: Number,
-      min: 0,
-      max: 100,
-      default: 0,
-    },
+        status: {
+            type: String,
+            enum: [
+                "pending",
+                "in_progress",
+                "on_hold",
+                "completed",
+                "cancelled",
+            ],
+            default: "pending",
+        },
 
-    startDate: {
-      type: Date,
-      required: true,
-    },
+        progress: {
+            type: Number,
+            min: 0,
+            max: 100,
+            default: 0,
+        },
 
-    deadline: {
-      type: Date,
-      required: true,
-    },
+        startDate: {
+            type: Date,
+            required: true,
+        },
 
-    estimatedHours: {
-      type: Number,
-      min: 0,
-      default: 0,
-    },
+        deadline: {
+            type: Date,
+            required: true,
+        },
 
-    remarks: {
-      type: String,
-      trim: true,
+        /*
+         * Time spent on self-added work
+         */
+        startTime: {
+            type: String,
+            trim: true,
+        },
+
+        endTime: {
+            type: String,
+            trim: true,
+        },
+
+        estimatedHours: {
+            type: Number,
+            min: 0,
+            default: 0,
+        },
+
+        hoursWorked: {
+            type: Number,
+            min: 0,
+            default: 0,
+        },
+
+        remarks: {
+            type: String,
+            trim: true,
+        },
+
+        createdBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+        },
     },
-  },
-  {
-    timestamps: true,
-  }
+    {
+        timestamps: true,
+    }
 );
 
 module.exports = mongoose.model("WorkTask", workTaskSchema);

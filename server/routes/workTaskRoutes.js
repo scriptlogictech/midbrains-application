@@ -1,96 +1,126 @@
 const express = require("express");
+
 const router = express.Router();
 
 const {
-  createWorkTask,
-  getWorkTasks,
-  getMyWork,
-  getWorkTaskById,
-  updateWorkTask,
-  updateWorkProgress,
-  deleteWorkTask,
+    createWorkTask,
+    createSelfWork,
+    getWorkTasks,
+    getMyWork,
+    getWorkTaskById,
+    updateWorkTask,
+    updateWorkProgress,
+    deleteWorkTask,
 } = require("../controllers/workTaskController");
 
-const { protect } = require("../middlewares/authMiddleware");
-const { authorizeRoles } = require("../middlewares/roleMiddleware");
+const {
+    protect,
+} = require("../middlewares/authMiddleware");
 
-// ========================================
-// SUPER ADMIN - CREATE WORK
-// ========================================
+const {
+    authorizeRoles,
+} = require("../middlewares/roleMiddleware");
 
+
+/* =========================================================
+   SUPER ADMIN
+========================================================= */
+
+/*
+ * Create task and assign to Employee/Intern
+ */
 router.post(
-  "/",
-  protect,
-  authorizeRoles("super_admin"),
-  createWorkTask
+    "/",
+    protect,
+    authorizeRoles("super_admin"),
+    createWorkTask
 );
 
-// ========================================
-// SUPER ADMIN - GET ALL WORK
-// ========================================
 
+/*
+ * Get all work tasks
+ */
 router.get(
-  "/",
-  protect,
-  authorizeRoles("super_admin"),
-  getWorkTasks
+    "/",
+    protect,
+    authorizeRoles("super_admin"),
+    getWorkTasks
 );
 
-// ========================================
-// EMPLOYEE / INTERN - MY WORK
-// IMPORTANT: Keep this BEFORE /:id
-// ========================================
 
-router.get(
-  "/my-work",
-  protect,
-  authorizeRoles("employee", "intern"),
-  getMyWork
-);
-
-// ========================================
-// GET SINGLE WORK
-// Super Admin / Employee / Intern
-// ========================================
-
-router.get(
-  "/:id",
-  protect,
-  authorizeRoles("super_admin", "employee", "intern"),
-  getWorkTaskById
-);
-
-// ========================================
-// SUPER ADMIN - UPDATE WORK
-// ========================================
-
+/*
+ * Update assigned task
+ */
 router.put(
-  "/:id",
-  protect,
-  authorizeRoles("super_admin"),
-  updateWorkTask
+    "/:id",
+    protect,
+    authorizeRoles("super_admin"),
+    updateWorkTask
 );
 
-// ========================================
-// EMPLOYEE / INTERN - UPDATE PROGRESS
-// ========================================
 
-router.put(
-  "/:id/progress",
-  protect,
-  authorizeRoles("employee", "intern"),
-  updateWorkProgress
-);
-
-// ========================================
-// SUPER ADMIN - DELETE WORK
-// ========================================
-
+/*
+ * Delete task
+ */
 router.delete(
-  "/:id",
-  protect,
-  authorizeRoles("super_admin"),
-  deleteWorkTask
+    "/:id",
+    protect,
+    authorizeRoles("super_admin"),
+    deleteWorkTask
 );
+
+
+/* =========================================================
+   EMPLOYEE / INTERN
+========================================================= */
+
+/*
+ * Add work for themselves
+ */
+router.post(
+    "/self",
+    protect,
+    authorizeRoles("employee", "intern"),
+    createSelfWork
+);
+
+
+/*
+ * Get their own work
+ */
+router.get(
+    "/my-work",
+    protect,
+    authorizeRoles("employee", "intern"),
+    getMyWork
+);
+
+
+/*
+ * Update their own progress
+ */
+router.put(
+    "/:id/progress",
+    protect,
+    authorizeRoles("employee", "intern"),
+    updateWorkProgress
+);
+
+
+/* =========================================================
+   SHARED
+========================================================= */
+
+router.get(
+    "/:id",
+    protect,
+    authorizeRoles(
+        "super_admin",
+        "employee",
+        "intern"
+    ),
+    getWorkTaskById
+);
+
 
 module.exports = router;

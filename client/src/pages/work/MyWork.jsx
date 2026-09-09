@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import {
     getMyWork,
     updateWorkProgress,
+    createSelfWork,
 } from "../../services/workTaskService";
 
 import {
@@ -41,8 +42,26 @@ const MyWork = () => {
         nextPlan: "",
     });
 
+    /* =========================================
+       SELF WORK FORM
+    ========================================= */
+
+    const [selfWorkForm, setSelfWorkForm] = useState({
+        title: "",
+        description: "",
+        date: new Date().toISOString().split("T")[0],
+        startTime: "",
+        endTime: "",
+        hoursWorked: "",
+        progress: 0,
+        priority: "medium",
+        remarks: "",
+    });
+
     const [showProgressModal, setShowProgressModal] = useState(false);
     const [showLogModal, setShowLogModal] = useState(false);
+    const [showSelfWorkModal, setShowSelfWorkModal] =
+        useState(false);
 
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
@@ -63,24 +82,6 @@ const MyWork = () => {
 
             console.log("My Work Response:", taskResponse);
             console.log("My Work Logs Response:", logResponse);
-
-            /*
-             * Backend may return:
-             *
-             * {
-             *     success: true,
-             *     tasks: [...]
-             * }
-             *
-             * OR:
-             *
-             * {
-             *     success: true,
-             *     data: [...]
-             * }
-             *
-             * So support both formats.
-             */
 
             setTasks(
                 taskResponse?.tasks ||
@@ -189,6 +190,75 @@ const MyWork = () => {
 
 
     /* =========================================
+       FORMAT TIME
+    ========================================= */
+
+    const formatTime = (time) => {
+        if (!time) return "-";
+
+        const [hours, minutes] = time.split(":");
+
+        const date = new Date();
+
+        date.setHours(
+            Number(hours),
+            Number(minutes),
+            0,
+            0
+        );
+
+        return date.toLocaleTimeString("en-IN", {
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
+
+
+    /* =========================================
+       CALCULATE HOURS
+    ========================================= */
+
+    const calculateHours = (startTime, endTime) => {
+        if (!startTime || !endTime) {
+            return "";
+        }
+
+        const startParts = startTime.split(":");
+        const endParts = endTime.split(":");
+
+        if (
+            startParts.length !== 2 ||
+            endParts.length !== 2
+        ) {
+            return "";
+        }
+
+        const startMinutes =
+            Number(startParts[0]) * 60 +
+            Number(startParts[1]);
+
+        const endMinutes =
+            Number(endParts[0]) * 60 +
+            Number(endParts[1]);
+
+        let difference =
+            endMinutes - startMinutes;
+
+        /*
+         * If end time is earlier than start time,
+         * consider it as work crossing midnight.
+         */
+        if (difference < 0) {
+            difference += 24 * 60;
+        }
+
+        return Number(
+            (difference / 60).toFixed(2)
+        );
+    };
+
+
+    /* =========================================
        OPEN PROGRESS MODAL
     ========================================= */
 
@@ -240,12 +310,17 @@ const MyWork = () => {
             await updateWorkProgress(
                 selectedTask._id,
                 {
-                    progress: Number(progressData.progress),
-                    remarks: progressData.remarks,
+                    progress: Number(
+                        progressData.progress
+                    ),
+                    remarks:
+                        progressData.remarks,
                 }
             );
 
-            alert("Progress updated successfully.");
+            alert(
+                "Progress updated successfully."
+            );
 
             setShowProgressModal(false);
             setSelectedTask(null);
@@ -273,7 +348,9 @@ const MyWork = () => {
 
         setLogForm({
             task: task?._id || "",
-            date: new Date().toISOString().split("T")[0],
+            date: new Date()
+                .toISOString()
+                .split("T")[0],
             progress: task?.progress || 0,
             hoursWorked: "",
             workDescription: "",
@@ -298,7 +375,9 @@ const MyWork = () => {
         }
 
         if (!logForm.workDescription.trim()) {
-            alert("Please enter today's work description.");
+            alert(
+                "Please enter today's work description."
+            );
             return;
         }
 
@@ -308,14 +387,21 @@ const MyWork = () => {
             await createWorkLog({
                 task: logForm.task,
                 date: logForm.date,
-                progress: Number(logForm.progress),
-                hoursWorked: Number(logForm.hoursWorked || 0),
-                workDescription: logForm.workDescription,
+                progress: Number(
+                    logForm.progress
+                ),
+                hoursWorked: Number(
+                    logForm.hoursWorked || 0
+                ),
+                workDescription:
+                    logForm.workDescription,
                 blockers: logForm.blockers,
                 nextPlan: logForm.nextPlan,
             });
 
-            alert("Daily work log submitted successfully.");
+            alert(
+                "Daily work log submitted successfully."
+            );
 
             setShowLogModal(false);
 
@@ -335,6 +421,169 @@ const MyWork = () => {
 
 
     /* =========================================
+       SELF WORK FORM CHANGE
+    ========================================= */
+
+    const handleSelfWorkChange = (e) => {
+        const { name, value } = e.target;
+
+        setSelfWorkForm((prev) => {
+            const updatedForm = {
+                ...prev,
+                [name]: value,
+            };
+
+            /*
+             * Automatically calculate hours
+             * whenever start/end time changes.
+             */
+            if (
+                name === "startTime" ||
+                name === "endTime"
+            ) {
+                updatedForm.hoursWorked =
+                    calculateHours(
+                        name === "startTime"
+                            ? value
+                            : prev.startTime,
+                        name === "endTime"
+                            ? value
+                            : prev.endTime
+                    );
+            }
+
+            return updatedForm;
+        });
+    };
+
+
+    /* =========================================
+       OPEN SELF WORK MODAL
+    ========================================= */
+
+    const openSelfWorkModal = () => {
+        setSelfWorkForm({
+            title: "",
+            description: "",
+            date: new Date()
+                .toISOString()
+                .split("T")[0],
+            startTime: "",
+            endTime: "",
+            hoursWorked: "",
+            progress: 0,
+            priority: "medium",
+            remarks: "",
+        });
+
+        setShowSelfWorkModal(true);
+    };
+
+
+    /* =========================================
+       SUBMIT SELF WORK
+    ========================================= */
+
+    const handleSelfWorkSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!selfWorkForm.title.trim()) {
+            alert("Please enter work title.");
+            return;
+        }
+
+        if (!selfWorkForm.date) {
+            alert("Please select work date.");
+            return;
+        }
+
+        if (!selfWorkForm.startTime) {
+            alert("Please select start time.");
+            return;
+        }
+
+        if (!selfWorkForm.endTime) {
+            alert("Please select end time.");
+            return;
+        }
+
+        const calculatedHours =
+            calculateHours(
+                selfWorkForm.startTime,
+                selfWorkForm.endTime
+            );
+
+        if (
+            calculatedHours === "" ||
+            Number(calculatedHours) <= 0
+        ) {
+            alert(
+                "End time must be different from start time."
+            );
+            return;
+        }
+
+        try {
+            setSaving(true);
+
+            const response =
+                await createSelfWork({
+                    title:
+                        selfWorkForm.title.trim(),
+
+                    description:
+                        selfWorkForm.description.trim(),
+
+                    date:
+                        selfWorkForm.date,
+
+                    startTime:
+                        selfWorkForm.startTime,
+
+                    endTime:
+                        selfWorkForm.endTime,
+
+                    hoursWorked:
+                        Number(calculatedHours),
+
+                    progress:
+                        Number(
+                            selfWorkForm.progress
+                        ),
+
+                    priority:
+                        selfWorkForm.priority,
+
+                    remarks:
+                        selfWorkForm.remarks.trim(),
+                });
+
+            alert(
+                response?.message ||
+                "Your work has been added successfully."
+            );
+
+            setShowSelfWorkModal(false);
+
+            await fetchData();
+
+        } catch (error) {
+            console.error(
+                "Create Self Work Error:",
+                error
+            );
+
+            alert(
+                error?.response?.data?.message ||
+                "Failed to add your work."
+            );
+        } finally {
+            setSaving(false);
+        }
+    };
+
+
+    /* =========================================
        LOADING
     ========================================= */
 
@@ -342,7 +591,10 @@ const MyWork = () => {
         return (
             <div className="my-work-loading">
                 <div className="loading-spinner"></div>
-                <p>Loading your work...</p>
+
+                <p>
+                    Loading your work...
+                </p>
             </div>
         );
     }
@@ -361,17 +613,36 @@ const MyWork = () => {
                     <h1>My Work</h1>
 
                     <p>
-                        Manage your assigned tasks and daily work updates.
+                        Manage your assigned tasks and
+                        record your daily work.
                     </p>
                 </div>
 
-                <button
-                    className="primary-btn"
-                    onClick={() => openLogModal()}
-                >
-                    <i className="bi bi-journal-plus"></i>
-                    Daily Work Log
-                </button>
+
+                <div className="header-actions">
+
+                    <button
+                        className="secondary-btn"
+                        onClick={openSelfWorkModal}
+                    >
+                        <i className="bi bi-plus-circle"></i>
+
+                        Add My Work
+                    </button>
+
+
+                    <button
+                        className="primary-btn"
+                        onClick={() =>
+                            openLogModal()
+                        }
+                    >
+                        <i className="bi bi-journal-plus"></i>
+
+                        Daily Work Log
+                    </button>
+
+                </div>
 
             </div>
 
@@ -383,69 +654,104 @@ const MyWork = () => {
             <div className="work-summary-grid">
 
                 <div className="work-summary-card">
+
                     <div className="summary-icon">
                         <i className="bi bi-clipboard-check"></i>
                     </div>
 
                     <div>
-                        <span>Total Tasks</span>
-                        <strong>{summary.total}</strong>
+                        <span>
+                            Total Tasks
+                        </span>
+
+                        <strong>
+                            {summary.total}
+                        </strong>
                     </div>
+
                 </div>
 
 
                 <div className="work-summary-card">
+
                     <div className="summary-icon">
                         <i className="bi bi-hourglass-split"></i>
                     </div>
 
                     <div>
-                        <span>Pending</span>
-                        <strong>{summary.pending}</strong>
+                        <span>
+                            Pending
+                        </span>
+
+                        <strong>
+                            {summary.pending}
+                        </strong>
                     </div>
+
                 </div>
 
 
                 <div className="work-summary-card">
+
                     <div className="summary-icon">
                         <i className="bi bi-arrow-repeat"></i>
                     </div>
 
                     <div>
-                        <span>In Progress</span>
-                        <strong>{summary.inProgress}</strong>
+                        <span>
+                            In Progress
+                        </span>
+
+                        <strong>
+                            {summary.inProgress}
+                        </strong>
                     </div>
+
                 </div>
 
 
                 <div className="work-summary-card">
+
                     <div className="summary-icon">
                         <i className="bi bi-check-circle"></i>
                     </div>
 
                     <div>
-                        <span>Completed</span>
-                        <strong>{summary.completed}</strong>
+                        <span>
+                            Completed
+                        </span>
+
+                        <strong>
+                            {summary.completed}
+                        </strong>
                     </div>
+
                 </div>
 
 
                 <div className="work-summary-card overdue-card">
+
                     <div className="summary-icon">
                         <i className="bi bi-exclamation-circle"></i>
                     </div>
 
                     <div>
-                        <span>Overdue</span>
-                        <strong>{summary.overdue}</strong>
+                        <span>
+                            Overdue
+                        </span>
+
+                        <strong>
+                            {summary.overdue}
+                        </strong>
                     </div>
+
                 </div>
 
             </div>
 
 
             {/* =========================================
-                TASK SECTION
+                ASSIGNED TASK SECTION
             ========================================= */}
 
             <div className="work-section">
@@ -453,8 +759,14 @@ const MyWork = () => {
                 <div className="section-header">
 
                     <div>
-                        <h2>Assigned Tasks</h2>
-                        <p>Your current assigned work.</p>
+                        <h2>
+                            Assigned Tasks
+                        </h2>
+
+                        <p>
+                            Tasks assigned to you by the
+                            administrator.
+                        </p>
                     </div>
 
                 </div>
@@ -473,7 +785,9 @@ const MyWork = () => {
                             placeholder="Search tasks..."
                             value={search}
                             onChange={(e) =>
-                                setSearch(e.target.value)
+                                setSearch(
+                                    e.target.value
+                                )
                             }
                         />
 
@@ -483,23 +797,36 @@ const MyWork = () => {
                     <select
                         value={statusFilter}
                         onChange={(e) =>
-                            setStatusFilter(e.target.value)
+                            setStatusFilter(
+                                e.target.value
+                            )
                         }
                     >
-                        <option value="all">All Status</option>
-                        <option value="pending">Pending</option>
+
+                        <option value="all">
+                            All Status
+                        </option>
+
+                        <option value="pending">
+                            Pending
+                        </option>
+
                         <option value="in_progress">
                             In Progress
                         </option>
+
                         <option value="on_hold">
                             On Hold
                         </option>
+
                         <option value="completed">
                             Completed
                         </option>
+
                         <option value="cancelled">
                             Cancelled
                         </option>
+
                     </select>
 
                 </div>
@@ -513,11 +840,14 @@ const MyWork = () => {
 
                         <i className="bi bi-clipboard-x"></i>
 
-                        <h3>No Tasks Found</h3>
+                        <h3>
+                            No Assigned Tasks
+                        </h3>
 
                         <p>
-                            You don't have any assigned tasks matching
-                            the selected filters.
+                            You don't have any assigned
+                            tasks matching the selected
+                            filters.
                         </p>
 
                     </div>
@@ -526,155 +856,259 @@ const MyWork = () => {
 
                     <div className="task-list">
 
-                        {filteredTasks.map((task) => {
+                        {filteredTasks.map(
+                            (task) => {
 
-                            const isOverdue =
-                                task.deadline &&
-                                new Date(task.deadline) < new Date() &&
-                                task.status !== "completed" &&
-                                task.status !== "cancelled";
+                                const isOverdue =
+                                    task.deadline &&
+                                    new Date(
+                                        task.deadline
+                                    ) < new Date() &&
+                                    task.status !==
+                                        "completed" &&
+                                    task.status !==
+                                        "cancelled";
 
-                            return (
+                                return (
 
-                                <div
-                                    className="task-card"
-                                    key={task._id}
-                                >
+                                    <div
+                                        className="task-card"
+                                        key={
+                                            task._id
+                                        }
+                                    >
 
-                                    <div className="task-card-top">
+                                        <div className="task-card-top">
 
-                                        <div>
+                                            <div>
 
-                                            <h3>
-                                                {task.title}
-                                            </h3>
+                                                <div className="task-title-row">
 
-                                            <p>
-                                                {task.description ||
-                                                    "No description provided."}
-                                            </p>
+                                                    <h3>
+                                                        {
+                                                            task.title
+                                                        }
+                                                    </h3>
 
-                                        </div>
+                                                    {task.workType ===
+                                                        "self" && (
+                                                        <span className="self-work-badge">
+                                                            My Work
+                                                        </span>
+                                                    )}
 
+                                                </div>
 
-                                        <span
-                                            className={`priority-badge priority-${task.priority}`}
-                                        >
-                                            {task.priority}
-                                        </span>
+                                                <p>
+                                                    {
+                                                        task.description ||
+                                                        "No description provided."
+                                                    }
+                                                </p>
 
-                                    </div>
+                                            </div>
 
-
-                                    <div className="task-meta">
-
-                                        <div>
-                                            <span>Start Date</span>
-                                            <strong>
-                                                {formatDate(
-                                                    task.startDate
-                                                )}
-                                            </strong>
-                                        </div>
-
-                                        <div>
-                                            <span>Deadline</span>
-
-                                            <strong
-                                                className={
-                                                    isOverdue
-                                                        ? "deadline-overdue"
-                                                        : ""
-                                                }
-                                            >
-                                                {formatDate(
-                                                    task.deadline
-                                                )}
-                                            </strong>
-                                        </div>
-
-                                        <div>
-                                            <span>Status</span>
 
                                             <span
-                                                className={`status-badge status-${task.status}`}
+                                                className={`priority-badge priority-${task.priority}`}
                                             >
-                                                {task.status
-                                                    ?.replace(
-                                                        "_",
-                                                        " "
+                                                {
+                                                    task.priority
+                                                }
+                                            </span>
+
+                                        </div>
+
+
+                                        <div className="task-meta">
+
+                                            <div>
+
+                                                <span>
+                                                    Start Date
+                                                </span>
+
+                                                <strong>
+                                                    {formatDate(
+                                                        task.startDate
                                                     )}
-                                            </span>
+                                                </strong>
+
+                                            </div>
+
+
+                                            <div>
+
+                                                <span>
+                                                    Deadline
+                                                </span>
+
+                                                <strong
+                                                    className={
+                                                        isOverdue
+                                                            ? "deadline-overdue"
+                                                            : ""
+                                                    }
+                                                >
+                                                    {formatDate(
+                                                        task.deadline
+                                                    )}
+                                                </strong>
+
+                                            </div>
+
+
+                                            <div>
+
+                                                <span>
+                                                    Status
+                                                </span>
+
+                                                <span
+                                                    className={`status-badge status-${task.status}`}
+                                                >
+                                                    {task.status
+                                                        ?.replace(
+                                                            "_",
+                                                            " "
+                                                        )}
+                                                </span>
+
+                                            </div>
+
+                                        </div>
+
+
+                                        {/* SELF WORK TIME */}
+
+                                        {task.workType ===
+                                            "self" && (
+                                            <div className="self-work-time">
+
+                                                <div>
+
+                                                    <span>
+                                                        Start Time
+                                                    </span>
+
+                                                    <strong>
+                                                        {formatTime(
+                                                            task.startTime
+                                                        )}
+                                                    </strong>
+
+                                                </div>
+
+
+                                                <div>
+
+                                                    <span>
+                                                        End Time
+                                                    </span>
+
+                                                    <strong>
+                                                        {formatTime(
+                                                            task.endTime
+                                                        )}
+                                                    </strong>
+
+                                                </div>
+
+
+                                                <div>
+
+                                                    <span>
+                                                        Hours Worked
+                                                    </span>
+
+                                                    <strong>
+                                                        {
+                                                            task.hoursWorked
+                                                        }{" "}
+                                                        hrs
+                                                    </strong>
+
+                                                </div>
+
+                                            </div>
+                                        )}
+
+
+                                        {/* Progress */}
+
+                                        <div className="task-progress">
+
+                                            <div className="progress-header">
+
+                                                <span>
+                                                    Progress
+                                                </span>
+
+                                                <strong>
+                                                    {
+                                                        task.progress ||
+                                                        0
+                                                    }%
+                                                </strong>
+
+                                            </div>
+
+
+                                            <div className="progress-bar">
+
+                                                <div
+                                                    className="progress-fill"
+                                                    style={{
+                                                        width: `${task.progress || 0}%`,
+                                                    }}
+                                                ></div>
+
+                                            </div>
+
+                                        </div>
+
+
+                                        {/* Actions */}
+
+                                        <div className="task-actions">
+
+                                            <button
+                                                className="secondary-btn"
+                                                onClick={() =>
+                                                    openProgressModal(
+                                                        task
+                                                    )
+                                                }
+                                                disabled={
+                                                    task.status ===
+                                                    "completed"
+                                                }
+                                            >
+                                                <i className="bi bi-pencil-square"></i>
+
+                                                Update Progress
+                                            </button>
+
+
+                                            <button
+                                                className="secondary-btn"
+                                                onClick={() =>
+                                                    openLogModal(
+                                                        task
+                                                    )
+                                                }
+                                            >
+                                                <i className="bi bi-journal-text"></i>
+
+                                                Add Daily Log
+                                            </button>
+
                                         </div>
 
                                     </div>
-
-
-                                    {/* Progress */}
-
-                                    <div className="task-progress">
-
-                                        <div className="progress-header">
-
-                                            <span>
-                                                Progress
-                                            </span>
-
-                                            <strong>
-                                                {task.progress || 0}%
-                                            </strong>
-
-                                        </div>
-
-                                        <div className="progress-bar">
-
-                                            <div
-                                                className="progress-fill"
-                                                style={{
-                                                    width: `${task.progress || 0}%`,
-                                                }}
-                                            ></div>
-
-                                        </div>
-
-                                    </div>
-
-
-                                    {/* Actions */}
-
-                                    <div className="task-actions">
-
-                                        <button
-                                            className="secondary-btn"
-                                            onClick={() =>
-                                                openProgressModal(task)
-                                            }
-                                            disabled={
-                                                task.status ===
-                                                "completed"
-                                            }
-                                        >
-                                            <i className="bi bi-pencil-square"></i>
-                                            Update Progress
-                                        </button>
-
-
-                                        <button
-                                            className="secondary-btn"
-                                            onClick={() =>
-                                                openLogModal(task)
-                                            }
-                                        >
-                                            <i className="bi bi-journal-text"></i>
-                                            Add Daily Log
-                                        </button>
-
-                                    </div>
-
-                                </div>
-
-                            );
-                        })}
+                                );
+                            }
+                        )}
 
                     </div>
 
@@ -684,7 +1118,7 @@ const MyWork = () => {
 
 
             {/* =========================================
-                WORK LOGS
+                MY DAILY WORK LOGS
             ========================================= */}
 
             <div className="work-section">
@@ -692,11 +1126,16 @@ const MyWork = () => {
                 <div className="section-header">
 
                     <div>
-                        <h2>My Daily Work Logs</h2>
+
+                        <h2>
+                            My Daily Work Logs
+                        </h2>
 
                         <p>
-                            Your submitted daily work updates.
+                            Your submitted daily work
+                            updates.
                         </p>
+
                     </div>
 
                 </div>
@@ -708,10 +1147,13 @@ const MyWork = () => {
 
                         <i className="bi bi-journal-x"></i>
 
-                        <h3>No Work Logs Yet</h3>
+                        <h3>
+                            No Work Logs Yet
+                        </h3>
 
                         <p>
-                            Start submitting your daily work updates.
+                            Start submitting your daily
+                            work updates.
                         </p>
 
                     </div>
@@ -720,89 +1162,117 @@ const MyWork = () => {
 
                     <div className="work-log-list">
 
-                        {workLogs.map((log) => (
+                        {workLogs.map(
+                            (log) => (
 
-                            <div
-                                className="work-log-card"
-                                key={log._id}
-                            >
+                                <div
+                                    className="work-log-card"
+                                    key={
+                                        log._id
+                                    }
+                                >
 
-                                <div className="work-log-header">
+                                    <div className="work-log-header">
 
-                                    <div>
+                                        <div>
 
-                                        <h3>
-                                            {log.task?.title ||
-                                                "Task"}
-                                        </h3>
+                                            <h3>
+                                                {
+                                                    log.task
+                                                        ?.title ||
+                                                    "Task"
+                                                }
+                                            </h3>
 
-                                        <span>
-                                            {formatDate(log.date)}
-                                        </span>
+                                            <span>
+                                                {formatDate(
+                                                    log.date
+                                                )}
+                                            </span>
 
-                                    </div>
-
-                                    <strong>
-                                        {log.progress}%
-                                    </strong>
-
-                                </div>
-
-
-                                <div className="work-log-details">
-
-                                    <div>
-                                        <span>
-                                            Hours Worked
-                                        </span>
+                                        </div>
 
                                         <strong>
-                                            {log.hoursWorked || 0}
+                                            {
+                                                log.progress
+                                            }%
                                         </strong>
+
                                     </div>
 
 
-                                    <div>
-                                        <span>
-                                            Work Done
-                                        </span>
+                                    <div className="work-log-details">
 
-                                        <p>
-                                            {log.workDescription}
-                                        </p>
+                                        <div>
+
+                                            <span>
+                                                Hours Worked
+                                            </span>
+
+                                            <strong>
+                                                {
+                                                    log.hoursWorked ||
+                                                    0
+                                                }
+                                            </strong>
+
+                                        </div>
+
+
+                                        <div>
+
+                                            <span>
+                                                Work Done
+                                            </span>
+
+                                            <p>
+                                                {
+                                                    log.workDescription
+                                                }
+                                            </p>
+
+                                        </div>
+
+
+                                        {log.blockers && (
+                                            <div>
+
+                                                <span>
+                                                    Blockers
+                                                </span>
+
+                                                <p>
+                                                    {
+                                                        log.blockers
+                                                    }
+                                                </p>
+
+                                            </div>
+                                        )}
+
+
+                                        {log.nextPlan && (
+                                            <div>
+
+                                                <span>
+                                                    Next Plan
+                                                </span>
+
+                                                <p>
+                                                    {
+                                                        log.nextPlan
+                                                    }
+                                                </p>
+
+                                            </div>
+                                        )}
+
                                     </div>
-
-
-                                    {log.blockers && (
-                                        <div>
-                                            <span>
-                                                Blockers
-                                            </span>
-
-                                            <p>
-                                                {log.blockers}
-                                            </p>
-                                        </div>
-                                    )}
-
-
-                                    {log.nextPlan && (
-                                        <div>
-                                            <span>
-                                                Next Plan
-                                            </span>
-
-                                            <p>
-                                                {log.nextPlan}
-                                            </p>
-                                        </div>
-                                    )}
 
                                 </div>
 
-                            </div>
-
-                        ))}
+                            )
+                        )}
 
                     </div>
 
@@ -824,17 +1294,26 @@ const MyWork = () => {
                         <div className="modal-header">
 
                             <div>
-                                <h2>Update Progress</h2>
+
+                                <h2>
+                                    Update Progress
+                                </h2>
 
                                 <p>
-                                    {selectedTask?.title}
+                                    {
+                                        selectedTask?.title
+                                    }
                                 </p>
+
                             </div>
+
 
                             <button
                                 className="modal-close"
                                 onClick={() =>
-                                    setShowProgressModal(false)
+                                    setShowProgressModal(
+                                        false
+                                    )
                                 }
                             >
                                 <i className="bi bi-x-lg"></i>
@@ -844,11 +1323,15 @@ const MyWork = () => {
 
 
                         <form
-                            onSubmit={handleUpdateProgress}
+                            onSubmit={
+                                handleUpdateProgress
+                            }
                         >
 
                             <div className="progress-value">
-                                {progressData.progress}%
+                                {
+                                    progressData.progress
+                                }%
                             </div>
 
 
@@ -857,7 +1340,9 @@ const MyWork = () => {
                                 min="0"
                                 max="100"
                                 step="5"
-                                value={progressData.progress}
+                                value={
+                                    progressData.progress
+                                }
                                 onChange={(e) =>
                                     handleProgressChange(
                                         e.target.value
@@ -867,9 +1352,19 @@ const MyWork = () => {
 
 
                             <div className="range-labels">
-                                <span>0%</span>
-                                <span>50%</span>
-                                <span>100%</span>
+
+                                <span>
+                                    0%
+                                </span>
+
+                                <span>
+                                    50%
+                                </span>
+
+                                <span>
+                                    100%
+                                </span>
+
                             </div>
 
 
@@ -888,7 +1383,8 @@ const MyWork = () => {
                                         setProgressData({
                                             ...progressData,
                                             remarks:
-                                                e.target.value,
+                                                e.target
+                                                    .value,
                                         })
                                     }
                                     placeholder="Add any remarks..."
@@ -903,11 +1399,14 @@ const MyWork = () => {
                                     type="button"
                                     className="cancel-btn"
                                     onClick={() =>
-                                        setShowProgressModal(false)
+                                        setShowProgressModal(
+                                            false
+                                        )
                                     }
                                 >
                                     Cancel
                                 </button>
+
 
                                 <button
                                     type="submit"
@@ -943,17 +1442,25 @@ const MyWork = () => {
                         <div className="modal-header">
 
                             <div>
-                                <h2>Daily Work Log</h2>
+
+                                <h2>
+                                    Daily Work Log
+                                </h2>
 
                                 <p>
-                                    Submit today's work update.
+                                    Submit today's work
+                                    update.
                                 </p>
+
                             </div>
+
 
                             <button
                                 className="modal-close"
                                 onClick={() =>
-                                    setShowLogModal(false)
+                                    setShowLogModal(
+                                        false
+                                    )
                                 }
                             >
                                 <i className="bi bi-x-lg"></i>
@@ -963,7 +1470,9 @@ const MyWork = () => {
 
 
                         <form
-                            onSubmit={handleLogSubmit}
+                            onSubmit={
+                                handleLogSubmit
+                            }
                         >
 
                             <div className="form-grid">
@@ -975,37 +1484,51 @@ const MyWork = () => {
                                     </label>
 
                                     <select
-                                        value={logForm.task}
+                                        value={
+                                            logForm.task
+                                        }
                                         onChange={(e) =>
                                             setLogForm({
                                                 ...logForm,
-                                                task: e.target.value,
+                                                task: e.target
+                                                    .value,
                                             })
                                         }
                                         required
                                     >
+
                                         <option value="">
                                             Select Task
                                         </option>
+
 
                                         {tasks
                                             .filter(
                                                 (task) =>
                                                     task.status !==
-                                                    "completed" &&
+                                                        "completed" &&
                                                     task.status !==
-                                                    "cancelled"
+                                                        "cancelled"
                                             )
-                                            .map((task) => (
+                                            .map(
+                                                (task) => (
 
-                                                <option
-                                                    key={task._id}
-                                                    value={task._id}
-                                                >
-                                                    {task.title}
-                                                </option>
+                                                    <option
+                                                        key={
+                                                            task._id
+                                                        }
+                                                        value={
+                                                            task._id
+                                                        }
+                                                    >
+                                                        {
+                                                            task.title
+                                                        }
+                                                    </option>
 
-                                            ))}
+                                                )
+                                            )}
+
                                     </select>
 
                                 </div>
@@ -1019,11 +1542,14 @@ const MyWork = () => {
 
                                     <input
                                         type="date"
-                                        value={logForm.date}
+                                        value={
+                                            logForm.date
+                                        }
                                         onChange={(e) =>
                                             setLogForm({
                                                 ...logForm,
-                                                date: e.target.value,
+                                                date: e.target
+                                                    .value,
                                             })
                                         }
                                         required
@@ -1042,12 +1568,15 @@ const MyWork = () => {
                                         type="number"
                                         min="0"
                                         max="100"
-                                        value={logForm.progress}
+                                        value={
+                                            logForm.progress
+                                        }
                                         onChange={(e) =>
                                             setLogForm({
                                                 ...logForm,
                                                 progress:
-                                                    e.target.value,
+                                                    e.target
+                                                        .value,
                                             })
                                         }
                                         required
@@ -1073,7 +1602,8 @@ const MyWork = () => {
                                             setLogForm({
                                                 ...logForm,
                                                 hoursWorked:
-                                                    e.target.value,
+                                                    e.target
+                                                        .value,
                                             })
                                         }
                                         placeholder="e.g. 6.5"
@@ -1099,7 +1629,8 @@ const MyWork = () => {
                                         setLogForm({
                                             ...logForm,
                                             workDescription:
-                                                e.target.value,
+                                                e.target
+                                                    .value,
                                         })
                                     }
                                     placeholder="What did you work on today?"
@@ -1124,7 +1655,8 @@ const MyWork = () => {
                                         setLogForm({
                                             ...logForm,
                                             blockers:
-                                                e.target.value,
+                                                e.target
+                                                    .value,
                                         })
                                     }
                                     placeholder="Any issue or blocker?"
@@ -1148,7 +1680,8 @@ const MyWork = () => {
                                         setLogForm({
                                             ...logForm,
                                             nextPlan:
-                                                e.target.value,
+                                                e.target
+                                                    .value,
                                         })
                                     }
                                     placeholder="What will you work on next?"
@@ -1163,11 +1696,14 @@ const MyWork = () => {
                                     type="button"
                                     className="cancel-btn"
                                     onClick={() =>
-                                        setShowLogModal(false)
+                                        setShowLogModal(
+                                            false
+                                        )
                                     }
                                 >
                                     Cancel
                                 </button>
+
 
                                 <button
                                     type="submit"
@@ -1177,6 +1713,321 @@ const MyWork = () => {
                                     {saving
                                         ? "Submitting..."
                                         : "Submit Work Log"}
+                                </button>
+
+                            </div>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            )}
+
+
+            {/* =========================================
+                ADD MY WORK MODAL
+            ========================================= */}
+
+            {showSelfWorkModal && (
+
+                <div className="modal-overlay">
+
+                    <div className="work-modal large-modal">
+
+                        <div className="modal-header">
+
+                            <div>
+
+                                <h2>
+                                    Add My Work
+                                </h2>
+
+                                <p>
+                                    Record work you completed
+                                    yourself.
+                                </p>
+
+                            </div>
+
+
+                            <button
+                                className="modal-close"
+                                onClick={() =>
+                                    setShowSelfWorkModal(
+                                        false
+                                    )
+                                }
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+
+                        </div>
+
+
+                        <form
+                            onSubmit={
+                                handleSelfWorkSubmit
+                            }
+                        >
+
+                            {/* Work Title */}
+
+                            <div className="form-group">
+
+                                <label>
+                                    Work Title *
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="title"
+                                    value={
+                                        selfWorkForm.title
+                                    }
+                                    onChange={
+                                        handleSelfWorkChange
+                                    }
+                                    placeholder="e.g. Developed Login API"
+                                    required
+                                />
+
+                            </div>
+
+
+                            {/* Description */}
+
+                            <div className="form-group">
+
+                                <label>
+                                    Description
+                                </label>
+
+                                <textarea
+                                    rows="3"
+                                    name="description"
+                                    value={
+                                        selfWorkForm.description
+                                    }
+                                    onChange={
+                                        handleSelfWorkChange
+                                    }
+                                    placeholder="Describe what you worked on..."
+                                />
+
+                            </div>
+
+
+                            {/* Date / Time */}
+
+                            <div className="form-grid">
+
+                                <div className="form-group">
+
+                                    <label>
+                                        Work Date *
+                                    </label>
+
+                                    <input
+                                        type="date"
+                                        name="date"
+                                        value={
+                                            selfWorkForm.date
+                                        }
+                                        onChange={
+                                            handleSelfWorkChange
+                                        }
+                                        required
+                                    />
+
+                                </div>
+
+
+                                <div className="form-group">
+
+                                    <label>
+                                        Start Time *
+                                    </label>
+
+                                    <input
+                                        type="time"
+                                        name="startTime"
+                                        value={
+                                            selfWorkForm.startTime
+                                        }
+                                        onChange={
+                                            handleSelfWorkChange
+                                        }
+                                        required
+                                    />
+
+                                </div>
+
+
+                                <div className="form-group">
+
+                                    <label>
+                                        End Time *
+                                    </label>
+
+                                    <input
+                                        type="time"
+                                        name="endTime"
+                                        value={
+                                            selfWorkForm.endTime
+                                        }
+                                        onChange={
+                                            handleSelfWorkChange
+                                        }
+                                        required
+                                    />
+
+                                </div>
+
+
+                                <div className="form-group">
+
+                                    <label>
+                                        Hours Worked
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        value={
+                                            selfWorkForm.hoursWorked
+                                        }
+                                        readOnly
+                                        placeholder="Automatically calculated"
+                                    />
+
+                                </div>
+
+                            </div>
+
+
+                            {/* Progress / Priority */}
+
+                            <div className="form-grid">
+
+                                <div className="form-group">
+
+                                    <label>
+                                        Progress (%)
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        name="progress"
+                                        min="0"
+                                        max="100"
+                                        value={
+                                            selfWorkForm.progress
+                                        }
+                                        onChange={
+                                            handleSelfWorkChange
+                                        }
+                                    />
+
+                                </div>
+
+
+                                <div className="form-group">
+
+                                    <label>
+                                        Priority
+                                    </label>
+
+                                    <select
+                                        name="priority"
+                                        value={
+                                            selfWorkForm.priority
+                                        }
+                                        onChange={
+                                            handleSelfWorkChange
+                                        }
+                                    >
+
+                                        <option value="low">
+                                            Low
+                                        </option>
+
+                                        <option value="medium">
+                                            Medium
+                                        </option>
+
+                                        <option value="high">
+                                            High
+                                        </option>
+
+                                        <option value="urgent">
+                                            Urgent
+                                        </option>
+
+                                    </select>
+
+                                </div>
+
+                            </div>
+
+
+                            {/* Remarks */}
+
+                            <div className="form-group">
+
+                                <label>
+                                    Remarks
+                                </label>
+
+                                <textarea
+                                    rows="3"
+                                    name="remarks"
+                                    value={
+                                        selfWorkForm.remarks
+                                    }
+                                    onChange={
+                                        handleSelfWorkChange
+                                    }
+                                    placeholder="Any additional notes..."
+                                />
+
+                            </div>
+
+
+                            {/* Actions */}
+
+                            <div className="modal-actions">
+
+                                <button
+                                    type="button"
+                                    className="cancel-btn"
+                                    onClick={() =>
+                                        setShowSelfWorkModal(
+                                            false
+                                        )
+                                    }
+                                    disabled={saving}
+                                >
+                                    Cancel
+                                </button>
+
+
+                                <button
+                                    type="submit"
+                                    className="primary-btn"
+                                    disabled={saving}
+                                >
+                                    {saving ? (
+                                        <>
+                                            <span className="button-spinner"></span>
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="bi bi-check-lg"></i>
+                                            Save My Work
+                                        </>
+                                    )}
                                 </button>
 
                             </div>
