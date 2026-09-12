@@ -26,10 +26,37 @@ export const getCompanyUsers = async (companyId) => {
 
 
 // ==========================================
-// Get Company Counselors
+// Get Company Employees & Interns
 // ==========================================
 
-export const getCompanyCounselors = async (companyId) => {
+export const getCompanyEmployeesAndInterns = async (
+    companyId
+) => {
+    const response = await api.get(
+        `/users/company/${companyId}`
+    );
+
+    const users = response.data?.users || [];
+
+    return {
+        ...response.data,
+        users: users.filter(
+            (user) =>
+                user.role === "employee" ||
+                user.role === "intern"
+        ),
+    };
+};
+
+
+// ==========================================
+// Get Company Employees
+// Backward-compatible function
+// ==========================================
+
+export const getCompanyCounselors = async (
+    companyId
+) => {
     const response = await api.get(
         `/users/company/${companyId}/counselors`
     );
@@ -58,7 +85,10 @@ export const createUser = async (userData) => {
 // Super Admin only
 // ==========================================
 
-export const updateUser = async (userId, userData) => {
+export const updateUser = async (
+    userId,
+    userData
+) => {
     const response = await api.put(
         `/users/${userId}`,
         userData
@@ -73,7 +103,10 @@ export const updateUser = async (userId, userData) => {
 // Super Admin only
 // ==========================================
 
-export const updateUserStatus = async (userId, isActive) => {
+export const updateUserStatus = async (
+    userId,
+    isActive
+) => {
     const response = await api.put(
         `/users/${userId}/status`,
         {

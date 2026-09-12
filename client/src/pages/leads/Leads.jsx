@@ -1,1992 +1,2411 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 import {
-  getLeads,
-  createLead,
-  updateLead,
-  updateLeadStatus,
-  addCommunication,
+    getLeads,
+    createLead,
+    updateLead,
+    updateLeadStatus,
+    addCommunication,
 } from "../../services/leadService";
 
-import { getCompanyCounselors } from "../../services/userService";
+import { getCompanyEmployeesAndInterns } from "../../services/userService";
 
-const initialForm = {
-  fullName: "",
-  contactNumber: "",
-  email: "",
-  city: "",
-  courseInterested: "",
-  inquiryType: "course",
-  leadSource: "website",
-  assignedCounselor: "",
-  priority: "medium",
-  status: "new",
-  nextFollowUpDate: "",
-  notes: "",
-  expectedFees: "",
-  admissionDate: "",
-};
+import "./Leads.css";
 
 const Leads = () => {
-  const { companyId } = useParams();
+    const { user } = useAuth();
+    const { companyId: routeCompanyId } = useParams();
 
-  const [leads, setLeads] = useState([]);
-  const [counselors, setCounselors] = useState([]);
+    // ============================================================
+    // COMPANY ID
+    // ============================================================
 
-  const [loading, setLoading] = useState(true);
-  const [counselorLoading, setCounselorLoading] =
-    useState(true);
+    const companyId =
+        routeCompanyId ||
+        user?.company?._id ||
+        user?.company ||
+        localStorage.getItem("companyId");
 
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+    // ============================================================
+    // STATES
+    // ============================================================
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [priorityFilter, setPriorityFilter] =
-    useState("");
-  const [sourceFilter, setSourceFilter] = useState("");
+    const [leads, setLeads] = useState([]);
+    const [employeesAndInterns, setEmployeesAndInterns] = useState([]);
 
-  // =========================
-  // PAGINATION
-  // =========================
+    const [loading, setLoading] = useState(true);
+    const [userLoading, setUserLoading] = useState(true);
 
-  const [page, setPage] = useState(1);
-  const [limit] = useState(20);
+    const [error, setError] = useState("");
 
-  const [pagination, setPagination] = useState({
-    total: 0,
-    page: 1,
-    limit: 20,
-    totalPages: 0,
-    hasNextPage: false,
-    hasPreviousPage: false,
-  });
+    const [showModal, setShowModal] = useState(false);
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
+    const [showCommunicationModal, setShowCommunicationModal] =
+        useState(false);
 
-  const [showModal, setShowModal] = useState(false);
+    const [editingLead, setEditingLead] = useState(null);
+    const [selectedLead, setSelectedLead] = useState(null);
 
-  const [showDetailsModal, setShowDetailsModal] =
-    useState(false);
+    // ============================================================
+    // FILTER STATES
+    // ============================================================
 
-  const [editingLead, setEditingLead] = useState(null);
-
-  const [selectedLead, setSelectedLead] =
-    useState(null);
-
-  const [formData, setFormData] = useState(initialForm);
-
-  const [communication, setCommunication] =
-    useState({
-      type: "call",
-      message: "",
+    const [filters, setFilters] = useState({
+        search: "",
+        status: "",
+        priority: "",
+        inquiryType: "",
+        assignedCounselor: "",
+        startDate: "",
+        endDate: "",
+        page: 1,
+        limit: 10,
     });
 
-  // =========================
-  // FETCH DATA
-  // =========================
-
-  useEffect(() => {
-    fetchLeads();
-  }, [
-    companyId,
-    page,
-    search,
-    statusFilter,
-    priorityFilter,
-    sourceFilter,
-  ]);
-
-  useEffect(() => {
-    fetchCounselors();
-  }, [companyId]);
-
-  // =========================
-  // FETCH LEADS
-  // =========================
-
-  const fetchLeads = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const response = await getLeads(companyId, {
-        page,
-        limit,
-        search,
-        status: statusFilter,
-        priority: priorityFilter,
-        leadSource: sourceFilter,
-      });
-
-      setLeads(response?.data || []);
-
-      setPagination(
-        response?.pagination || {
-          total: 0,
-          page: 1,
-          limit,
-          totalPages: 0,
-          hasNextPage: false,
-          hasPreviousPage: false,
-        }
-      );
-    } catch (error) {
-      console.error("Lead fetch error:", error);
-
-      setError(
-        error.response?.data?.message ||
-          "Unable to load leads."
-      );
-
-      setLeads([]);
-
-      setPagination({
-        total: 0,
+    const [pagination, setPagination] = useState({
         page: 1,
-        limit,
-        totalPages: 0,
+        limit: 10,
+        total: 0,
+        totalPages: 1,
         hasNextPage: false,
         hasPreviousPage: false,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // =========================
-  // FETCH COUNSELORS
-  // =========================
-
-  const fetchCounselors = async () => {
-    try {
-      setCounselorLoading(true);
-
-      const data =
-        await getCompanyCounselors(companyId);
-
-      setCounselors(data.counselors || []);
-    } catch (error) {
-      console.error(
-        "Counselor fetch error:",
-        error
-      );
-    } finally {
-      setCounselorLoading(false);
-    }
-  };
-
-  // =========================
-  // FORM CHANGE
-  // =========================
-
-  const handleFormChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  // =========================
-  // COMMUNICATION CHANGE
-  // =========================
-
-  const handleCommunicationChange = (e) => {
-    setCommunication({
-      ...communication,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  // =========================
-  // OPEN ADD MODAL
-  // =========================
-
-  const openAddModal = () => {
-    setEditingLead(null);
-    setFormData(initialForm);
-    setError("");
-    setShowModal(true);
-  };
-
-  // =========================
-  // OPEN EDIT MODAL
-  // =========================
-
-  const openEditModal = (lead) => {
-    setEditingLead(lead);
-
-    setFormData({
-      fullName: lead.fullName || "",
-      contactNumber: lead.contactNumber || "",
-      email: lead.email || "",
-      city: lead.city || "",
-      courseInterested:
-        lead.courseInterested || "",
-      inquiryType:
-        lead.inquiryType || "course",
-      leadSource:
-        lead.leadSource || "website",
-      assignedCounselor:
-        lead.assignedCounselor?._id || "",
-      priority: lead.priority || "medium",
-      status: lead.status || "new",
-      nextFollowUpDate: lead.nextFollowUpDate
-        ? formatDateForInput(
-            lead.nextFollowUpDate
-          )
-        : "",
-      notes: lead.notes || "",
-      expectedFees:
-        lead.expectedFees ?? "",
-      admissionDate: lead.admissionDate
-        ? formatDateForInput(
-            lead.admissionDate
-          )
-        : "",
     });
 
-    setError("");
-    setShowDetailsModal(false);
-    setShowModal(true);
-  };
+    // ============================================================
+    // FORM STATES
+    // ============================================================
 
-  // =========================
-  // CREATE / UPDATE
-  // =========================
+    const initialForm = {
+        fullName: "",
+        contactNumber: "",
+        email: "",
+        city: "",
+        courseInterested: "",
+        inquiryType: "course",
+        leadSource: "",
+        assignedCounselor: "",
+        priority: "medium",
+        status: "new",
+        nextFollowUpDate: "",
+        notes: "",
+        expectedFees: "",
+        admissionDate: "",
+    };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    const [formData, setFormData] = useState(initialForm);
 
-    try {
-      setError("");
-      setSuccess("");
-
-      const payload = {
-        ...formData,
-        company: companyId,
-      };
-
-      if (!formData.assignedCounselor) {
-        payload.assignedCounselor = null;
-      }
-
-      if (!formData.expectedFees) {
-        payload.expectedFees = null;
-      }
-
-      if (!formData.nextFollowUpDate) {
-        payload.nextFollowUpDate = null;
-      }
-
-      if (!formData.admissionDate) {
-        payload.admissionDate = null;
-      }
-
-      if (editingLead) {
-        await updateLead(
-          editingLead._id,
-          payload
-        );
-
-        setSuccess(
-          "Lead updated successfully."
-        );
-      } else {
-        await createLead(payload);
-
-        setSuccess(
-          "Lead created successfully."
-        );
-      }
-
-      setShowModal(false);
-      setEditingLead(null);
-      setFormData(initialForm);
-
-      // Go back to first page after creating/updating
-      setPage(1);
-
-      await fetchLeads();
-
-      setTimeout(() => {
-        setSuccess("");
-      }, 3000);
-    } catch (error) {
-      console.error(
-        "Lead save error:",
-        error
-      );
-
-      setError(
-        error.response?.data?.message ||
-          "Unable to save lead."
-      );
-    }
-  };
-
-  // =========================
-  // STATUS
-  // =========================
-
-  const handleStatusChange = async (
-    leadId,
-    status
-  ) => {
-    try {
-      setError("");
-
-      const response =
-        await updateLeadStatus(
-          leadId,
-          status
-        );
-
-      setLeads((currentLeads) =>
-        currentLeads.map((lead) =>
-          lead._id === leadId
-            ? {
-                ...lead,
-                status:
-                  response?.lead?.status ||
-                  status,
-              }
-            : lead
-        )
-      );
-
-      if (selectedLead?._id === leadId) {
-        setSelectedLead({
-          ...selectedLead,
-          status,
-        });
-      }
-
-      setSuccess(
-        "Lead status updated successfully."
-      );
-
-      setTimeout(() => {
-        setSuccess("");
-      }, 2500);
-    } catch (error) {
-      setError(
-        error.response?.data?.message ||
-          "Unable to update status."
-      );
-    }
-  };
-
-  // =========================
-  // COMMUNICATION
-  // =========================
-
-  const handleAddCommunication = async (
-    e
-  ) => {
-    e.preventDefault();
-
-    if (!communication.message.trim()) {
-      return;
-    }
-
-    try {
-      setError("");
-
-      const response =
-        await addCommunication(
-          selectedLead._id,
-          communication
-        );
-
-      setSelectedLead(response.lead);
-
-      setCommunication({
+    const [communicationData, setCommunicationData] = useState({
         type: "call",
         message: "",
-      });
-
-      await fetchLeads();
-
-      setSuccess(
-        "Communication added successfully."
-      );
-
-      setTimeout(() => {
-        setSuccess("");
-      }, 2500);
-    } catch (error) {
-      setError(
-        error.response?.data?.message ||
-          "Unable to add communication."
-      );
-    }
-  };
-
-  // =========================
-  // CLEAR FILTERS
-  // =========================
-
-  const clearFilters = () => {
-    setSearch("");
-    setStatusFilter("");
-    setPriorityFilter("");
-    setSourceFilter("");
-    setPage(1);
-  };
-
-  // =========================
-  // FILTER
-  // =========================
-  // Backend already performs filtering.
-  // This useMemo is only a safety layer for
-  // the current page of results.
-
-  const filteredLeads = useMemo(() => {
-    if (!Array.isArray(leads)) {
-      return [];
-    }
-
-    return leads.filter((lead) => {
-      const searchText =
-        search.toLowerCase();
-
-      const matchesSearch =
-        lead.fullName
-          ?.toLowerCase()
-          .includes(searchText) ||
-        lead.contactNumber
-          ?.toLowerCase()
-          .includes(searchText) ||
-        lead.email
-          ?.toLowerCase()
-          .includes(searchText) ||
-        lead.city
-          ?.toLowerCase()
-          .includes(searchText) ||
-        lead.courseInterested
-          ?.toLowerCase()
-          .includes(searchText);
-
-      const matchesStatus =
-        !statusFilter ||
-        lead.status === statusFilter;
-
-      const matchesPriority =
-        !priorityFilter ||
-        lead.priority === priorityFilter;
-
-      const matchesSource =
-        !sourceFilter ||
-        lead.leadSource === sourceFilter;
-
-      return (
-        matchesSearch &&
-        matchesStatus &&
-        matchesPriority &&
-        matchesSource
-      );
     });
-  }, [
-    leads,
-    search,
-    statusFilter,
-    priorityFilter,
-    sourceFilter,
-  ]);
 
-  // =========================
-  // PAGINATION HANDLERS
-  // =========================
+    // ============================================================
+    // FETCH LEADS
+    // ============================================================
 
-  const handlePreviousPage = () => {
-    if (pagination.hasPreviousPage) {
-      setPage((currentPage) =>
-        Math.max(currentPage - 1, 1)
-      );
-    }
-  };
+    const fetchLeads = async () => {
+        if (!companyId) {
+            setLoading(false);
+            return;
+        }
 
-  const handleNextPage = () => {
-    if (pagination.hasNextPage) {
-      setPage((currentPage) =>
-        currentPage + 1
-      );
-    }
-  };
+        try {
+            setLoading(true);
+            setError("");
 
-  // =========================
-  // HELPERS
-  // =========================
+            const response = await getLeads(
+                companyId,
+                filters
+            );
 
-  const formatStatus = (value) => {
-    if (!value) return "-";
+            const leadData =
+                response?.data ||
+                response?.leads ||
+                [];
 
-    return value
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (letter) =>
-        letter.toUpperCase()
-      );
-  };
+            setLeads(leadData);
 
-  const formatDate = (date) => {
-    if (!date) return "-";
+            if (response?.pagination) {
+                setPagination({
+                    page:
+                        response.pagination.page ||
+                        1,
 
-    return new Date(date).toLocaleDateString(
-      "en-IN",
-      {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }
-    );
-  };
+                    limit:
+                        response.pagination.limit ||
+                        10,
 
-  const formatDateForInput = (date) => {
-    const d = new Date(date);
+                    total:
+                        response.pagination.total ||
+                        0,
 
-    const year = d.getFullYear();
+                    totalPages:
+                        response.pagination.totalPages ||
+                        1,
 
-    const month = String(
-      d.getMonth() + 1
-    ).padStart(2, "0");
+                    hasNextPage:
+                        response.pagination.hasNextPage ||
+                        false,
 
-    const day = String(
-      d.getDate()
-    ).padStart(2, "0");
+                    hasPreviousPage:
+                        response.pagination.hasPreviousPage ||
+                        false,
+                });
+            }
+        } catch (err) {
+            console.error(
+                "Fetch Leads Error:",
+                err
+            );
 
-    return `${year}-${month}-${day}`;
-  };
-
-  const getStatusClass = (status) => {
-    const classes = {
-      new: "status-new",
-      contacted: "status-contacted",
-      interested: "status-interested",
-      follow_up: "status-followup",
-      converted: "status-converted",
-      not_interested:
-        "status-not-interested",
-      closed: "status-closed",
+            setError(
+                err?.response?.data?.message ||
+                    "Failed to load leads"
+            );
+        } finally {
+            setLoading(false);
+        }
     };
+
+    // ============================================================
+    // FETCH EMPLOYEES + INTERNS
+    // ============================================================
+
+    const fetchEmployeesAndInterns = async () => {
+        if (!companyId) {
+            setUserLoading(false);
+            return;
+        }
+
+        try {
+            setUserLoading(true);
+
+            const response =
+                await getCompanyEmployeesAndInterns(
+                    companyId
+                );
+
+            setEmployeesAndInterns(
+                response?.users || []
+            );
+        } catch (err) {
+            console.error(
+                "Fetch Employees and Interns Error:",
+                err
+            );
+
+            setEmployeesAndInterns([]);
+        } finally {
+            setUserLoading(false);
+        }
+    };
+
+    // ============================================================
+    // INITIAL LOAD
+    // ============================================================
+
+    useEffect(() => {
+        if (!companyId) return;
+
+        fetchEmployeesAndInterns();
+    }, [companyId]);
+
+    // ============================================================
+    // FETCH LEADS WHEN FILTER CHANGES
+    // ============================================================
+
+    useEffect(() => {
+        if (!companyId) return;
+
+        fetchLeads();
+    }, [
+        companyId,
+        filters.search,
+        filters.status,
+        filters.priority,
+        filters.inquiryType,
+        filters.assignedCounselor,
+        filters.startDate,
+        filters.endDate,
+        filters.page,
+        filters.limit,
+    ]);
+
+    // ============================================================
+    // HANDLE FILTER
+    // ============================================================
+
+    const handleFilterChange = (e) => {
+        const { name, value } = e.target;
+
+        setFilters((prev) => ({
+            ...prev,
+            [name]: value,
+            page: 1,
+        }));
+    };
+
+    const clearFilters = () => {
+        setFilters({
+            search: "",
+            status: "",
+            priority: "",
+            inquiryType: "",
+            assignedCounselor: "",
+            startDate: "",
+            endDate: "",
+            page: 1,
+            limit: 10,
+        });
+    };
+
+    // ============================================================
+    // HANDLE FORM CHANGE
+    // ============================================================
+
+    const handleFormChange = (e) => {
+        const { name, value } = e.target;
+
+        setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+    };
+
+    // ============================================================
+    // OPEN CREATE MODAL
+    // ============================================================
+
+    const handleAddLead = () => {
+        setEditingLead(null);
+        setFormData(initialForm);
+        setShowModal(true);
+    };
+
+    // ============================================================
+    // OPEN EDIT MODAL
+    // ============================================================
+
+    const handleEditLead = (lead) => {
+        setEditingLead(lead);
+
+        setFormData({
+            fullName: lead.fullName || "",
+            contactNumber:
+                lead.contactNumber || "",
+            email: lead.email || "",
+            city: lead.city || "",
+            courseInterested:
+                lead.courseInterested || "",
+            inquiryType:
+                lead.inquiryType || "course",
+            leadSource:
+                lead.leadSource || "",
+            assignedCounselor:
+                lead.assignedCounselor?._id ||
+                lead.assignedCounselor ||
+                "",
+            priority:
+                lead.priority || "medium",
+            status:
+                lead.status || "new",
+            nextFollowUpDate:
+                lead.nextFollowUpDate
+                    ? new Date(
+                          lead.nextFollowUpDate
+                      )
+                          .toISOString()
+                          .split("T")[0]
+                    : "",
+            notes: lead.notes || "",
+            expectedFees:
+                lead.expectedFees !== undefined &&
+                lead.expectedFees !== null
+                    ? lead.expectedFees
+                    : "",
+            admissionDate:
+                lead.admissionDate
+                    ? new Date(
+                          lead.admissionDate
+                      )
+                          .toISOString()
+                          .split("T")[0]
+                    : "",
+        });
+
+        setShowModal(true);
+    };
+
+    // ============================================================
+    // SUBMIT LEAD
+    // ============================================================
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        try {
+            setError("");
+
+            const payload = {
+                ...formData,
+                company: companyId,
+            };
+
+            if (payload.expectedFees === "") {
+                delete payload.expectedFees;
+            } else {
+                payload.expectedFees = Number(
+                    payload.expectedFees
+                );
+            }
+
+            if (!payload.assignedCounselor) {
+                delete payload.assignedCounselor;
+            }
+
+            if (!payload.nextFollowUpDate) {
+                delete payload.nextFollowUpDate;
+            }
+
+            if (!payload.admissionDate) {
+                delete payload.admissionDate;
+            }
+
+            if (editingLead) {
+                await updateLead(
+                    editingLead._id,
+                    payload
+                );
+            } else {
+                await createLead(payload);
+            }
+
+            setShowModal(false);
+            setEditingLead(null);
+            setFormData(initialForm);
+
+            await fetchLeads();
+        } catch (err) {
+            console.error(
+                "Save Lead Error:",
+                err
+            );
+
+            setError(
+                err?.response?.data?.message ||
+                    "Failed to save lead"
+            );
+        }
+    };
+
+    // ============================================================
+    // UPDATE STATUS
+    // ============================================================
+
+    const handleStatusChange = async (
+        leadId,
+        status
+    ) => {
+        try {
+            setError("");
+
+            await updateLeadStatus(
+                leadId,
+                status
+            );
+
+            await fetchLeads();
+
+            if (
+                selectedLead &&
+                selectedLead._id === leadId
+            ) {
+                setSelectedLead((prev) => ({
+                    ...prev,
+                    status,
+                }));
+            }
+        } catch (err) {
+            console.error(
+                "Update Lead Status Error:",
+                err
+            );
+
+            setError(
+                err?.response?.data?.message ||
+                    "Failed to update lead status"
+            );
+        }
+    };
+
+    // ============================================================
+    // VIEW DETAILS
+    // ============================================================
+
+    const handleViewDetails = (lead) => {
+        setSelectedLead(lead);
+        setShowDetailsModal(true);
+    };
+
+    // ============================================================
+    // COMMUNICATION
+    // ============================================================
+
+    const handleOpenCommunication = (
+        lead
+    ) => {
+        setSelectedLead(lead);
+
+        setCommunicationData({
+            type: "call",
+            message: "",
+        });
+
+        setShowCommunicationModal(true);
+    };
+
+    const handleCommunicationChange = (
+        e
+    ) => {
+        const { name, value } = e.target;
+
+        setCommunicationData((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+    };
+
+    const handleAddCommunication = async (
+        e
+    ) => {
+        e.preventDefault();
+
+        if (!selectedLead) return;
+
+        try {
+            setError("");
+
+            await addCommunication(
+                selectedLead._id,
+                communicationData
+            );
+
+            setShowCommunicationModal(false);
+
+            setCommunicationData({
+                type: "call",
+                message: "",
+            });
+
+            await fetchLeads();
+        } catch (err) {
+            console.error(
+                "Add Communication Error:",
+                err
+            );
+
+            setError(
+                err?.response?.data?.message ||
+                    "Failed to add communication"
+            );
+        }
+    };
+
+    // ============================================================
+    // PAGINATION
+    // ============================================================
+
+    const handlePreviousPage = () => {
+        if (!pagination.hasPreviousPage) {
+            return;
+        }
+
+        setFilters((prev) => ({
+            ...prev,
+            page: pagination.page - 1,
+        }));
+    };
+
+    const handleNextPage = () => {
+        if (!pagination.hasNextPage) {
+            return;
+        }
+
+        setFilters((prev) => ({
+            ...prev,
+            page: pagination.page + 1,
+        }));
+    };
+
+    // ============================================================
+    // HELPERS
+    // ============================================================
+
+    const getUserName = (
+        assignedUser
+    ) => {
+        if (!assignedUser) {
+            return "Unassigned";
+        }
+
+        if (
+            typeof assignedUser ===
+            "object"
+        ) {
+            return (
+                assignedUser.fullName ||
+                "Unknown"
+            );
+        }
+
+        const user =
+            employeesAndInterns.find(
+                (item) =>
+                    item._id ===
+                    assignedUser
+            );
+
+        return (
+            user?.fullName ||
+            "Unknown"
+        );
+    };
+
+    const getUserRole = (
+        assignedUser
+    ) => {
+        if (!assignedUser) {
+            return "";
+        }
+
+        if (
+            typeof assignedUser ===
+            "object"
+        ) {
+            return assignedUser.role || "";
+        }
+
+        const user =
+            employeesAndInterns.find(
+                (item) =>
+                    item._id ===
+                    assignedUser
+            );
+
+        return user?.role || "";
+    };
+
+    const getRoleLabel = (
+        role
+    ) => {
+        if (
+            role ===
+            "employee"
+        ) {
+            return "Employee";
+        }
+
+        if (
+            role ===
+            "intern"
+        ) {
+            return "Intern";
+        }
+
+        if (
+            role ===
+            "super_admin"
+        ) {
+            return "Super Admin";
+        }
+
+        return "";
+    };
+
+    const getStatusLabel = (
+        status
+    ) => {
+        const labels = {
+            new: "New",
+            contacted: "Contacted",
+            interested: "Interested",
+            follow_up: "Follow Up",
+            converted: "Converted",
+            not_interested:
+                "Not Interested",
+            closed: "Closed",
+        };
+
+        return (
+            labels[status] ||
+            status
+        );
+    };
+
+    const getInquiryTypeLabel = (
+        type
+    ) => {
+        const labels = {
+            course: "Course",
+            internship: "Internship",
+            corporate_training:
+                "Corporate Training",
+            project: "Project",
+            placement: "Placement",
+        };
+
+        return (
+            labels[type] ||
+            type ||
+            "-"
+        );
+    };
+
+    const getPriorityLabel = (
+        priority
+    ) => {
+        const labels = {
+            low: "Low",
+            medium: "Medium",
+            high: "High",
+        };
+
+        return (
+            labels[priority] ||
+            priority
+        );
+    };
+
+    const formatDate = (
+        date
+    ) => {
+        if (!date) return "-";
+
+        return new Date(
+            date
+        ).toLocaleDateString(
+            "en-IN",
+            {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+            }
+        );
+    };
+
+    // ============================================================
+    // NO COMPANY
+    // ============================================================
+
+    if (!companyId) {
+        return (
+            <div className="empty-state">
+                <i className="bi bi-building"></i>
+
+                <h3>
+                    Company Not Selected
+                </h3>
+
+                <p>
+                    Please select a company
+                    before managing leads.
+                </p>
+            </div>
+        );
+    }
+
+    // ============================================================
+    // RENDER
+    // ============================================================
 
     return (
-      classes[status] || "status-default"
-    );
-  };
+        <div className="leads-page">
 
-  const getPriorityClass = (priority) => {
-    const classes = {
-      low: "priority-low",
-      medium: "priority-medium",
-      high: "priority-high",
-    };
+            {/* ================= HEADER ================= */}
 
-    return classes[priority] || "";
-  };
+            <div className="page-header">
+                <div>
+                    <h1>
+                        Lead Management
+                    </h1>
 
-  return (
-    <div>
+                    <p>
+                        Manage leads,
+                        assignments,
+                        follow-ups and
+                        communications.
+                    </p>
+                </div>
 
-      {/* HEADER */}
-
-      <div className="dashboard-page-header lead-page-header">
-
-        <div>
-          <h2>Leads</h2>
-
-          <p>
-            Manage and track all company leads
-          </p>
-        </div>
-
-        <button
-          className="btn btn-primary"
-          onClick={openAddModal}
-        >
-          <i className="bi bi-plus-lg me-2"></i>
-          Add Lead
-        </button>
-
-      </div>
-
-      {/* ALERTS */}
-
-      {error && (
-        <div className="alert alert-danger">
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="alert alert-success">
-          {success}
-        </div>
-      )}
-
-      {/* FILTERS */}
-
-      <div className="lead-filter-card">
-
-        <div className="row g-3">
-
-          <div className="col-12 col-lg-4">
-
-            <div className="input-group">
-
-              <span className="input-group-text">
-                <i className="bi bi-search"></i>
-              </span>
-
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Search leads..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-              />
-
+                <button
+                    className="btn btn-primary"
+                    onClick={
+                        handleAddLead
+                    }
+                >
+                    <i className="bi bi-plus-lg"></i>
+                    Add Lead
+                </button>
             </div>
 
-          </div>
-
-          <div className="col-12 col-sm-4 col-lg-2">
-
-            <select
-              className="form-select"
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(
-                  e.target.value
-                );
-                setPage(1);
-              }}
-            >
-
-              <option value="">
-                All Status
-              </option>
-
-              <option value="new">
-                New
-              </option>
-
-              <option value="contacted">
-                Contacted
-              </option>
-
-              <option value="interested">
-                Interested
-              </option>
-
-              <option value="follow_up">
-                Follow-up
-              </option>
-
-              <option value="converted">
-                Converted
-              </option>
-
-              <option value="not_interested">
-                Not Interested
-              </option>
-
-              <option value="closed">
-                Closed
-              </option>
-
-            </select>
-
-          </div>
-
-          <div className="col-12 col-sm-4 col-lg-2">
-
-            <select
-              className="form-select"
-              value={priorityFilter}
-              onChange={(e) => {
-                setPriorityFilter(
-                  e.target.value
-                );
-                setPage(1);
-              }}
-            >
-
-              <option value="">
-                All Priority
-              </option>
-
-              <option value="high">
-                High
-              </option>
-
-              <option value="medium">
-                Medium
-              </option>
-
-              <option value="low">
-                Low
-              </option>
-
-            </select>
-
-          </div>
-
-          <div className="col-12 col-sm-4 col-lg-2">
-
-            <select
-              className="form-select"
-              value={sourceFilter}
-              onChange={(e) => {
-                setSourceFilter(
-                  e.target.value
-                );
-                setPage(1);
-              }}
-            >
-
-              <option value="">
-                All Sources
-              </option>
-
-              <option value="website">
-                Website
-              </option>
-
-              <option value="instagram">
-                Instagram
-              </option>
-
-              <option value="whatsapp">
-                WhatsApp
-              </option>
-
-              <option value="walkin">
-                Walk-in
-              </option>
-
-              <option value="facebook">
-                Facebook
-              </option>
-
-              <option value="linkedin">
-                LinkedIn
-              </option>
-
-              <option value="phone_call">
-                Phone Call
-              </option>
-
-              <option value="reference">
-                Reference
-              </option>
-
-              <option value="internship">
-                Internship
-              </option>
-
-              <option value="corporate_training">
-                Corporate Training
-              </option>
-
-              <option value="project_client">
-                Project Client
-              </option>
-
-            </select>
-
-          </div>
-
-          <div className="col-12 col-lg-2">
-
-            <button
-              className="btn btn-light w-100"
-              onClick={clearFilters}
-            >
-              <i className="bi bi-arrow-counterclockwise me-2"></i>
-              Clear
-            </button>
-
-          </div>
-
-        </div>
-
-      </div>
-
-      {/* TABLE */}
-
-      <div className="lead-table-card">
-
-        <div className="lead-table-header">
-
-          <h5>All Leads</h5>
-
-          <span>
-            {pagination.total} lead
-            {pagination.total !== 1
-              ? "s"
-              : ""}
-          </span>
-
-        </div>
-
-        {loading ? (
-          <div className="table-loading">
-
-            <div className="spinner-border text-primary"></div>
-
-            <p>Loading leads...</p>
-
-          </div>
-        ) : filteredLeads.length === 0 ? (
-          <div className="empty-state">
-
-            <i className="bi bi-people"></i>
-
-            <h5>No leads found</h5>
-
-            <p>
-              Add a lead or change your filters.
-            </p>
-
-          </div>
-        ) : (
-          <div className="table-responsive">
-
-            <table className="table align-middle lead-table">
-
-              <thead>
-
-                <tr>
-                  <th>Lead</th>
-                  <th>Contact</th>
-                  <th>Course</th>
-                  <th>Counselor</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Follow-up</th>
-                  <th>Fees</th>
-                  <th></th>
-                </tr>
-
-              </thead>
-
-              <tbody>
-
-                {filteredLeads.map((lead) => (
-
-                  <tr key={lead._id}>
-
-                    <td>
-
-                      <div className="lead-name">
-                        {lead.fullName}
-                      </div>
-
-                      <small>
-                        {lead.city || "-"}
-                      </small>
-
-                    </td>
-
-                    <td>
-
-                      <div>
-                        {lead.contactNumber}
-                      </div>
-
-                      <small>
-                        {lead.email || "-"}
-                      </small>
-
-                    </td>
-
-                    <td>
-                      {lead.courseInterested ||
-                        "-"}
-                    </td>
-
-                    <td>
-                      {lead.assignedCounselor
-                        ?.fullName || (
-                        <span className="text-muted">
-                          Unassigned
-                        </span>
-                      )}
-                    </td>
-
-                    <td>
-
-                      <span
-                        className={`priority-badge ${getPriorityClass(
-                          lead.priority
-                        )}`}
-                      >
-                        {formatStatus(
-                          lead.priority
-                        )}
-                      </span>
-
-                    </td>
-
-                    <td>
-
-                      <select
-                        className={`status-select ${getStatusClass(
-                          lead.status
-                        )}`}
-                        value={lead.status}
-                        onChange={(e) =>
-                          handleStatusChange(
-                            lead._id,
-                            e.target.value
-                          )
+            {/* ================= ERROR ================= */}
+
+            {error && (
+                <div className="alert alert-danger">
+                    <i className="bi bi-exclamation-triangle"></i>
+                    {error}
+                </div>
+            )}
+
+            {/* ================= FILTERS ================= */}
+
+            <div className="filters-card">
+
+                <div className="filter-group search-group">
+                    <label>
+                        Search
+                    </label>
+
+                    <div className="search-input">
+                        <i className="bi bi-search"></i>
+
+                        <input
+                            type="text"
+                            name="search"
+                            placeholder="Search by name, phone or email..."
+                            value={
+                                filters.search
+                            }
+                            onChange={
+                                handleFilterChange
+                            }
+                        />
+                    </div>
+                </div>
+
+                <div className="filter-group">
+                    <label>
+                        Status
+                    </label>
+
+                    <select
+                        name="status"
+                        value={
+                            filters.status
                         }
-                      >
+                        onChange={
+                            handleFilterChange
+                        }
+                    >
+                        <option value="">
+                            All Status
+                        </option>
 
                         <option value="new">
-                          New
+                            New
                         </option>
 
                         <option value="contacted">
-                          Contacted
+                            Contacted
                         </option>
 
                         <option value="interested">
-                          Interested
+                            Interested
                         </option>
 
                         <option value="follow_up">
-                          Follow-up
+                            Follow Up
                         </option>
 
                         <option value="converted">
-                          Converted
+                            Converted
                         </option>
 
                         <option value="not_interested">
-                          Not Interested
+                            Not Interested
                         </option>
 
                         <option value="closed">
-                          Closed
+                            Closed
+                        </option>
+                    </select>
+                </div>
+
+                <div className="filter-group">
+                    <label>
+                        Priority
+                    </label>
+
+                    <select
+                        name="priority"
+                        value={
+                            filters.priority
+                        }
+                        onChange={
+                            handleFilterChange
+                        }
+                    >
+                        <option value="">
+                            All Priority
                         </option>
 
-                      </select>
+                        <option value="low">
+                            Low
+                        </option>
 
-                    </td>
+                        <option value="medium">
+                            Medium
+                        </option>
 
-                    <td>
-                      {formatDate(
-                        lead.nextFollowUpDate
-                      )}
-                    </td>
+                        <option value="high">
+                            High
+                        </option>
+                    </select>
+                </div>
 
-                    <td>
-                      {lead.expectedFees
-                        ? `₹${Number(
-                            lead.expectedFees
-                          ).toLocaleString(
-                            "en-IN"
-                          )}`
-                        : "-"}
-                    </td>
+                <div className="filter-group">
+                    <label>
+                        Inquiry Type
+                    </label>
 
-                    <td>
+                    <select
+                        name="inquiryType"
+                        value={
+                            filters.inquiryType
+                        }
+                        onChange={
+                            handleFilterChange
+                        }
+                    >
+                        <option value="">
+                            All Types
+                        </option>
 
-                      <div className="d-flex gap-2">
+                        <option value="course">
+                            Course
+                        </option>
 
-                        <button
-                          className="btn btn-sm btn-light"
-                          title="View"
-                          onClick={() => {
-                            setSelectedLead(
-                              lead
-                            );
-                            setShowDetailsModal(
-                              true
-                            );
-                          }}
-                        >
-                          <i className="bi bi-eye"></i>
-                        </button>
+                        <option value="internship">
+                            Internship
+                        </option>
 
-                        <button
-                          className="btn btn-sm btn-light"
-                          title="Edit"
-                          onClick={() =>
-                            openEditModal(
-                              lead
+                        <option value="corporate_training">
+                            Corporate Training
+                        </option>
+
+                        <option value="project">
+                            Project
+                        </option>
+
+                        <option value="placement">
+                            Placement
+                        </option>
+                    </select>
+                </div>
+
+                <div className="filter-group">
+                    <label>
+                        Assigned To
+                    </label>
+
+                    <select
+                        name="assignedCounselor"
+                        value={
+                            filters.assignedCounselor
+                        }
+                        onChange={
+                            handleFilterChange
+                        }
+                    >
+                        <option value="">
+                            All Users
+                        </option>
+
+                        {employeesAndInterns.map(
+                            (item) => (
+                                <option
+                                    key={
+                                        item._id
+                                    }
+                                    value={
+                                        item._id
+                                    }
+                                >
+                                    {
+                                        item.fullName
+                                    }{" "}
+                                    (
+                                    {
+                                        getRoleLabel(
+                                            item.role
+                                        )
+                                    }
+                                    )
+                                </option>
                             )
-                          }
-                        >
-                          <i className="bi bi-pencil"></i>
-                        </button>
+                        )}
+                    </select>
+                </div>
 
-                      </div>
+                <div className="filter-group">
+                    <label>
+                        From Date
+                    </label>
 
-                    </td>
+                    <input
+                        type="date"
+                        name="startDate"
+                        value={
+                            filters.startDate
+                        }
+                        onChange={
+                            handleFilterChange
+                        }
+                    />
+                </div>
 
-                  </tr>
+                <div className="filter-group">
+                    <label>
+                        To Date
+                    </label>
 
-                ))}
-
-              </tbody>
-
-            </table>
-
-          </div>
-        )}
-
-        {/* PAGINATION */}
-
-        {!loading &&
-          pagination.totalPages > 0 && (
-            <div className="d-flex justify-content-between align-items-center p-3 border-top">
-
-              <div className="text-muted small">
-                Showing page{" "}
-                <strong>
-                  {pagination.page}
-                </strong>{" "}
-                of{" "}
-                <strong>
-                  {pagination.totalPages}
-                </strong>
-              </div>
-
-              <div className="d-flex gap-2">
+                    <input
+                        type="date"
+                        name="endDate"
+                        value={
+                            filters.endDate
+                        }
+                        onChange={
+                            handleFilterChange
+                        }
+                    />
+                </div>
 
                 <button
-                  className="btn btn-sm btn-outline-secondary"
-                  disabled={
-                    !pagination.hasPreviousPage
-                  }
-                  onClick={
-                    handlePreviousPage
-                  }
+                    className="btn btn-secondary clear-filter-btn"
+                    onClick={
+                        clearFilters
+                    }
                 >
-                  <i className="bi bi-chevron-left me-1"></i>
-                  Previous
+                    <i className="bi bi-x-circle"></i>
+                    Clear
                 </button>
-
-                <button
-                  className="btn btn-sm btn-outline-primary"
-                  disabled={
-                    !pagination.hasNextPage
-                  }
-                  onClick={handleNextPage}
-                >
-                  Next
-                  <i className="bi bi-chevron-right ms-1"></i>
-                </button>
-
-              </div>
-
-            </div>
-          )}
-
-      </div>
-
-      {/* ADD / EDIT MODAL */}
-
-      {showModal && (
-        <div
-          className="custom-modal-backdrop"
-          onClick={() =>
-            setShowModal(false)
-          }
-        >
-
-          <div
-            className="custom-modal"
-            onClick={(e) =>
-              e.stopPropagation()
-            }
-          >
-
-            <div className="custom-modal-header">
-
-              <div>
-
-                <h5>
-                  {editingLead
-                    ? "Edit Lead"
-                    : "Add New Lead"}
-                </h5>
-
-                <small>
-                  {editingLead
-                    ? "Update lead information"
-                    : "Enter lead information"}
-                </small>
-
-              </div>
-
-              <button
-                className="btn-close"
-                onClick={() =>
-                  setShowModal(false)
-                }
-              ></button>
-
             </div>
 
-            <form onSubmit={handleSubmit}>
+            {/* ================= TABLE ================= */}
 
-              <div className="custom-modal-body">
+            <div className="table-card">
 
-                <div className="row g-3">
+                <div className="table-header">
+                    <div>
+                        <h3>
+                            All Leads
+                        </h3>
 
-                  <div className="col-md-6">
-
-                    <label className="form-label">
-                      Full Name *
-                    </label>
-
-                    <input
-                      type="text"
-                      name="fullName"
-                      className="form-control"
-                      value={
-                        formData.fullName
-                      }
-                      onChange={
-                        handleFormChange
-                      }
-                      required
-                    />
-
-                  </div>
-
-                  <div className="col-md-6">
-
-                    <label className="form-label">
-                      Contact Number *
-                    </label>
-
-                    <input
-                      type="text"
-                      name="contactNumber"
-                      className="form-control"
-                      value={
-                        formData.contactNumber
-                      }
-                      onChange={
-                        handleFormChange
-                      }
-                      required
-                    />
-
-                  </div>
-
-                  <div className="col-md-6">
-
-                    <label className="form-label">
-                      Email
-                    </label>
-
-                    <input
-                      type="email"
-                      name="email"
-                      className="form-control"
-                      value={
-                        formData.email
-                      }
-                      onChange={
-                        handleFormChange
-                      }
-                    />
-
-                  </div>
-
-                  <div className="col-md-6">
-
-                    <label className="form-label">
-                      City
-                    </label>
-
-                    <input
-                      type="text"
-                      name="city"
-                      className="form-control"
-                      value={
-                        formData.city
-                      }
-                      onChange={
-                        handleFormChange
-                      }
-                    />
-
-                  </div>
-
-                  <div className="col-md-6">
-
-                    <label className="form-label">
-                      Course Interested
-                    </label>
-
-                    <input
-                      type="text"
-                      name="courseInterested"
-                      className="form-control"
-                      value={
-                        formData.courseInterested
-                      }
-                      onChange={
-                        handleFormChange
-                      }
-                    />
-
-                  </div>
-
-                  <div className="col-md-6">
-
-                    <label className="form-label">
-                      Inquiry Type
-                    </label>
-
-                    <select
-                      name="inquiryType"
-                      className="form-select"
-                      value={
-                        formData.inquiryType
-                      }
-                      onChange={
-                        handleFormChange
-                      }
-                    >
-
-                      <option value="course">
-                        Course
-                      </option>
-
-                      <option value="internship">
-                        Internship
-                      </option>
-
-                      <option value="corporate_training">
-                        Corporate Training
-                      </option>
-
-                      <option value="project">
-                        Project
-                      </option>
-
-                      <option value="placement">
-                        Placement
-                      </option>
-
-                    </select>
-
-                  </div>
-
-                  <div className="col-md-6">
-
-                    <label className="form-label">
-                      Lead Source
-                    </label>
-
-                    <select
-                      name="leadSource"
-                      className="form-select"
-                      value={
-                        formData.leadSource
-                      }
-                      onChange={
-                        handleFormChange
-                      }
-                    >
-
-                      <option value="website">
-                        Website
-                      </option>
-
-                      <option value="instagram">
-                        Instagram
-                      </option>
-
-                      <option value="whatsapp">
-                        WhatsApp
-                      </option>
-
-                      <option value="walkin">
-                        Walk-in
-                      </option>
-
-                      <option value="facebook">
-                        Facebook
-                      </option>
-
-                      <option value="linkedin">
-                        LinkedIn
-                      </option>
-
-                      <option value="phone_call">
-                        Phone Call
-                      </option>
-
-                      <option value="reference">
-                        Reference
-                      </option>
-
-                      <option value="internship">
-                        Internship
-                      </option>
-
-                      <option value="corporate_training">
-                        Corporate Training
-                      </option>
-
-                      <option value="project_client">
-                        Project Client
-                      </option>
-
-                    </select>
-
-                  </div>
-
-                  <div className="col-md-6">
-
-                    <label className="form-label">
-                      Assigned Counselor
-                    </label>
-
-                    <select
-                      name="assignedCounselor"
-                      className="form-select"
-                      value={
-                        formData.assignedCounselor
-                      }
-                      onChange={
-                        handleFormChange
-                      }
-                    >
-
-                      <option value="">
-                        {counselorLoading
-                          ? "Loading counselors..."
-                          : "Unassigned"}
-                      </option>
-
-                      {counselors.map(
-                        (counselor) => (
-                          <option
-                            key={
-                              counselor._id
-                            }
-                            value={
-                              counselor._id
-                            }
-                          >
+                        <span>
                             {
-                              counselor.fullName
+                                pagination.total ||
+                                0
+                            }{" "}
+                            total leads
+                        </span>
+                    </div>
+
+                    {userLoading && (
+                        <span className="loading-text">
+                            Loading users...
+                        </span>
+                    )}
+                </div>
+
+                {loading ? (
+                    <div className="loading-container">
+                        <div className="spinner"></div>
+
+                        <p>
+                            Loading leads...
+                        </p>
+                    </div>
+                ) : leads.length ===
+                  0 ? (
+                    <div className="empty-state">
+                        <i className="bi bi-people"></i>
+
+                        <h3>
+                            No Leads Found
+                        </h3>
+
+                        <p>
+                            No leads match
+                            your current
+                            filters.
+                        </p>
+
+                        <button
+                            className="btn btn-primary"
+                            onClick={
+                                handleAddLead
                             }
-                          </option>
-                        )
-                      )}
-
-                    </select>
-
-                  </div>
-
-                  <div className="col-md-4">
-
-                    <label className="form-label">
-                      Priority
-                    </label>
-
-                    <select
-                      name="priority"
-                      className="form-select"
-                      value={
-                        formData.priority
-                      }
-                      onChange={
-                        handleFormChange
-                      }
-                    >
-
-                      <option value="low">
-                        Low
-                      </option>
-
-                      <option value="medium">
-                        Medium
-                      </option>
-
-                      <option value="high">
-                        High
-                      </option>
-
-                    </select>
-
-                  </div>
-
-                  <div className="col-md-4">
-
-                    <label className="form-label">
-                      Status
-                    </label>
-
-                    <select
-                      name="status"
-                      className="form-select"
-                      value={
-                        formData.status
-                      }
-                      onChange={
-                        handleFormChange
-                      }
-                    >
-
-                      <option value="new">
-                        New
-                      </option>
-
-                      <option value="contacted">
-                        Contacted
-                      </option>
-
-                      <option value="interested">
-                        Interested
-                      </option>
-
-                      <option value="follow_up">
-                        Follow-up
-                      </option>
-
-                      <option value="converted">
-                        Converted
-                      </option>
-
-                      <option value="not_interested">
-                        Not Interested
-                      </option>
-
-                      <option value="closed">
-                        Closed
-                      </option>
-
-                    </select>
-
-                  </div>
-
-                  <div className="col-md-4">
-
-                    <label className="form-label">
-                      Expected Fees
-                    </label>
-
-                    <input
-                      type="number"
-                      name="expectedFees"
-                      className="form-control"
-                      placeholder="₹"
-                      min="0"
-                      value={
-                        formData.expectedFees
-                      }
-                      onChange={
-                        handleFormChange
-                      }
-                    />
-
-                  </div>
-
-                  <div className="col-md-6">
-
-                    <label className="form-label">
-                      Next Follow-up Date
-                    </label>
-
-                    <input
-                      type="date"
-                      name="nextFollowUpDate"
-                      className="form-control"
-                      value={
-                        formData.nextFollowUpDate
-                      }
-                      onChange={
-                        handleFormChange
-                      }
-                    />
-
-                  </div>
-
-                  <div className="col-md-6">
-
-                    <label className="form-label">
-                      Admission Date
-                    </label>
-
-                    <input
-                      type="date"
-                      name="admissionDate"
-                      className="form-control"
-                      value={
-                        formData.admissionDate
-                      }
-                      onChange={
-                        handleFormChange
-                      }
-                    />
-
-                  </div>
-
-                  <div className="col-12">
-
-                    <label className="form-label">
-                      Notes
-                    </label>
-
-                    <textarea
-                      name="notes"
-                      className="form-control"
-                      rows="4"
-                      value={
-                        formData.notes
-                      }
-                      onChange={
-                        handleFormChange
-                      }
-                    ></textarea>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-              <div className="custom-modal-footer">
-
-                <button
-                  type="button"
-                  className="btn btn-light"
-                  onClick={() =>
-                    setShowModal(false)
-                  }
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                >
-
-                  <i
-                    className={`bi ${
-                      editingLead
-                        ? "bi-check-lg"
-                        : "bi-plus-lg"
-                    } me-2`}
-                  ></i>
-
-                  {editingLead
-                    ? "Update Lead"
-                    : "Create Lead"}
-
-                </button>
-
-              </div>
-
-            </form>
-
-          </div>
-
-        </div>
-      )}
-
-      {/* DETAILS MODAL */}
-
-      {showDetailsModal &&
-        selectedLead && (
-          <div
-            className="custom-modal-backdrop"
-            onClick={() =>
-              setShowDetailsModal(false)
-            }
-          >
-
-            <div
-              className="custom-modal lead-details-modal"
-              onClick={(e) =>
-                e.stopPropagation()
-              }
-            >
-
-              <div className="custom-modal-header">
-
-                <div>
-
-                  <h5>
-                    {selectedLead.fullName}
-                  </h5>
-
-                  <small>
-                    Complete Lead Details
-                  </small>
-
-                </div>
-
-                <div className="d-flex gap-2">
-
-                  <button
-                    className="btn btn-sm btn-outline-primary"
-                    onClick={() =>
-                      openEditModal(
-                        selectedLead
-                      )
-                    }
-                  >
-                    <i className="bi bi-pencil me-1"></i>
-                    Edit
-                  </button>
-
-                  <button
-                    className="btn-close"
-                    onClick={() =>
-                      setShowDetailsModal(
-                        false
-                      )
-                    }
-                  ></button>
-
-                </div>
-
-              </div>
-
-              <div className="custom-modal-body">
-
-                <h6 className="detail-section-title">
-                  Basic Information
-                </h6>
-
-                <div className="lead-detail-grid">
-
-                  <DetailItem
-                    label="Full Name"
-                    value={
-                      selectedLead.fullName
-                    }
-                  />
-
-                  <DetailItem
-                    label="Contact Number"
-                    value={
-                      selectedLead.contactNumber
-                    }
-                  />
-
-                  <DetailItem
-                    label="Email"
-                    value={
-                      selectedLead.email || "-"
-                    }
-                  />
-
-                  <DetailItem
-                    label="City"
-                    value={
-                      selectedLead.city || "-"
-                    }
-                  />
-
-                </div>
-
-                <h6 className="detail-section-title">
-                  Inquiry Information
-                </h6>
-
-                <div className="lead-detail-grid">
-
-                  <DetailItem
-                    label="Course Interested"
-                    value={
-                      selectedLead.courseInterested ||
-                      "-"
-                    }
-                  />
-
-                  <DetailItem
-                    label="Inquiry Type"
-                    value={formatStatus(
-                      selectedLead.inquiryType
-                    )}
-                  />
-
-                  <DetailItem
-                    label="Lead Source"
-                    value={formatStatus(
-                      selectedLead.leadSource
-                    )}
-                  />
-
-                  <DetailItem
-                    label="Assigned Counselor"
-                    value={
-                      selectedLead
-                        .assignedCounselor
-                        ?.fullName ||
-                      "Unassigned"
-                    }
-                  />
-
-                </div>
-
-                <h6 className="detail-section-title">
-                  Lead Tracking
-                </h6>
-
-                <div className="lead-detail-grid">
-
-                  <DetailItem
-                    label="Priority"
-                    value={formatStatus(
-                      selectedLead.priority
-                    )}
-                  />
-
-                  <DetailItem
-                    label="Status"
-                    value={formatStatus(
-                      selectedLead.status
-                    )}
-                  />
-
-                  <DetailItem
-                    label="Next Follow-up"
-                    value={formatDate(
-                      selectedLead.nextFollowUpDate
-                    )}
-                  />
-
-                  <DetailItem
-                    label="Expected Fees"
-                    value={
-                      selectedLead.expectedFees
-                        ? `₹${Number(
-                            selectedLead.expectedFees
-                          ).toLocaleString(
-                            "en-IN"
-                          )}`
-                        : "-"
-                    }
-                  />
-
-                  <DetailItem
-                    label="Admission Date"
-                    value={formatDate(
-                      selectedLead.admissionDate
-                    )}
-                  />
-
-                  <DetailItem
-                    label="Created Date"
-                    value={formatDate(
-                      selectedLead.createdAt
-                    )}
-                  />
-
-                </div>
-
-                <h6 className="detail-section-title">
-                  Notes
-                </h6>
-
-                <div className="lead-notes">
-
-                  {selectedLead.notes ||
-                    "No notes added."}
-
-                </div>
-
-                <hr />
-
-                <h6 className="detail-section-title">
-                  Communication History
-                </h6>
-
-                {selectedLead.communicationHistory
-                  ?.length > 0 ? (
-                  <div className="communication-list">
-
-                    {[
-                      ...selectedLead.communicationHistory,
-                    ]
-                      .reverse()
-                      .map(
-                        (
-                          item,
-                          index
-                        ) => (
-                          <div
-                            className="communication-item"
-                            key={index}
-                          >
-
-                            <div className="communication-icon">
-
-                              <i
-                                className={`bi ${
-                                  item.type ===
-                                  "call"
-                                    ? "bi-telephone"
-                                    : item.type ===
-                                      "whatsapp"
-                                    ? "bi-whatsapp"
-                                    : item.type ===
-                                      "email"
-                                    ? "bi-envelope"
-                                    : "bi-calendar-event"
-                                }`}
-                              ></i>
-
-                            </div>
-
-                            <div className="flex-grow-1">
-
-                              <div className="communication-top">
-
-                                <strong>
-                                  {formatStatus(
-                                    item.type
-                                  )}
-                                </strong>
-
-                                <small>
-                                  {formatDate(
-                                    item.date
-                                  )}
-                                </small>
-
-                              </div>
-
-                              <p>
-                                {item.message}
-                              </p>
-
-                            </div>
-
-                          </div>
-                        )
-                      )}
-
-                  </div>
+                        >
+                            <i className="bi bi-plus-lg"></i>
+                            Add First Lead
+                        </button>
+                    </div>
                 ) : (
-                  <p className="text-muted">
-                    No communication history yet.
-                  </p>
+                    <>
+                        <div className="table-responsive">
+                            <table className="leads-table">
+
+                                <thead>
+                                    <tr>
+                                        <th>
+                                            Lead
+                                        </th>
+
+                                        <th>
+                                            Contact
+                                        </th>
+
+                                        <th>
+                                            Inquiry
+                                        </th>
+
+                                        <th>
+                                            Assigned To
+                                        </th>
+
+                                        <th>
+                                            Priority
+                                        </th>
+
+                                        <th>
+                                            Status
+                                        </th>
+
+                                        <th>
+                                            Next Follow-up
+                                        </th>
+
+                                        <th>
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    {leads.map(
+                                        (lead) => {
+                                            const role =
+                                                getUserRole(
+                                                    lead.assignedCounselor
+                                                );
+
+                                            return (
+                                                <tr
+                                                    key={
+                                                        lead._id
+                                                    }
+                                                >
+                                                    <td>
+                                                        <div className="lead-info">
+                                                            <strong>
+                                                                {
+                                                                    lead.fullName
+                                                                }
+                                                            </strong>
+
+                                                            <span>
+                                                                {
+                                                                    lead.city ||
+                                                                    "-"
+                                                                }
+                                                            </span>
+                                                        </div>
+                                                    </td>
+
+                                                    <td>
+                                                        <div className="contact-info">
+                                                            <span>
+                                                                <i className="bi bi-telephone"></i>
+
+                                                                {
+                                                                    lead.contactNumber
+                                                                }
+                                                            </span>
+
+                                                            {lead.email && (
+                                                                <span>
+                                                                    <i className="bi bi-envelope"></i>
+
+                                                                    {
+                                                                        lead.email
+                                                                    }
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+
+                                                    <td>
+                                                        <div className="inquiry-info">
+                                                            <strong>
+                                                                {getInquiryTypeLabel(
+                                                                    lead.inquiryType
+                                                                )}
+                                                            </strong>
+
+                                                            {lead.courseInterested && (
+                                                                <span>
+                                                                    {
+                                                                        lead.courseInterested
+                                                                    }
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+
+                                                    <td>
+                                                        <div className="assigned-user">
+                                                            <span>
+                                                                {getUserName(
+                                                                    lead.assignedCounselor
+                                                                )}
+                                                            </span>
+
+                                                            {role && (
+                                                                <small>
+                                                                    {getRoleLabel(
+                                                                        role
+                                                                    )}
+                                                                </small>
+                                                            )}
+                                                        </div>
+                                                    </td>
+
+                                                    <td>
+                                                        <span
+                                                            className={`priority-badge ${lead.priority}`}
+                                                        >
+                                                            {getPriorityLabel(
+                                                                lead.priority
+                                                            )}
+                                                        </span>
+                                                    </td>
+
+                                                    <td>
+                                                        <select
+                                                            className={`status-select ${lead.status}`}
+                                                            value={
+                                                                lead.status
+                                                            }
+                                                            onChange={(
+                                                                e
+                                                            ) =>
+                                                                handleStatusChange(
+                                                                    lead._id,
+                                                                    e
+                                                                        .target
+                                                                        .value
+                                                                )
+                                                            }
+                                                        >
+                                                            <option value="new">
+                                                                New
+                                                            </option>
+
+                                                            <option value="contacted">
+                                                                Contacted
+                                                            </option>
+
+                                                            <option value="interested">
+                                                                Interested
+                                                            </option>
+
+                                                            <option value="follow_up">
+                                                                Follow Up
+                                                            </option>
+
+                                                            <option value="converted">
+                                                                Converted
+                                                            </option>
+
+                                                            <option value="not_interested">
+                                                                Not Interested
+                                                            </option>
+
+                                                            <option value="closed">
+                                                                Closed
+                                                            </option>
+                                                        </select>
+                                                    </td>
+
+                                                    <td>
+                                                        {formatDate(
+                                                            lead.nextFollowUpDate
+                                                        )}
+                                                    </td>
+
+                                                    <td>
+                                                        <div className="action-buttons">
+
+                                                            <button
+                                                                className="icon-btn"
+                                                                title="View Details"
+                                                                onClick={() =>
+                                                                    handleViewDetails(
+                                                                        lead
+                                                                    )
+                                                                }
+                                                            >
+                                                                <i className="bi bi-eye"></i>
+                                                            </button>
+
+                                                            <button
+                                                                className="icon-btn"
+                                                                title="Edit Lead"
+                                                                onClick={() =>
+                                                                    handleEditLead(
+                                                                        lead
+                                                                    )
+                                                                }
+                                                            >
+                                                                <i className="bi bi-pencil"></i>
+                                                            </button>
+
+                                                            <button
+                                                                className="icon-btn"
+                                                                title="Add Communication"
+                                                                onClick={() =>
+                                                                    handleOpenCommunication(
+                                                                        lead
+                                                                    )
+                                                                }
+                                                            >
+                                                                <i className="bi bi-chat-left-text"></i>
+                                                            </button>
+
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        }
+                                    )}
+                                </tbody>
+
+                            </table>
+                        </div>
+
+                        {/* ================= PAGINATION ================= */}
+
+                        <div className="pagination">
+
+                            <span>
+                                Page{" "}
+                                {
+                                    pagination.page
+                                }{" "}
+                                of{" "}
+                                {
+                                    pagination.totalPages
+                                }
+                            </span>
+
+                            <div>
+
+                                <button
+                                    className="btn btn-secondary"
+                                    disabled={
+                                        !pagination.hasPreviousPage
+                                    }
+                                    onClick={
+                                        handlePreviousPage
+                                    }
+                                >
+                                    <i className="bi bi-chevron-left"></i>
+                                    Previous
+                                </button>
+
+                                <button
+                                    className="btn btn-secondary"
+                                    disabled={
+                                        !pagination.hasNextPage
+                                    }
+                                    onClick={
+                                        handleNextPage
+                                    }
+                                >
+                                    Next
+
+                                    <i className="bi bi-chevron-right"></i>
+                                </button>
+
+                            </div>
+
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* =====================================================
+                ADD / EDIT LEAD MODAL
+            ===================================================== */}
+
+            {showModal && (
+                <div
+                    className="modal-overlay"
+                    onClick={() =>
+                        setShowModal(false)
+                    }
+                >
+                    <div
+                        className="modal-content large-modal"
+                        onClick={(e) =>
+                            e.stopPropagation()
+                        }
+                    >
+
+                        <div className="modal-header">
+
+                            <div>
+                                <h2>
+                                    {editingLead
+                                        ? "Edit Lead"
+                                        : "Add New Lead"}
+                                </h2>
+
+                                <p>
+                                    Enter lead
+                                    information
+                                    below.
+                                </p>
+                            </div>
+
+                            <button
+                                className="modal-close"
+                                onClick={() =>
+                                    setShowModal(
+                                        false
+                                    )
+                                }
+                            >
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+
+                        </div>
+
+                        <form
+                            onSubmit={
+                                handleSubmit
+                            }
+                            className="lead-form"
+                        >
+
+                            {/* PERSONAL INFORMATION */}
+
+                            <div className="form-section">
+
+                                <h3>
+                                    Personal
+                                    Information
+                                </h3>
+
+                                <div className="form-grid">
+
+                                    <div className="form-group">
+                                        <label>
+                                            Full Name *
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            name="fullName"
+                                            value={
+                                                formData.fullName
+                                            }
+                                            onChange={
+                                                handleFormChange
+                                            }
+                                            required
+                                            placeholder="Enter full name"
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>
+                                            Contact Number *
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            name="contactNumber"
+                                            value={
+                                                formData.contactNumber
+                                            }
+                                            onChange={
+                                                handleFormChange
+                                            }
+                                            required
+                                            placeholder="Enter contact number"
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>
+                                            Email
+                                        </label>
+
+                                        <input
+                                            type="email"
+                                            name="email"
+                                            value={
+                                                formData.email
+                                            }
+                                            onChange={
+                                                handleFormChange
+                                            }
+                                            placeholder="Enter email"
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>
+                                            City
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            name="city"
+                                            value={
+                                                formData.city
+                                            }
+                                            onChange={
+                                                handleFormChange
+                                            }
+                                            placeholder="Enter city"
+                                        />
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            {/* LEAD INFORMATION */}
+
+                            <div className="form-section">
+
+                                <h3>
+                                    Lead Information
+                                </h3>
+
+                                <div className="form-grid">
+
+                                    <div className="form-group">
+                                        <label>
+                                            Inquiry Type *
+                                        </label>
+
+                                        <select
+                                            name="inquiryType"
+                                            value={
+                                                formData.inquiryType
+                                            }
+                                            onChange={
+                                                handleFormChange
+                                            }
+                                            required
+                                        >
+                                            <option value="course">
+                                                Course
+                                            </option>
+
+                                            <option value="internship">
+                                                Internship
+                                            </option>
+
+                                            <option value="corporate_training">
+                                                Corporate Training
+                                            </option>
+
+                                            <option value="project">
+                                                Project
+                                            </option>
+
+                                            <option value="placement">
+                                                Placement
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>
+                                            Course Interested
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            name="courseInterested"
+                                            value={
+                                                formData.courseInterested
+                                            }
+                                            onChange={
+                                                handleFormChange
+                                            }
+                                            placeholder="Enter course"
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>
+                                            Lead Source
+                                        </label>
+
+                                        <select
+                                            name="leadSource"
+                                            value={
+                                                formData.leadSource
+                                            }
+                                            onChange={
+                                                handleFormChange
+                                            }
+                                        >
+                                            <option value="">
+                                                Select Source
+                                            </option>
+
+                                            <option value="instagram">
+                                                Instagram
+                                            </option>
+
+                                            <option value="whatsapp">
+                                                WhatsApp
+                                            </option>
+
+                                            <option value="walkin">
+                                                Walk-in
+                                            </option>
+
+                                            <option value="website">
+                                                Website
+                                            </option>
+
+                                            <option value="facebook">
+                                                Facebook
+                                            </option>
+
+                                            <option value="linkedin">
+                                                LinkedIn
+                                            </option>
+
+                                            <option value="phone_call">
+                                                Phone Call
+                                            </option>
+
+                                            <option value="reference">
+                                                Reference
+                                            </option>
+
+                                            <option value="internship">
+                                                Internship
+                                            </option>
+
+                                            <option value="corporate_training">
+                                                Corporate Training
+                                            </option>
+
+                                            <option value="project_client">
+                                                Project Client
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>
+                                            Assigned Employee / Intern
+                                        </label>
+
+                                        <select
+                                            name="assignedCounselor"
+                                            value={
+                                                formData.assignedCounselor
+                                            }
+                                            onChange={
+                                                handleFormChange
+                                            }
+                                        >
+                                            <option value="">
+                                                Select Employee / Intern
+                                            </option>
+
+                                            {employeesAndInterns.map(
+                                                (
+                                                    item
+                                                ) => (
+                                                    <option
+                                                        key={
+                                                            item._id
+                                                        }
+                                                        value={
+                                                            item._id
+                                                        }
+                                                    >
+                                                        {
+                                                            item.fullName
+                                                        }{" "}
+                                                        (
+                                                        {
+                                                            getRoleLabel(
+                                                                item.role
+                                                            )
+                                                        }
+                                                        )
+                                                    </option>
+                                                )
+                                            )}
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>
+                                            Priority
+                                        </label>
+
+                                        <select
+                                            name="priority"
+                                            value={
+                                                formData.priority
+                                            }
+                                            onChange={
+                                                handleFormChange
+                                            }
+                                        >
+                                            <option value="low">
+                                                Low
+                                            </option>
+
+                                            <option value="medium">
+                                                Medium
+                                            </option>
+
+                                            <option value="high">
+                                                High
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>
+                                            Status
+                                        </label>
+
+                                        <select
+                                            name="status"
+                                            value={
+                                                formData.status
+                                            }
+                                            onChange={
+                                                handleFormChange
+                                            }
+                                        >
+                                            <option value="new">
+                                                New
+                                            </option>
+
+                                            <option value="contacted">
+                                                Contacted
+                                            </option>
+
+                                            <option value="interested">
+                                                Interested
+                                            </option>
+
+                                            <option value="follow_up">
+                                                Follow Up
+                                            </option>
+
+                                            <option value="converted">
+                                                Converted
+                                            </option>
+
+                                            <option value="not_interested">
+                                                Not Interested
+                                            </option>
+
+                                            <option value="closed">
+                                                Closed
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            {/* FOLLOW-UP INFORMATION */}
+
+                            <div className="form-section">
+
+                                <h3>
+                                    Follow-up
+                                    Information
+                                </h3>
+
+                                <div className="form-grid">
+
+                                    <div className="form-group">
+                                        <label>
+                                            Next Follow-up Date
+                                        </label>
+
+                                        <input
+                                            type="date"
+                                            name="nextFollowUpDate"
+                                            value={
+                                                formData.nextFollowUpDate
+                                            }
+                                            onChange={
+                                                handleFormChange
+                                            }
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>
+                                            Expected Fees
+                                        </label>
+
+                                        <input
+                                            type="number"
+                                            name="expectedFees"
+                                            value={
+                                                formData.expectedFees
+                                            }
+                                            onChange={
+                                                handleFormChange
+                                            }
+                                            placeholder="Enter expected fees"
+                                            min="0"
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>
+                                            Admission Date
+                                        </label>
+
+                                        <input
+                                            type="date"
+                                            name="admissionDate"
+                                            value={
+                                                formData.admissionDate
+                                            }
+                                            onChange={
+                                                handleFormChange
+                                            }
+                                        />
+                                    </div>
+
+                                </div>
+
+                                <div className="form-group full-width">
+
+                                    <label>
+                                        Notes
+                                    </label>
+
+                                    <textarea
+                                        name="notes"
+                                        value={
+                                            formData.notes
+                                        }
+                                        onChange={
+                                            handleFormChange
+                                        }
+                                        rows="4"
+                                        placeholder="Add notes about this lead..."
+                                    ></textarea>
+
+                                </div>
+
+                            </div>
+
+                            {/* FORM ACTIONS */}
+
+                            <div className="modal-footer">
+
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() =>
+                                        setShowModal(
+                                            false
+                                        )
+                                    }
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary"
+                                >
+                                    <i className="bi bi-check-lg"></i>
+
+                                    {editingLead
+                                        ? "Update Lead"
+                                        : "Create Lead"}
+                                </button>
+
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* =====================================================
+                LEAD DETAILS MODAL
+            ===================================================== */}
+
+            {showDetailsModal &&
+                selectedLead && (
+                    <div
+                        className="modal-overlay"
+                        onClick={() =>
+                            setShowDetailsModal(
+                                false
+                            )
+                        }
+                    >
+                        <div
+                            className="modal-content"
+                            onClick={(e) =>
+                                e.stopPropagation()
+                            }
+                        >
+
+                            <div className="modal-header">
+
+                                <div>
+                                    <h2>
+                                        Lead Details
+                                    </h2>
+
+                                    <p>
+                                        Complete lead
+                                        information.
+                                    </p>
+                                </div>
+
+                                <button
+                                    className="modal-close"
+                                    onClick={() =>
+                                        setShowDetailsModal(
+                                            false
+                                        )
+                                    }
+                                >
+                                    <i className="bi bi-x-lg"></i>
+                                </button>
+
+                            </div>
+
+                            <div className="details-content">
+
+                                <div className="details-profile">
+
+                                    <div className="profile-icon">
+                                        <i className="bi bi-person"></i>
+                                    </div>
+
+                                    <div>
+                                        <h3>
+                                            {
+                                                selectedLead.fullName
+                                            }
+                                        </h3>
+
+                                        <span>
+                                            {getStatusLabel(
+                                                selectedLead.status
+                                            )}
+                                        </span>
+                                    </div>
+
+                                </div>
+
+                                <div className="details-grid">
+
+                                    <div className="detail-item">
+                                        <label>
+                                            Contact Number
+                                        </label>
+
+                                        <strong>
+                                            {
+                                                selectedLead.contactNumber
+                                            }
+                                        </strong>
+                                    </div>
+
+                                    <div className="detail-item">
+                                        <label>
+                                            Email
+                                        </label>
+
+                                        <strong>
+                                            {
+                                                selectedLead.email ||
+                                                "-"
+                                            }
+                                        </strong>
+                                    </div>
+
+                                    <div className="detail-item">
+                                        <label>
+                                            City
+                                        </label>
+
+                                        <strong>
+                                            {
+                                                selectedLead.city ||
+                                                "-"
+                                            }
+                                        </strong>
+                                    </div>
+
+                                    <div className="detail-item">
+                                        <label>
+                                            Inquiry Type
+                                        </label>
+
+                                        <strong>
+                                            {getInquiryTypeLabel(
+                                                selectedLead.inquiryType
+                                            )}
+                                        </strong>
+                                    </div>
+
+                                    <div className="detail-item">
+                                        <label>
+                                            Course Interested
+                                        </label>
+
+                                        <strong>
+                                            {
+                                                selectedLead.courseInterested ||
+                                                "-"
+                                            }
+                                        </strong>
+                                    </div>
+
+                                    <div className="detail-item">
+                                        <label>
+                                            Lead Source
+                                        </label>
+
+                                        <strong>
+                                            {
+                                                selectedLead.leadSource ||
+                                                "-"
+                                            }
+                                        </strong>
+                                    </div>
+
+                                    <div className="detail-item">
+                                        <label>
+                                            Assigned Employee / Intern
+                                        </label>
+
+                                        <strong>
+                                            {getUserName(
+                                                selectedLead.assignedCounselor
+                                            )}
+
+                                            {getUserRole(
+                                                selectedLead.assignedCounselor
+                                            ) && (
+                                                <small>
+                                                    {" "}
+                                                    (
+                                                    {getRoleLabel(
+                                                        getUserRole(
+                                                            selectedLead.assignedCounselor
+                                                        )
+                                                    )}
+                                                    )
+                                                </small>
+                                            )}
+                                        </strong>
+                                    </div>
+
+                                    <div className="detail-item">
+                                        <label>
+                                            Priority
+                                        </label>
+
+                                        <strong>
+                                            {getPriorityLabel(
+                                                selectedLead.priority
+                                            )}
+                                        </strong>
+                                    </div>
+
+                                    <div className="detail-item">
+                                        <label>
+                                            Next Follow-up
+                                        </label>
+
+                                        <strong>
+                                            {formatDate(
+                                                selectedLead.nextFollowUpDate
+                                            )}
+                                        </strong>
+                                    </div>
+
+                                    <div className="detail-item">
+                                        <label>
+                                            Expected Fees
+                                        </label>
+
+                                        <strong>
+                                            {selectedLead.expectedFees
+                                                ? `₹${Number(
+                                                      selectedLead.expectedFees
+                                                  ).toLocaleString(
+                                                      "en-IN"
+                                                  )}`
+                                                : "-"}
+                                        </strong>
+                                    </div>
+
+                                    <div className="detail-item">
+                                        <label>
+                                            Admission Date
+                                        </label>
+
+                                        <strong>
+                                            {formatDate(
+                                                selectedLead.admissionDate
+                                            )}
+                                        </strong>
+                                    </div>
+
+                                    <div className="detail-item">
+                                        <label>
+                                            Created Date
+                                        </label>
+
+                                        <strong>
+                                            {formatDate(
+                                                selectedLead.createdAt
+                                            )}
+                                        </strong>
+                                    </div>
+
+                                </div>
+
+                                <div className="detail-section">
+
+                                    <label>
+                                        Notes
+                                    </label>
+
+                                    <p>
+                                        {
+                                            selectedLead.notes ||
+                                            "No notes available."
+                                        }
+                                    </p>
+
+                                </div>
+
+                                {/* COMMUNICATION HISTORY */}
+
+                                <div className="detail-section">
+
+                                    <div className="section-title-row">
+
+                                        <h3>
+                                            Communication
+                                            History
+                                        </h3>
+
+                                        <button
+                                            className="btn btn-primary btn-sm"
+                                            onClick={() => {
+                                                setShowDetailsModal(
+                                                    false
+                                                );
+
+                                                handleOpenCommunication(
+                                                    selectedLead
+                                                );
+                                            }}
+                                        >
+                                            <i className="bi bi-plus-lg"></i>
+                                            Add
+                                        </button>
+
+                                    </div>
+
+                                    {selectedLead.communicationHistory
+                                        ?.length ? (
+                                        <div className="communication-list">
+
+                                            {[
+                                                ...selectedLead.communicationHistory,
+                                            ]
+                                                .reverse()
+                                                .map(
+                                                    (
+                                                        item,
+                                                        index
+                                                    ) => (
+                                                        <div
+                                                            className="communication-item"
+                                                            key={
+                                                                index
+                                                            }
+                                                        >
+
+                                                            <div className="communication-icon">
+                                                                <i
+                                                                    className={`bi ${
+                                                                        item.type ===
+                                                                        "call"
+                                                                            ? "bi-telephone"
+                                                                            : item.type ===
+                                                                              "whatsapp"
+                                                                            ? "bi-whatsapp"
+                                                                            : item.type ===
+                                                                              "email"
+                                                                            ? "bi-envelope"
+                                                                            : "bi-people"
+                                                                    }`}
+                                                                ></i>
+                                                            </div>
+
+                                                            <div className="communication-content">
+
+                                                                <div>
+                                                                    <strong>
+                                                                        {
+                                                                            item.type
+                                                                        }
+                                                                    </strong>
+
+                                                                    <span>
+                                                                        {formatDate(
+                                                                            item.date
+                                                                        )}
+                                                                    </span>
+                                                                </div>
+
+                                                                <p>
+                                                                    {
+                                                                        item.message
+                                                                    }
+                                                                </p>
+
+                                                            </div>
+
+                                                        </div>
+                                                    )
+                                                )}
+
+                                        </div>
+                                    ) : (
+                                        <p className="empty-text">
+                                            No communication
+                                            history
+                                            available.
+                                        </p>
+                                    )}
+
+                                </div>
+
+                            </div>
+
+                            <div className="modal-footer">
+
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={() =>
+                                        setShowDetailsModal(
+                                            false
+                                        )
+                                    }
+                                >
+                                    Close
+                                </button>
+
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={() => {
+                                        setShowDetailsModal(
+                                            false
+                                        );
+
+                                        handleEditLead(
+                                            selectedLead
+                                        );
+                                    }}
+                                >
+                                    <i className="bi bi-pencil"></i>
+                                    Edit Lead
+                                </button>
+
+                            </div>
+
+                        </div>
+                    </div>
                 )}
 
-                <hr />
+            {/* =====================================================
+                COMMUNICATION MODAL
+            ===================================================== */}
 
-                <h6 className="detail-section-title">
-                  Add Communication
-                </h6>
-
-                <form
-                  onSubmit={
-                    handleAddCommunication
-                  }
-                >
-
-                  <div className="row g-3">
-
-                    <div className="col-md-4">
-
-                      <select
-                        name="type"
-                        className="form-select"
-                        value={
-                          communication.type
+            {showCommunicationModal &&
+                selectedLead && (
+                    <div
+                        className="modal-overlay"
+                        onClick={() =>
+                            setShowCommunicationModal(
+                                false
+                            )
                         }
-                        onChange={
-                          handleCommunicationChange
-                        }
-                      >
+                    >
+                        <div
+                            className="modal-content"
+                            onClick={(e) =>
+                                e.stopPropagation()
+                            }
+                        >
 
-                        <option value="call">
-                          Call
-                        </option>
+                            <div className="modal-header">
 
-                        <option value="whatsapp">
-                          WhatsApp
-                        </option>
+                                <div>
+                                    <h2>
+                                        Add Communication
+                                    </h2>
 
-                        <option value="email">
-                          Email
-                        </option>
+                                    <p>
+                                        Add communication
+                                        details for{" "}
+                                        <strong>
+                                            {
+                                                selectedLead.fullName
+                                            }
+                                        </strong>
+                                    </p>
+                                </div>
 
-                        <option value="meeting">
-                          Meeting
-                        </option>
+                                <button
+                                    className="modal-close"
+                                    onClick={() =>
+                                        setShowCommunicationModal(
+                                            false
+                                        )
+                                    }
+                                >
+                                    <i className="bi bi-x-lg"></i>
+                                </button>
 
-                      </select>
+                            </div>
 
+                            <form
+                                onSubmit={
+                                    handleAddCommunication
+                                }
+                            >
+
+                                <div className="form-group">
+
+                                    <label>
+                                        Communication Type
+                                    </label>
+
+                                    <select
+                                        name="type"
+                                        value={
+                                            communicationData.type
+                                        }
+                                        onChange={
+                                            handleCommunicationChange
+                                        }
+                                        required
+                                    >
+                                        <option value="call">
+                                            Phone Call
+                                        </option>
+
+                                        <option value="whatsapp">
+                                            WhatsApp
+                                        </option>
+
+                                        <option value="email">
+                                            Email
+                                        </option>
+
+                                        <option value="meeting">
+                                            Meeting
+                                        </option>
+                                    </select>
+
+                                </div>
+
+                                <div className="form-group">
+
+                                    <label>
+                                        Message / Notes
+                                    </label>
+
+                                    <textarea
+                                        name="message"
+                                        value={
+                                            communicationData.message
+                                        }
+                                        onChange={
+                                            handleCommunicationChange
+                                        }
+                                        rows="5"
+                                        required
+                                        placeholder="Enter communication details..."
+                                    ></textarea>
+
+                                </div>
+
+                                <div className="modal-footer">
+
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() =>
+                                            setShowCommunicationModal(
+                                                false
+                                            )
+                                        }
+                                    >
+                                        Cancel
+                                    </button>
+
+                                    <button
+                                        type="submit"
+                                        className="btn btn-primary"
+                                    >
+                                        <i className="bi bi-check-lg"></i>
+                                        Add Communication
+                                    </button>
+
+                                </div>
+
+                            </form>
+
+                        </div>
                     </div>
+                )}
 
-                    <div className="col-md-8">
-
-                      <input
-                        type="text"
-                        name="message"
-                        className="form-control"
-                        placeholder="Enter communication notes..."
-                        value={
-                          communication.message
-                        }
-                        onChange={
-                          handleCommunicationChange
-                        }
-                        required
-                      />
-
-                    </div>
-
-                    <div className="col-12">
-
-                      <button
-                        type="submit"
-                        className="btn btn-primary"
-                      >
-                        <i className="bi bi-plus-lg me-2"></i>
-                        Add Communication
-                      </button>
-
-                    </div>
-
-                  </div>
-
-                </form>
-
-              </div>
-
-            </div>
-
-          </div>
-        )}
-
-    </div>
-  );
-};
-
-const DetailItem = ({
-  label,
-  value,
-}) => {
-  return (
-    <div className="lead-detail-item">
-
-      <small>{label}</small>
-
-      <strong>{value}</strong>
-
-    </div>
-  );
+        </div>
+    );
 };
 
 export default Leads;

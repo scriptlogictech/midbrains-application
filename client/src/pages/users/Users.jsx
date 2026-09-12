@@ -12,7 +12,7 @@ const initialForm = {
     fullName: "",
     email: "",
     password: "",
-    role: "counselor",
+    role: "employee",
     company: "",
 };
 
@@ -53,15 +53,15 @@ const Users = () => {
 
             setUsers(
                 response?.users ||
-                response?.data ||
-                []
+                    response?.data ||
+                    []
             );
         } catch (err) {
             console.error("Fetch Users Error:", err);
 
             setError(
                 err.response?.data?.message ||
-                "Failed to load users"
+                    "Failed to load users"
             );
         } finally {
             setLoading(false);
@@ -78,16 +78,19 @@ const Users = () => {
 
             setCompanies(
                 response?.data?.companies ||
-                response?.data?.data ||
-                response?.data ||
-                []
+                    response?.data?.data ||
+                    response?.data ||
+                    []
             );
         } catch (err) {
-            console.error("Fetch Companies Error:", err);
+            console.error(
+                "Fetch Companies Error:",
+                err
+            );
 
             setError(
                 err.response?.data?.message ||
-                "Failed to load companies"
+                    "Failed to load companies"
             );
         }
     };
@@ -112,7 +115,10 @@ const Users = () => {
     const openAddModal = () => {
         setEditingUser(null);
 
-        setForm(initialForm);
+        setForm({
+            ...initialForm,
+            role: "employee",
+        });
 
         setError("");
         setSuccess("");
@@ -125,13 +131,18 @@ const Users = () => {
     // ==========================================
 
     const openEditModal = (user) => {
+        // Super Admin cannot be edited
+        if (user.role === "super_admin") {
+            return;
+        }
+
         setEditingUser(user);
 
         setForm({
             fullName: user.fullName || "",
             email: user.email || "",
             password: "",
-            role: user.role || "counselor",
+            role: user.role || "employee",
             company:
                 user.company?._id ||
                 user.company ||
@@ -153,7 +164,10 @@ const Users = () => {
 
         setShowModal(false);
         setEditingUser(null);
-        setForm(initialForm);
+        setForm({
+            ...initialForm,
+            role: "employee",
+        });
     };
 
     // ==========================================
@@ -181,13 +195,29 @@ const Users = () => {
             return;
         }
 
-        if (!editingUser && form.password.length < 6) {
-            setError("Password must be at least 6 characters");
+        if (
+            !editingUser &&
+            form.password.length < 6
+        ) {
+            setError(
+                "Password must be at least 6 characters"
+            );
             return;
         }
 
         if (!form.role) {
             setError("Please select a role");
+            return;
+        }
+
+        if (
+            !["employee", "intern"].includes(
+                form.role
+            )
+        ) {
+            setError(
+                "Only Employee and Intern users can be created or modified"
+            );
             return;
         }
 
@@ -201,37 +231,44 @@ const Users = () => {
 
             if (editingUser) {
                 const updateData = {
-                    fullName: form.fullName.trim(),
+                    fullName:
+                        form.fullName.trim(),
                     email: form.email.trim(),
                     role: form.role,
                     company: form.company,
                 };
 
                 if (form.password.trim()) {
-                    updateData.password = form.password;
+                    updateData.password =
+                        form.password;
                 }
 
-                const response = await updateUser(
-                    editingUser._id,
-                    updateData
-                );
+                const response =
+                    await updateUser(
+                        editingUser._id,
+                        updateData
+                    );
 
                 setSuccess(
                     response?.message ||
-                    "User updated successfully"
+                        "User updated successfully"
                 );
             } else {
-                const response = await createUser({
-                    fullName: form.fullName.trim(),
-                    email: form.email.trim(),
-                    password: form.password,
-                    role: form.role,
-                    company: form.company,
-                });
+                const response =
+                    await createUser({
+                        fullName:
+                            form.fullName.trim(),
+                        email:
+                            form.email.trim(),
+                        password:
+                            form.password,
+                        role: form.role,
+                        company: form.company,
+                    });
 
                 setSuccess(
                     response?.message ||
-                    "User created successfully"
+                        "User created successfully"
                 );
             }
 
@@ -242,11 +279,14 @@ const Users = () => {
                 setSuccess("");
             }, 700);
         } catch (err) {
-            console.error("Save User Error:", err);
+            console.error(
+                "Save User Error:",
+                err
+            );
 
             setError(
                 err.response?.data?.message ||
-                "Failed to save user"
+                    "Failed to save user"
             );
         } finally {
             setFormLoading(false);
@@ -258,6 +298,11 @@ const Users = () => {
     // ==========================================
 
     const handleStatusToggle = async (user) => {
+        // Super Admin status cannot be changed
+        if (user.role === "super_admin") {
+            return;
+        }
+
         const newStatus = !user.isActive;
 
         try {
@@ -274,7 +319,8 @@ const Users = () => {
                     item._id === user._id
                         ? {
                               ...item,
-                              isActive: newStatus,
+                              isActive:
+                                  newStatus,
                           }
                         : item
                 )
@@ -299,7 +345,7 @@ const Users = () => {
 
             setError(
                 err.response?.data?.message ||
-                "Failed to update user status"
+                    "Failed to update user status"
             );
         }
     };
@@ -333,15 +379,6 @@ const Users = () => {
     const getRoleLabel = (role) => {
         const roles = {
             super_admin: "Super Admin",
-            counselor: "Counselor",
-            hr: "HR",
-            trainer: "Trainer",
-            placement_coordinator:
-                "Placement Coordinator",
-            project_manager:
-                "Project Manager",
-
-            // NEW ROLES
             employee: "Employee",
             intern: "Intern",
         };
@@ -402,8 +439,8 @@ const Users = () => {
         (user) => !user.isActive
     ).length;
 
-    const counselors = users.filter(
-        (user) => user.role === "counselor"
+    const employees = users.filter(
+        (user) => user.role === "employee"
     ).length;
 
     // ==========================================
@@ -515,12 +552,12 @@ const Users = () => {
                 <div className="user-summary-card">
 
                     <div className="user-summary-icon">
-                        <i className="bi bi-headset"></i>
+                        <i className="bi bi-person-badge"></i>
                     </div>
 
                     <div>
-                        <span>Counselors</span>
-                        <h3>{counselors}</h3>
+                        <span>Employees</span>
+                        <h3>{employees}</h3>
                     </div>
 
                 </div>
@@ -552,7 +589,9 @@ const Users = () => {
                     className="form-select"
                     value={roleFilter}
                     onChange={(e) =>
-                        setRoleFilter(e.target.value)
+                        setRoleFilter(
+                            e.target.value
+                        )
                     }
                 >
 
@@ -560,27 +599,9 @@ const Users = () => {
                         All Roles
                     </option>
 
-                    <option value="counselor">
-                        Counselor
+                    <option value="super_admin">
+                        Super Admin
                     </option>
-
-                    <option value="hr">
-                        HR
-                    </option>
-
-                    <option value="trainer">
-                        Trainer
-                    </option>
-
-                    <option value="placement_coordinator">
-                        Placement Coordinator
-                    </option>
-
-                    <option value="project_manager">
-                        Project Manager
-                    </option>
-
-                    {/* NEW ROLES */}
 
                     <option value="employee">
                         Employee
@@ -596,7 +617,9 @@ const Users = () => {
                     className="form-select"
                     value={statusFilter}
                     onChange={(e) =>
-                        setStatusFilter(e.target.value)
+                        setStatusFilter(
+                            e.target.value
+                        )
                     }
                 >
 
@@ -641,7 +664,9 @@ const Users = () => {
                         <h5>Users</h5>
 
                         <span>
-                            Showing {filteredUsers.length} of{" "}
+                            Showing{" "}
+                            {filteredUsers.length}{" "}
+                            of{" "}
                             {users.length} users
                         </span>
                     </div>
@@ -693,7 +718,11 @@ const Users = () => {
                                 filteredUsers.map(
                                     (user, index) => (
 
-                                        <tr key={user._id}>
+                                        <tr
+                                            key={
+                                                user._id
+                                            }
+                                        >
 
                                             <td>
                                                 {index + 1}
@@ -706,7 +735,9 @@ const Users = () => {
                                                     <div className="user-avatar">
 
                                                         {user.fullName
-                                                            ?.charAt(0)
+                                                            ?.charAt(
+                                                                0
+                                                            )
                                                             ?.toUpperCase()}
 
                                                     </div>
@@ -714,7 +745,9 @@ const Users = () => {
                                                     <div>
 
                                                         <strong>
-                                                            {user.fullName}
+                                                            {
+                                                                user.fullName
+                                                            }
                                                         </strong>
 
                                                         {user.role ===
@@ -731,7 +764,9 @@ const Users = () => {
                                             </td>
 
                                             <td>
-                                                {user.email}
+                                                {
+                                                    user.email
+                                                }
                                             </td>
 
                                             <td>
@@ -762,8 +797,6 @@ const Users = () => {
                                                             : "inactive"
                                                     }`}
                                                     onClick={() =>
-                                                        user.role !==
-                                                        "super_admin" &&
                                                         handleStatusToggle(
                                                             user
                                                         )
@@ -953,9 +986,15 @@ const Users = () => {
                                         name="fullName"
                                         className="form-control"
                                         placeholder="Enter full name"
-                                        value={form.fullName}
-                                        onChange={handleChange}
-                                        disabled={formLoading}
+                                        value={
+                                            form.fullName
+                                        }
+                                        onChange={
+                                            handleChange
+                                        }
+                                        disabled={
+                                            formLoading
+                                        }
                                     />
 
                                 </div>
@@ -973,9 +1012,15 @@ const Users = () => {
                                         name="email"
                                         className="form-control"
                                         placeholder="Enter email address"
-                                        value={form.email}
-                                        onChange={handleChange}
-                                        disabled={formLoading}
+                                        value={
+                                            form.email
+                                        }
+                                        onChange={
+                                            handleChange
+                                        }
+                                        disabled={
+                                            formLoading
+                                        }
                                     />
 
                                 </div>
@@ -1005,9 +1050,15 @@ const Users = () => {
                                                 ? "Enter new password"
                                                 : "Enter password"
                                         }
-                                        value={form.password}
-                                        onChange={handleChange}
-                                        disabled={formLoading}
+                                        value={
+                                            form.password
+                                        }
+                                        onChange={
+                                            handleChange
+                                        }
+                                        disabled={
+                                            formLoading
+                                        }
                                     />
 
                                 </div>
@@ -1025,40 +1076,20 @@ const Users = () => {
                                         <select
                                             name="role"
                                             className="form-select"
-                                            value={form.role}
-                                            onChange={handleChange}
+                                            value={
+                                                form.role
+                                            }
+                                            onChange={
+                                                handleChange
+                                            }
                                             disabled={
-                                                formLoading ||
-                                                editingUser?.role ===
-                                                    "super_admin"
+                                                formLoading
                                             }
                                         >
 
                                             <option value="">
                                                 Select Role
                                             </option>
-
-                                            <option value="counselor">
-                                                Counselor
-                                            </option>
-
-                                            <option value="hr">
-                                                HR
-                                            </option>
-
-                                            <option value="trainer">
-                                                Trainer
-                                            </option>
-
-                                            <option value="placement_coordinator">
-                                                Placement Coordinator
-                                            </option>
-
-                                            <option value="project_manager">
-                                                Project Manager
-                                            </option>
-
-                                            {/* NEW ROLES */}
 
                                             <option value="employee">
                                                 Employee
@@ -1081,12 +1112,14 @@ const Users = () => {
                                         <select
                                             name="company"
                                             className="form-select"
-                                            value={form.company}
-                                            onChange={handleChange}
+                                            value={
+                                                form.company
+                                            }
+                                            onChange={
+                                                handleChange
+                                            }
                                             disabled={
-                                                formLoading ||
-                                                editingUser?.role ===
-                                                    "super_admin"
+                                                formLoading
                                             }
                                         >
 
@@ -1095,7 +1128,9 @@ const Users = () => {
                                             </option>
 
                                             {companies.map(
-                                                (company) => (
+                                                (
+                                                    company
+                                                ) => (
                                                     <option
                                                         key={
                                                             company._id
@@ -1130,9 +1165,11 @@ const Users = () => {
                                         </strong>
 
                                         <p>
-                                            The selected role determines
-                                            which modules and features
-                                            the user can access.
+                                            Employee and Intern users
+                                            can manage leads and
+                                            follow-ups. Their access
+                                            to other modules depends
+                                            on the assigned permissions.
                                         </p>
 
                                     </div>
@@ -1148,7 +1185,9 @@ const Users = () => {
                                 <button
                                     type="button"
                                     className="btn btn-light"
-                                    onClick={closeModal}
+                                    onClick={
+                                        closeModal
+                                    }
                                     disabled={
                                         formLoading
                                     }

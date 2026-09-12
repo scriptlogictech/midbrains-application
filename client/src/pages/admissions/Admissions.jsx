@@ -101,37 +101,58 @@ const Admissions = () => {
   // FETCH CONVERTED LEADS
   // ========================================
 
-  const fetchLeads = async () => {
-    try {
-      setLoadingLeads(true);
+ const fetchLeads = async () => {
+  if (!companyId) return;
 
-      const data = await getLeads(companyId);
+  try {
+    setLoadingLeads(true);
 
-      const allLeads =
-        data?.leads ||
-        data?.data ||
-        data ||
+    let currentPage = 1;
+    let allConvertedLeads = [];
+    let hasNextPage = true;
+
+    while (hasNextPage) {
+      const response = await getLeads(companyId, {
+        status: "converted",
+        page: currentPage,
+        limit: 100,
+      });
+
+      const pageLeads =
+        response?.data ||
+        response?.leads ||
         [];
 
-      const convertedLeads = allLeads.filter(
-        (lead) => lead.status === "converted"
-      );
+      if (Array.isArray(pageLeads)) {
+        allConvertedLeads = [
+          ...allConvertedLeads,
+          ...pageLeads,
+        ];
+      }
 
-      setLeads(convertedLeads);
-    } catch (error) {
-      console.error(
-        "Failed to load leads:",
-        error
-      );
+      hasNextPage =
+        response?.hasNextPage || false;
 
-      setError(
-        error.response?.data?.message ||
-          "Failed to load converted leads."
-      );
-    } finally {
-      setLoadingLeads(false);
+      currentPage++;
     }
-  };
+
+    setLeads(allConvertedLeads);
+  } catch (err) {
+    console.error(
+      "Failed to load converted leads:",
+      err
+    );
+
+    setLeads([]);
+
+    setError(
+      err.response?.data?.message ||
+        "Failed to load converted leads."
+    );
+  } finally {
+    setLoadingLeads(false);
+  }
+};
 
   // ========================================
   // INITIAL LOAD

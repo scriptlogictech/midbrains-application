@@ -39,13 +39,22 @@ const Followups = () => {
         getUpcomingFollowUps(),
       ]);
 
-      setTodayFollowUps(today?.followUps || today || []);
-      setMissedFollowUps(missed?.followUps || missed || []);
+      setTodayFollowUps(
+        today?.followUps || today || []
+      );
+
+      setMissedFollowUps(
+        missed?.followUps || missed || []
+      );
+
       setUpcomingFollowUps(
         upcoming?.followUps || upcoming || []
       );
     } catch (error) {
-      console.error("Failed to load follow-ups:", error);
+      console.error(
+        "Failed to load follow-ups:",
+        error
+      );
 
       setError(
         error.response?.data?.message ||
@@ -91,7 +100,9 @@ const Followups = () => {
 
   const filteredFollowUps = useMemo(() => {
     return activeFollowUps.filter((lead) => {
-      const searchValue = search.toLowerCase().trim();
+      const searchValue = search
+        .toLowerCase()
+        .trim();
 
       const matchesSearch =
         !searchValue ||
@@ -136,20 +147,26 @@ const Followups = () => {
   const formatDate = (date) => {
     if (!date) return "-";
 
-    return new Date(date).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return new Date(date).toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }
+    );
   };
 
   const formatTime = (date) => {
     if (!date) return "-";
 
-    return new Date(date).toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return new Date(date).toLocaleTimeString(
+      "en-IN",
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+      }
+    );
   };
 
   const getStatusBadge = (status) => {
@@ -163,7 +180,9 @@ const Followups = () => {
       closed: "dark",
     };
 
-    return statusMap[status] || "secondary";
+    return (
+      statusMap[status] || "secondary"
+    );
   };
 
   const getPriorityBadge = (priority) => {
@@ -173,7 +192,9 @@ const Followups = () => {
       high: "danger",
     };
 
-    return priorityMap[priority] || "secondary";
+    return (
+      priorityMap[priority] || "secondary"
+    );
   };
 
   const formatStatus = (status) => {
@@ -184,6 +205,55 @@ const Followups = () => {
       .replace(/\b\w/g, (char) =>
         char.toUpperCase()
       );
+  };
+
+  // ========================================
+  // GET ASSIGNED USER
+  // ========================================
+
+  const getAssignedUser = (lead) => {
+    const assignedUser =
+      lead.assignedCounselor;
+
+    if (!assignedUser) {
+      return {
+        name: "Unassigned",
+        role: "",
+      };
+    }
+
+    if (
+      typeof assignedUser === "object"
+    ) {
+      return {
+        name:
+          assignedUser.fullName ||
+          "Unknown",
+        role:
+          assignedUser.role || "",
+      };
+    }
+
+    return {
+      name: "Assigned User",
+      role: "",
+    };
+  };
+
+  const getRoleLabel = (role) => {
+    if (role === "employee") {
+      return "Employee";
+    }
+
+    if (role === "intern") {
+      return "Intern";
+    }
+
+    if (role === "super_admin") {
+      return "Super Admin";
+    }
+
+    return "";
   };
 
   // ========================================
@@ -230,15 +300,17 @@ const Followups = () => {
     <div className="followups-page">
 
       {/* PAGE HEADER */}
+
       <div className="dashboard-page-header">
+
         <div>
           <h2 className="fw-bold mb-1">
             Follow-ups
           </h2>
 
           <p className="text-muted mb-0">
-            Manage today's, missed and upcoming lead
-            follow-ups.
+            Manage today's, missed and upcoming
+            lead follow-ups.
           </p>
         </div>
 
@@ -249,9 +321,11 @@ const Followups = () => {
           <i className="bi bi-arrow-clockwise me-2"></i>
           Refresh
         </button>
+
       </div>
 
       {/* ERROR */}
+
       {error && (
         <div className="alert alert-danger">
           <i className="bi bi-exclamation-triangle me-2"></i>
@@ -260,18 +334,24 @@ const Followups = () => {
       )}
 
       {/* SUMMARY CARDS */}
+
       <div className="row g-4 mb-4">
 
         {/* TODAY */}
+
         <div className="col-md-4">
+
           <div
             className={`followup-summary-card ${
               activeTab === "today"
                 ? "active"
                 : ""
             }`}
-            onClick={() => setActiveTab("today")}
+            onClick={() =>
+              setActiveTab("today")
+            }
           >
+
             <div className="followup-summary-icon today">
               <i className="bi bi-calendar-day"></i>
             </div>
@@ -287,19 +367,26 @@ const Followups = () => {
                 Scheduled for today
               </small>
             </div>
+
           </div>
+
         </div>
 
         {/* MISSED */}
+
         <div className="col-md-4">
+
           <div
             className={`followup-summary-card ${
               activeTab === "missed"
                 ? "active"
                 : ""
             }`}
-            onClick={() => setActiveTab("missed")}
+            onClick={() =>
+              setActiveTab("missed")
+            }
           >
+
             <div className="followup-summary-icon missed">
               <i className="bi bi-exclamation-circle"></i>
             </div>
@@ -315,19 +402,26 @@ const Followups = () => {
                 Need attention
               </small>
             </div>
+
           </div>
+
         </div>
 
         {/* UPCOMING */}
+
         <div className="col-md-4">
+
           <div
             className={`followup-summary-card ${
               activeTab === "upcoming"
                 ? "active"
                 : ""
             }`}
-            onClick={() => setActiveTab("upcoming")}
+            onClick={() =>
+              setActiveTab("upcoming")
+            }
           >
+
             <div className="followup-summary-icon upcoming">
               <i className="bi bi-calendar-check"></i>
             </div>
@@ -343,24 +437,31 @@ const Followups = () => {
                 Scheduled for later
               </small>
             </div>
+
           </div>
+
         </div>
 
       </div>
 
       {/* FILTER SECTION */}
+
       <div className="card border-0 shadow-sm mb-4">
+
         <div className="card-body">
 
           <div className="row g-3">
 
             {/* SEARCH */}
+
             <div className="col-lg-5">
+
               <label className="form-label">
                 Search
               </label>
 
               <div className="input-group">
+
                 <span className="input-group-text">
                   <i className="bi bi-search"></i>
                 </span>
@@ -371,14 +472,20 @@ const Followups = () => {
                   placeholder="Search name, phone, email or course..."
                   value={search}
                   onChange={(e) =>
-                    setSearch(e.target.value)
+                    setSearch(
+                      e.target.value
+                    )
                   }
                 />
+
               </div>
+
             </div>
 
             {/* STATUS */}
+
             <div className="col-lg-3">
+
               <label className="form-label">
                 Status
               </label>
@@ -387,9 +494,12 @@ const Followups = () => {
                 className="form-select"
                 value={statusFilter}
                 onChange={(e) =>
-                  setStatusFilter(e.target.value)
+                  setStatusFilter(
+                    e.target.value
+                  )
                 }
               >
+
                 <option value="all">
                   All Status
                 </option>
@@ -421,11 +531,15 @@ const Followups = () => {
                 <option value="closed">
                   Closed
                 </option>
+
               </select>
+
             </div>
 
             {/* PRIORITY */}
+
             <div className="col-lg-2">
+
               <label className="form-label">
                 Priority
               </label>
@@ -434,9 +548,12 @@ const Followups = () => {
                 className="form-select"
                 value={priorityFilter}
                 onChange={(e) =>
-                  setPriorityFilter(e.target.value)
+                  setPriorityFilter(
+                    e.target.value
+                  )
                 }
               >
+
                 <option value="all">
                   All Priority
                 </option>
@@ -452,26 +569,35 @@ const Followups = () => {
                 <option value="high">
                   High
                 </option>
+
               </select>
+
             </div>
 
             {/* RESET */}
+
             <div className="col-lg-2 d-flex align-items-end">
+
               <button
                 className="btn btn-light border w-100"
-                onClick={handleResetFilters}
+                onClick={
+                  handleResetFilters
+                }
               >
                 <i className="bi bi-x-circle me-2"></i>
                 Reset
               </button>
+
             </div>
 
           </div>
 
         </div>
+
       </div>
 
       {/* TABLE */}
+
       <div className="card border-0 shadow-sm">
 
         <div className="card-header bg-white border-0 py-3">
@@ -479,7 +605,9 @@ const Followups = () => {
           <div className="d-flex justify-content-between align-items-center">
 
             <div>
+
               <h5 className="mb-1 fw-bold">
+
                 {activeTab === "today" &&
                   "Today's Follow-ups"}
 
@@ -488,15 +616,23 @@ const Followups = () => {
 
                 {activeTab === "upcoming" &&
                   "Upcoming Follow-ups"}
+
               </h5>
 
               <small className="text-muted">
-                Showing {filteredFollowUps.length}{" "}
+
+                Showing{" "}
+                {
+                  filteredFollowUps.length
+                }{" "}
                 follow-up
-                {filteredFollowUps.length !== 1
+                {filteredFollowUps.length !==
+                1
                   ? "s"
                   : ""}
+
               </small>
+
             </div>
 
             <span className="badge bg-light text-dark border">
@@ -509,7 +645,8 @@ const Followups = () => {
 
         <div className="card-body p-0">
 
-          {filteredFollowUps.length === 0 ? (
+          {filteredFollowUps.length ===
+          0 ? (
             <div className="followup-empty">
 
               <div className="followup-empty-icon">
@@ -521,8 +658,9 @@ const Followups = () => {
               </h5>
 
               <p className="text-muted mb-0">
-                There are no follow-ups matching
-                your current filters.
+                There are no follow-ups
+                matching your current
+                filters.
               </p>
 
             </div>
@@ -532,6 +670,7 @@ const Followups = () => {
               <table className="table align-middle mb-0">
 
                 <thead>
+
                   <tr>
                     <th>Lead</th>
                     <th>Contact</th>
@@ -539,120 +678,172 @@ const Followups = () => {
                     <th>Priority</th>
                     <th>Status</th>
                     <th>Follow-up Date</th>
-                    <th>Counselor</th>
+                    <th>Assigned To</th>
                     <th>Action</th>
                   </tr>
+
                 </thead>
 
                 <tbody>
 
-                  {filteredFollowUps.map((lead) => (
-                    <tr key={lead._id}>
+                  {filteredFollowUps.map(
+                    (lead) => {
+                      const assignedUser =
+                        getAssignedUser(
+                          lead
+                        );
 
-                      {/* LEAD */}
-                      <td>
-                        <div className="d-flex align-items-center">
+                      return (
+                        <tr
+                          key={lead._id}
+                        >
 
-                          <div className="followup-avatar">
-                            {lead.fullName
-                              ?.charAt(0)
-                              ?.toUpperCase()}
-                          </div>
+                          {/* LEAD */}
 
-                          <div>
-                            <div className="fw-semibold">
-                              {lead.fullName}
+                          <td>
+
+                            <div className="d-flex align-items-center">
+
+                              <div className="followup-avatar">
+                                {lead.fullName
+                                  ?.charAt(
+                                    0
+                                  )
+                                  ?.toUpperCase()}
+                              </div>
+
+                              <div>
+
+                                <div className="fw-semibold">
+                                  {
+                                    lead.fullName
+                                  }
+                                </div>
+
+                                {lead.email && (
+                                  <small className="text-muted">
+                                    {
+                                      lead.email
+                                    }
+                                  </small>
+                                )}
+
+                              </div>
+
                             </div>
 
-                            {lead.email && (
-                              <small className="text-muted">
-                                {lead.email}
-                              </small>
-                            )}
-                          </div>
+                          </td>
 
-                        </div>
-                      </td>
+                          {/* CONTACT */}
 
-                      {/* CONTACT */}
-                      <td>
-                        {lead.contactNumber || "-"}
-                      </td>
+                          <td>
+                            {lead.contactNumber ||
+                              "-"}
+                          </td>
 
-                      {/* COURSE */}
-                      <td>
-                        {lead.courseInterested ||
-                          "-"}
-                      </td>
+                          {/* COURSE */}
 
-                      {/* PRIORITY */}
-                      <td>
-                        <span
-                          className={`badge bg-${getPriorityBadge(
-                            lead.priority
-                          )}`}
-                        >
-                          {formatStatus(
-                            lead.priority
-                          )}
-                        </span>
-                      </td>
+                          <td>
+                            {lead.courseInterested ||
+                              "-"}
+                          </td>
 
-                      {/* STATUS */}
-                      <td>
-                        <span
-                          className={`badge bg-${getStatusBadge(
-                            lead.status
-                          )}`}
-                        >
-                          {formatStatus(
-                            lead.status
-                          )}
-                        </span>
-                      </td>
+                          {/* PRIORITY */}
 
-                      {/* DATE */}
-                      <td>
-                        <div className="fw-semibold">
-                          {formatDate(
-                            lead.nextFollowUpDate
-                          )}
-                        </div>
+                          <td>
 
-                        <small className="text-muted">
-                          {formatTime(
-                            lead.nextFollowUpDate
-                          )}
-                        </small>
-                      </td>
+                            <span
+                              className={`badge bg-${getPriorityBadge(
+                                lead.priority
+                              )}`}
+                            >
+                              {formatStatus(
+                                lead.priority
+                              )}
+                            </span>
 
-                      {/* COUNSELOR */}
-                      <td>
-                        {lead.assignedCounselor
-                          ?.fullName || (
-                          <span className="text-muted">
-                            Unassigned
-                          </span>
-                        )}
-                      </td>
+                          </td>
 
-                      {/* ACTION */}
-                      <td>
-                        <button
-                          className="btn btn-sm btn-outline-primary"
-                          onClick={() =>
-                            handleViewLead(
-                              lead._id
-                            )
-                          }
-                        >
-                          <i className="bi bi-eye me-1"></i>
-                          View
-                        </button>
-                      </td>
+                          {/* STATUS */}
 
-                    </tr>
-                  ))}
+                          <td>
+
+                            <span
+                              className={`badge bg-${getStatusBadge(
+                                lead.status
+                              )}`}
+                            >
+                              {formatStatus(
+                                lead.status
+                              )}
+                            </span>
+
+                          </td>
+
+                          {/* DATE */}
+
+                          <td>
+
+                            <div className="fw-semibold">
+                              {formatDate(
+                                lead.nextFollowUpDate
+                              )}
+                            </div>
+
+                            <small className="text-muted">
+                              {formatTime(
+                                lead.nextFollowUpDate
+                              )}
+                            </small>
+
+                          </td>
+
+                          {/* ASSIGNED USER */}
+
+                          <td>
+
+                            <div className="assigned-user-cell">
+
+                              <div className="fw-semibold">
+                                {
+                                  assignedUser.name
+                                }
+                              </div>
+
+                              {assignedUser.role && (
+                                <small className="text-muted">
+                                  {getRoleLabel(
+                                    assignedUser.role
+                                  )}
+                                </small>
+                              )}
+
+                            </div>
+
+                          </td>
+
+                          {/* ACTION */}
+
+                          <td>
+
+                            <button
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() =>
+                                handleViewLead(
+                                  lead._id
+                                )
+                              }
+                            >
+                              <i className="bi bi-eye me-1"></i>
+                              View
+                            </button>
+
+                          </td>
+
+                        </tr>
+                      );
+                    }
+                  )}
 
                 </tbody>
 
@@ -662,6 +853,7 @@ const Followups = () => {
           )}
 
         </div>
+
       </div>
 
     </div>

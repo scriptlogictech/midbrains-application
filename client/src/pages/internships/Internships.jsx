@@ -89,6 +89,11 @@ const Internships = () => {
   // ========================================
 
   const fetchInternships = async () => {
+    if (!companyId) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
@@ -98,11 +103,16 @@ const Internships = () => {
           companyId
         );
 
-      setInternships(
+      const internshipData =
         data?.internships ||
-          data?.data ||
-          data ||
-          []
+        data?.data ||
+        data ||
+        [];
+
+      setInternships(
+        Array.isArray(internshipData)
+          ? internshipData
+          : []
       );
     } catch (error) {
       console.error(
@@ -114,6 +124,8 @@ const Internships = () => {
         error.response?.data?.message ||
           "Failed to load internships."
       );
+
+      setInternships([]);
     } finally {
       setLoading(false);
     }
@@ -124,6 +136,8 @@ const Internships = () => {
   // ========================================
 
   const fetchFormData = async () => {
+    if (!companyId) return;
+
     try {
       setLoadingFormData(true);
 
@@ -135,19 +149,39 @@ const Internships = () => {
         getCompanyUsers(companyId),
       ]);
 
-      setAdmissions(
+      const admissionList =
         admissionsData?.admissions ||
-          admissionsData?.data ||
-          admissionsData ||
-          []
+        admissionsData?.data ||
+        admissionsData ||
+        [];
+
+      const userList =
+        usersData?.users ||
+        usersData?.data ||
+        usersData ||
+        [];
+
+      setAdmissions(
+        Array.isArray(admissionList)
+          ? admissionList
+          : []
       );
 
-      setUsers(
-        usersData?.users ||
-          usersData?.data ||
-          usersData ||
-          []
-      );
+      // ========================================
+      // ONLY ACTIVE EMPLOYEES CAN BE MENTORS
+      // ========================================
+
+      const employeeUsers = Array.isArray(
+        userList
+      )
+        ? userList.filter(
+            (user) =>
+              user.role === "employee" &&
+              user.isActive !== false
+          )
+        : [];
+
+      setUsers(employeeUsers);
     } catch (error) {
       console.error(
         "Failed to load internship form data:",
@@ -158,6 +192,9 @@ const Internships = () => {
         error.response?.data?.message ||
           "Failed to load students or mentors."
       );
+
+      setAdmissions([]);
+      setUsers([]);
     } finally {
       setLoadingFormData(false);
     }
@@ -251,6 +288,14 @@ const Internships = () => {
 
     setError("");
     setSuccess("");
+
+    if (!companyId) {
+      setError(
+        "Company is not selected."
+      );
+
+      return;
+    }
 
     if (!formData.admission) {
       setError(
@@ -431,6 +476,12 @@ const Internships = () => {
           internship.mentor
             ?.fullName || "";
 
+        const projectTitle =
+          internship.projectTitle || "";
+
+        const technology =
+          internship.technology || "";
+
         const matchesSearch =
           !searchValue ||
           studentName
@@ -442,11 +493,11 @@ const Internships = () => {
           mentorName
             .toLowerCase()
             .includes(searchValue) ||
-          internship.projectTitle
-            ?.toLowerCase()
+          projectTitle
+            .toLowerCase()
             .includes(searchValue) ||
-          internship.technology
-            ?.toLowerCase()
+          technology
+            .toLowerCase()
             .includes(searchValue);
 
         const matchesStatus =
@@ -646,6 +697,12 @@ const Internships = () => {
 
           {error}
 
+          <button
+            type="button"
+            className="btn-close float-end"
+            onClick={() => setError("")}
+          ></button>
+
         </div>
       )}
 
@@ -655,6 +712,12 @@ const Internships = () => {
           <i className="bi bi-check-circle me-2"></i>
 
           {success}
+
+          <button
+            type="button"
+            className="btn-close float-end"
+            onClick={() => setSuccess("")}
+          ></button>
 
         </div>
       )}
@@ -858,6 +921,7 @@ const Internships = () => {
             <div className="col-lg-2 d-flex align-items-end">
 
               <button
+                type="button"
                 className="btn btn-light border w-100"
                 onClick={resetFilters}
               >
@@ -899,6 +963,7 @@ const Internships = () => {
             </div>
 
             <button
+              type="button"
               className="btn btn-outline-primary btn-sm"
               onClick={fetchInternships}
             >
@@ -1177,6 +1242,7 @@ const Internships = () => {
                         <td>
 
                           <button
+                            type="button"
                             className="btn btn-sm btn-outline-primary"
                             onClick={() =>
                               openDetails(
@@ -1243,6 +1309,7 @@ const Internships = () => {
               </div>
 
               <button
+                type="button"
                 className="btn-close"
                 onClick={closeModal}
                 disabled={
@@ -1267,6 +1334,14 @@ const Internships = () => {
                     <i className="bi bi-exclamation-triangle me-2"></i>
 
                     {error}
+
+                    <button
+                      type="button"
+                      className="btn-close float-end"
+                      onClick={() =>
+                        setError("")
+                      }
+                    ></button>
 
                   </div>
 
@@ -1300,14 +1375,19 @@ const Internships = () => {
                         handleAdmissionChange
                       }
                       disabled={
-                        loadingFormData
+                        loadingFormData ||
+                        submitLoading
                       }
+                      required
                     >
 
                       <option value="">
 
                         {loadingFormData
                           ? "Loading students..."
+                          : admissions.length ===
+                            0
+                          ? "No admissions available"
                           : "Select student"}
 
                       </option>
@@ -1390,7 +1470,8 @@ const Internships = () => {
                         handleChange
                       }
                       disabled={
-                        loadingFormData
+                        loadingFormData ||
+                        submitLoading
                       }
                     >
 
@@ -1398,13 +1479,8 @@ const Internships = () => {
                         No Mentor Assigned
                       </option>
 
-                      {users
-                        .filter(
-                          (user) =>
-                            user.isActive !==
-                              false
-                        )
-                        .map((user) => (
+                      {users.map(
+                        (user) => (
 
                           <option
                             key={
@@ -1419,17 +1495,20 @@ const Internships = () => {
                               user.fullName
                             }
 
-                            {" - "}
-
-                            {formatStatus(
-                              user.role
-                            )}
+                            {" - Employee"}
 
                           </option>
 
-                        ))}
+                        )
+                      )}
 
                     </select>
+
+                    <small className="text-muted">
+                      Only active employees can
+                      be assigned as internship
+                      mentors.
+                    </small>
 
                   </div>
 
@@ -1460,6 +1539,9 @@ const Internships = () => {
                       onChange={
                         handleChange
                       }
+                      disabled={
+                        submitLoading
+                      }
                     />
 
                   </div>
@@ -1485,6 +1567,9 @@ const Internships = () => {
                       onChange={
                         handleChange
                       }
+                      disabled={
+                        submitLoading
+                      }
                     />
 
                   </div>
@@ -1509,6 +1594,9 @@ const Internships = () => {
                       }
                       onChange={
                         handleChange
+                      }
+                      disabled={
+                        submitLoading
                       }
                     />
 
@@ -1540,6 +1628,9 @@ const Internships = () => {
                       onChange={
                         handleChange
                       }
+                      disabled={
+                        submitLoading
+                      }
                     />
 
                   </div>
@@ -1570,6 +1661,9 @@ const Internships = () => {
                       onChange={
                         handleChange
                       }
+                      disabled={
+                        submitLoading
+                      }
                     />
 
                   </div>
@@ -1592,6 +1686,9 @@ const Internships = () => {
                       }
                       onChange={
                         handleChange
+                      }
+                      disabled={
+                        submitLoading
                       }
                     >
 
@@ -1634,6 +1731,9 @@ const Internships = () => {
                         onChange={
                           handleChange
                         }
+                        disabled={
+                          submitLoading
+                        }
                       />
 
                       <label
@@ -1667,6 +1767,9 @@ const Internships = () => {
                       }
                       onChange={
                         handleChange
+                      }
+                      disabled={
+                        submitLoading
                       }
                     ></textarea>
 
@@ -1765,6 +1868,7 @@ const Internships = () => {
                 </div>
 
                 <button
+                  type="button"
                   className="btn-close"
                   onClick={closeDetails}
                 ></button>
@@ -2144,6 +2248,7 @@ const Internships = () => {
               <div className="custom-modal-footer">
 
                 <button
+                  type="button"
                   className="btn btn-light border"
                   onClick={closeDetails}
                 >

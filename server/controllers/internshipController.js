@@ -7,7 +7,7 @@ const User = require("../models/User");
 // ==========================================
 
 const hasCompanyAccess = (req, companyId) => {
-    if (!req.user) {
+    if (!req.user || !companyId) {
         return false;
     }
 
@@ -16,6 +16,7 @@ const hasCompanyAccess = (req, companyId) => {
         return true;
     }
 
+    // Employee can access only their own company
     return (
         req.user.company &&
         req.user.company.toString() ===
@@ -23,6 +24,47 @@ const hasCompanyAccess = (req, companyId) => {
     );
 };
 
+// ==========================================
+// Helper: Get Target Company
+// ==========================================
+
+const getTargetCompany = (req, requestedCompany) => {
+    // Super Admin can select any company
+    if (req.user.role === "super_admin") {
+        return requestedCompany || null;
+    }
+
+    // Employee automatically uses their own company
+    if (req.user.company) {
+        return req.user.company;
+    }
+
+    return null;
+};
+
+// ==========================================
+// Helper: Populate Internship
+// ==========================================
+
+const populateInternship = (query) => {
+    return query
+        .populate(
+            "admission",
+            "studentName contactNumber email courseName batchName"
+        )
+        .populate(
+            "mentor",
+            "fullName email role"
+        )
+        .populate(
+            "company",
+            "companyName companyCode"
+        )
+        .populate(
+            "createdBy",
+            "fullName email role"
+        );
+};
 
 // ==========================================
 // Create Internship
@@ -44,8 +86,11 @@ exports.createInternship = async (req, res) => {
             remarks,
         } = req.body || {};
 
+        // ==========================================
+        // Required Fields
+        // ==========================================
+
         if (
-            !company ||
             !admission ||
             !projectTitle ||
             !startDate ||
@@ -54,7 +99,23 @@ exports.createInternship = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message:
-                    "Company, admission, project title, start date and end date are required",
+                    "Admission, project title, start date and end date are required",
+            });
+        }
+
+        // ==========================================
+        // Determine Company
+        // ==========================================
+
+        const targetCompany = getTargetCompany(
+            req,
+            company
+        );
+
+        if (!targetCompany) {
+            return res.status(400).json({
+                success: false,
+                message: "Company is required",
             });
         }
 
@@ -62,7 +123,12 @@ exports.createInternship = async (req, res) => {
         // Company Access
         // ==========================================
 
-        if (!hasCompanyAccess(req, company)) {
+        if (
+            !hasCompanyAccess(
+                req,
+                targetCompany
+            )
+        ) {
             return res.status(403).json({
                 success: false,
                 message:
@@ -89,8 +155,9 @@ exports.createInternship = async (req, res) => {
         // ==========================================
 
         if (
+            !existingAdmission.company ||
             existingAdmission.company.toString() !==
-            company.toString()
+                targetCompany.toString()
         ) {
             return res.status(403).json({
                 success: false,
@@ -107,8 +174,8 @@ exports.createInternship = async (req, res) => {
             const existingMentor =
                 await User.findOne({
                     _id: mentor,
-                    company,
-                    role: "trainer",
+                    company: targetCompany,
+                    role: "employee",
                     isActive: true,
                 });
 
@@ -116,9 +183,31 @@ exports.createInternship = async (req, res) => {
                 return res.status(400).json({
                     success: false,
                     message:
-                        "Invalid or inactive trainer selected as mentor",
+                        "Invalid or inactive employee selected as mentor",
                 });
             }
+        }
+
+        // ==========================================
+        // Validate Status
+        // ==========================================
+
+        const allowedStatuses = [
+            "assigned",
+            "in_progress",
+            "completed",
+            "cancelled",
+        ];
+
+        if (
+            status &&
+            !allowedStatuses.includes(status)
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Invalid internship status",
+            });
         }
 
         // ==========================================
@@ -128,6 +217,7 @@ exports.createInternship = async (req, res) => {
         const existingInternship =
             await Internship.findOne({
                 admission,
+                company: targetCompany,
                 status: {
                     $in: [
                         "assigned",
@@ -150,7 +240,7 @@ exports.createInternship = async (req, res) => {
 
         const internship =
             await Internship.create({
-                company,
+                company: targetCompany,
                 admission,
                 mentor,
                 projectTitle,
@@ -161,39 +251,31 @@ exports.createInternship = async (req, res) => {
                 status:
                     status || "assigned",
                 certificateGenerated:
-                    certificateGenerated !== undefined
+                    certificateGenerated !==
+                    undefined
                         ? certificateGenerated
                         : false,
                 remarks,
                 createdBy: req.user._id,
             });
 
-        const populatedInternship =
-            await Internship.findById(
-                internship._id
-            )
-                .populate(
-                    "admission",
-                    "studentName contactNumber email courseName batchName"
-                )
-                .populate(
-                    "mentor",
-                    "fullName email role"
-                )
-                .populate(
-                    "company",
-                    "companyName companyCode"
-                )
-                .populate(
-                    "createdBy",
-                    "fullName email role"
-                );
+        // ==========================================
+        // Get Populated Internship
+        // ==========================================
 
-        res.status(201).json({
+        const populatedInternship =
+            await populateInternship(
+                Internship.findById(
+                    internship._id
+                )
+            );
+
+        return res.status(201).json({
             success: true,
             message:
                 "Internship created successfully",
-            internship: populatedInternship,
+            internship:
+                populatedInternship,
         });
     } catch (error) {
         console.error(
@@ -201,7 +283,7 @@ exports.createInternship = async (req, res) => {
             error
         );
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message:
                 "Failed to create internship",
@@ -209,7 +291,6 @@ exports.createInternship = async (req, res) => {
         });
     }
 };
-
 
 // ==========================================
 // Get All Internships
@@ -219,7 +300,10 @@ exports.getInternships = async (req, res) => {
     try {
         let filter = {};
 
-        // Non Super Admin → own company only
+        // ==========================================
+        // Employee → Own Company Only
+        // ==========================================
+
         if (req.user.role !== "super_admin") {
             if (!req.user.company) {
                 return res.status(403).json({
@@ -229,32 +313,18 @@ exports.getInternships = async (req, res) => {
                 });
             }
 
-            filter.company = req.user.company;
+            filter.company =
+                req.user.company;
         }
 
         const internships =
-            await Internship.find(filter)
-                .populate(
-                    "admission",
-                    "studentName contactNumber email courseName batchName"
-                )
-                .populate(
-                    "mentor",
-                    "fullName email role"
-                )
-                .populate(
-                    "company",
-                    "companyName companyCode"
-                )
-                .populate(
-                    "createdBy",
-                    "fullName email role"
-                )
-                .sort({
+            await populateInternship(
+                Internship.find(filter).sort({
                     createdAt: -1,
-                });
+                })
+            );
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             internships,
         });
@@ -264,7 +334,7 @@ exports.getInternships = async (req, res) => {
             error
         );
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message:
                 "Failed to fetch internships",
@@ -272,7 +342,6 @@ exports.getInternships = async (req, res) => {
         });
     }
 };
-
 
 // ==========================================
 // Get Company Internships
@@ -285,7 +354,24 @@ exports.getCompanyInternships = async (
     try {
         const { companyId } = req.params;
 
-        if (!hasCompanyAccess(req, companyId)) {
+        if (!companyId) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Company ID is required",
+            });
+        }
+
+        // ==========================================
+        // Company Access
+        // ==========================================
+
+        if (
+            !hasCompanyAccess(
+                req,
+                companyId
+            )
+        ) {
             return res.status(403).json({
                 success: false,
                 message:
@@ -294,30 +380,15 @@ exports.getCompanyInternships = async (
         }
 
         const internships =
-            await Internship.find({
-                company: companyId,
-            })
-                .populate(
-                    "admission",
-                    "studentName contactNumber email courseName batchName"
-                )
-                .populate(
-                    "mentor",
-                    "fullName email role"
-                )
-                .populate(
-                    "company",
-                    "companyName companyCode"
-                )
-                .populate(
-                    "createdBy",
-                    "fullName email role"
-                )
-                .sort({
+            await populateInternship(
+                Internship.find({
+                    company: companyId,
+                }).sort({
                     createdAt: -1,
-                });
+                })
+            );
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             internships,
         });
@@ -327,7 +398,7 @@ exports.getCompanyInternships = async (
             error
         );
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message:
                 "Failed to fetch company internships",
@@ -336,25 +407,16 @@ exports.getCompanyInternships = async (
     }
 };
 
-
 // ==========================================
-// Update Internship Status
+// Get Internship By ID
 // ==========================================
 
-exports.updateInternshipStatus = async (
+exports.getInternshipById = async (
     req,
     res
 ) => {
     try {
         const { id } = req.params;
-        const { status } = req.body || {};
-
-        if (!status) {
-            return res.status(400).json({
-                success: false,
-                message: "Status is required",
-            });
-        }
 
         const internship =
             await Internship.findById(id);
@@ -362,7 +424,8 @@ exports.updateInternshipStatus = async (
         if (!internship) {
             return res.status(404).json({
                 success: false,
-                message: "Internship not found",
+                message:
+                    "Internship not found",
             });
         }
 
@@ -383,9 +446,291 @@ exports.updateInternshipStatus = async (
             });
         }
 
+        const populatedInternship =
+            await populateInternship(
+                Internship.findById(id)
+            );
+
+        return res.status(200).json({
+            success: true,
+            internship:
+                populatedInternship,
+        });
+    } catch (error) {
+        console.error(
+            "Get Internship By ID Error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Failed to fetch internship",
+            error: error.message,
+        });
+    }
+};
+
+// ==========================================
+// Update Internship
+// ==========================================
+
+exports.updateInternship = async (
+    req,
+    res
+) => {
+    try {
+        const { id } = req.params;
+
+        const {
+            company,
+            admission,
+            mentor,
+            projectTitle,
+            technology,
+            duration,
+            startDate,
+            endDate,
+            status,
+            certificateGenerated,
+            remarks,
+        } = req.body || {};
+
+        const internship =
+            await Internship.findById(id);
+
+        if (!internship) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    "Internship not found",
+            });
+        }
+
         // ==========================================
-        // Validate Status
+        // Existing Internship Company Access
         // ==========================================
+
+        if (
+            !hasCompanyAccess(
+                req,
+                internship.company
+            )
+        ) {
+            return res.status(403).json({
+                success: false,
+                message:
+                    "You do not have access to this internship",
+            });
+        }
+
+        // ==========================================
+        // Determine Company
+        // ==========================================
+
+        const targetCompany =
+            getTargetCompany(
+                req,
+                company || internship.company
+            );
+
+        if (!targetCompany) {
+            return res.status(400).json({
+                success: false,
+                message: "Company is required",
+            });
+        }
+
+        // ==========================================
+        // Prevent Company Change
+        // ==========================================
+
+        if (
+            targetCompany.toString() !==
+            internship.company.toString()
+        ) {
+            return res.status(403).json({
+                success: false,
+                message:
+                    "Internship company cannot be changed",
+            });
+        }
+
+        // ==========================================
+        // Validate Admission
+        // ==========================================
+
+        if (admission) {
+            const existingAdmission =
+                await Admission.findById(
+                    admission
+                );
+
+            if (!existingAdmission) {
+                return res.status(404).json({
+                    success: false,
+                    message:
+                        "Admission not found",
+                });
+            }
+
+            if (
+                !existingAdmission.company ||
+                existingAdmission.company.toString() !==
+                    targetCompany.toString()
+            ) {
+                return res.status(403).json({
+                    success: false,
+                    message:
+                        "Admission does not belong to the selected company",
+                });
+            }
+
+            internship.admission =
+                admission;
+        }
+
+        // ==========================================
+        // Validate Mentor
+        // ==========================================
+
+        if (mentor !== undefined) {
+            if (mentor === null || mentor === "") {
+                internship.mentor = undefined;
+            } else {
+                const existingMentor =
+                    await User.findOne({
+                        _id: mentor,
+                        company: targetCompany,
+                        role: "employee",
+                        isActive: true,
+                    });
+
+                if (!existingMentor) {
+                    return res.status(400).json({
+                        success: false,
+                        message:
+                            "Invalid or inactive employee selected as mentor",
+                    });
+                }
+
+                internship.mentor =
+                    mentor;
+            }
+        }
+
+        // ==========================================
+        // Update Fields
+        // ==========================================
+
+        if (projectTitle !== undefined) {
+            internship.projectTitle =
+                projectTitle;
+        }
+
+        if (technology !== undefined) {
+            internship.technology =
+                technology;
+        }
+
+        if (duration !== undefined) {
+            internship.duration =
+                duration;
+        }
+
+        if (startDate !== undefined) {
+            internship.startDate =
+                startDate;
+        }
+
+        if (endDate !== undefined) {
+            internship.endDate =
+                endDate;
+        }
+
+        if (status !== undefined) {
+            const allowedStatuses = [
+                "assigned",
+                "in_progress",
+                "completed",
+                "cancelled",
+            ];
+
+            if (
+                !allowedStatuses.includes(
+                    status
+                )
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Invalid internship status",
+                });
+            }
+
+            internship.status = status;
+        }
+
+        if (
+            certificateGenerated !==
+            undefined
+        ) {
+            internship.certificateGenerated =
+                certificateGenerated;
+        }
+
+        if (remarks !== undefined) {
+            internship.remarks =
+                remarks;
+        }
+
+        await internship.save();
+
+        const updatedInternship =
+            await populateInternship(
+                Internship.findById(id)
+            );
+
+        return res.status(200).json({
+            success: true,
+            message:
+                "Internship updated successfully",
+            internship:
+                updatedInternship,
+        });
+    } catch (error) {
+        console.error(
+            "Update Internship Error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Failed to update internship",
+            error: error.message,
+        });
+    }
+};
+
+// ==========================================
+// Update Internship Status
+// ==========================================
+
+exports.updateInternshipStatus = async (
+    req,
+    res
+) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body || {};
+
+        if (!status) {
+            return res.status(400).json({
+                success: false,
+                message: "Status is required",
+            });
+        }
 
         const allowedStatuses = [
             "assigned",
@@ -394,10 +739,41 @@ exports.updateInternshipStatus = async (
             "cancelled",
         ];
 
-        if (!allowedStatuses.includes(status)) {
+        if (
+            !allowedStatuses.includes(status)
+        ) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid internship status",
+                message:
+                    "Invalid internship status",
+            });
+        }
+
+        const internship =
+            await Internship.findById(id);
+
+        if (!internship) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    "Internship not found",
+            });
+        }
+
+        // ==========================================
+        // Company Access
+        // ==========================================
+
+        if (
+            !hasCompanyAccess(
+                req,
+                internship.company
+            )
+        ) {
+            return res.status(403).json({
+                success: false,
+                message:
+                    "You do not have access to this internship",
             });
         }
 
@@ -406,27 +782,18 @@ exports.updateInternshipStatus = async (
         await internship.save();
 
         const updatedInternship =
-            await Internship.findById(
-                internship._id
-            )
-                .populate(
-                    "admission",
-                    "studentName contactNumber email courseName batchName"
+            await populateInternship(
+                Internship.findById(
+                    internship._id
                 )
-                .populate(
-                    "mentor",
-                    "fullName email role"
-                )
-                .populate(
-                    "company",
-                    "companyName companyCode"
-                );
+            );
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message:
                 "Internship status updated successfully",
-            internship: updatedInternship,
+            internship:
+                updatedInternship,
         });
     } catch (error) {
         console.error(
@@ -434,10 +801,73 @@ exports.updateInternshipStatus = async (
             error
         );
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message:
                 "Failed to update internship status",
+            error: error.message,
+        });
+    }
+};
+
+// ==========================================
+// Delete Internship
+// ==========================================
+
+exports.deleteInternship = async (
+    req,
+    res
+) => {
+    try {
+        const { id } = req.params;
+
+        const internship =
+            await Internship.findById(id);
+
+        if (!internship) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    "Internship not found",
+            });
+        }
+
+        // ==========================================
+        // Company Access
+        // ==========================================
+
+        if (
+            !hasCompanyAccess(
+                req,
+                internship.company
+            )
+        ) {
+            return res.status(403).json({
+                success: false,
+                message:
+                    "You do not have access to this internship",
+            });
+        }
+
+        await Internship.findByIdAndDelete(
+            id
+        );
+
+        return res.status(200).json({
+            success: true,
+            message:
+                "Internship deleted successfully",
+        });
+    } catch (error) {
+        console.error(
+            "Delete Internship Error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Failed to delete internship",
             error: error.message,
         });
     }

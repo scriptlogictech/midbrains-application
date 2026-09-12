@@ -33,151 +33,338 @@ import Users from "../pages/users/Users";
 import WorkManagement from "../pages/work/WorkManagement";
 import MyWork from "../pages/work/MyWork";
 
+import { useAuth } from "../context/AuthContext";
+
+
+// =====================================================
+// ROLE PROTECTED ROUTE
+// =====================================================
+
+const RoleRoute = ({ children, allowedRoles }) => {
+    const { user } = useAuth();
+
+    // No logged-in user
+    if (!user) {
+        return (
+            <Navigate
+                to="/login"
+                replace
+            />
+        );
+    }
+
+    // User role is not allowed
+    if (!allowedRoles.includes(user.role)) {
+        return (
+            <Navigate
+                to={`/dashboard/${
+                    user.company?._id ||
+                    user.company ||
+                    ""
+                }`}
+                replace
+            />
+        );
+    }
+
+    return children;
+};
+
 
 const AppRoutes = () => {
     return (
         <BrowserRouter>
             <Routes>
 
-                {/* Login */}
+                {/* =================================================
+                    LOGIN
+                ================================================= */}
+
                 <Route
                     path="/login"
                     element={<Login />}
                 />
 
-                {/* Company Selection */}
+
+                {/* =================================================
+                    COMPANY SELECTION
+                ================================================= */}
+
                 <Route
                     path="/companies"
                     element={<CompanySelection />}
                 />
 
-                {/* Dashboard */}
+
+                {/* =================================================
+                    DASHBOARD
+                    Super Admin + Employee + Intern
+                ================================================= */}
+
                 <Route
                     path="/dashboard/:companyId"
                     element={
-                        <DashboardLayout>
-                            <Dashboard />
-                        </DashboardLayout>
+                        <RoleRoute
+                            allowedRoles={[
+                                "super_admin",
+                                "employee",
+                                "intern",
+                            ]}
+                        >
+                            <DashboardLayout>
+                                <Dashboard />
+                            </DashboardLayout>
+                        </RoleRoute>
                     }
                 />
 
-                {/* Leads */}
+
+                {/* =================================================
+                    LEADS
+                    Super Admin + Employee + Intern
+                ================================================= */}
+
                 <Route
                     path="/dashboard/:companyId/leads"
                     element={
-                        <DashboardLayout>
-                            <Leads />
-                        </DashboardLayout>
+                        <RoleRoute
+                            allowedRoles={[
+                                "super_admin",
+                                "employee",
+                                "intern",
+                            ]}
+                        >
+                            <DashboardLayout>
+                                <Leads />
+                            </DashboardLayout>
+                        </RoleRoute>
                     }
                 />
 
-                {/* Follow-ups */}
+
+                {/* =================================================
+                    FOLLOW-UPS
+                    Super Admin + Employee + Intern
+                ================================================= */}
+
                 <Route
                     path="/dashboard/:companyId/followups"
                     element={
-                        <DashboardLayout>
-                            <Followups />
-                        </DashboardLayout>
+                        <RoleRoute
+                            allowedRoles={[
+                                "super_admin",
+                                "employee",
+                                "intern",
+                            ]}
+                        >
+                            <DashboardLayout>
+                                <Followups />
+                            </DashboardLayout>
+                        </RoleRoute>
                     }
                 />
 
-                {/* Admissions */}
+
+                {/* =================================================
+                    ADMISSIONS
+                    Super Admin + Employee
+                ================================================= */}
+
                 <Route
                     path="/dashboard/:companyId/admissions"
                     element={
-                        <DashboardLayout>
-                            <Admissions />
-                        </DashboardLayout>
+                        <RoleRoute
+                            allowedRoles={[
+                                "super_admin",
+                                "employee",
+                            ]}
+                        >
+                            <DashboardLayout>
+                                <Admissions />
+                            </DashboardLayout>
+                        </RoleRoute>
                     }
                 />
 
-                {/* Internships */}
+
+                {/* =================================================
+                    INTERNSHIPS
+                    Super Admin + Employee
+                ================================================= */}
+
                 <Route
                     path="/dashboard/:companyId/internships"
                     element={
-                        <DashboardLayout>
-                            <Internships />
-                        </DashboardLayout>
+                        <RoleRoute
+                            allowedRoles={[
+                                "super_admin",
+                                "employee",
+                            ]}
+                        >
+                            <DashboardLayout>
+                                <Internships />
+                            </DashboardLayout>
+                        </RoleRoute>
                     }
                 />
 
-                {/* Corporate Training */}
+
+                {/* =================================================
+                    CORPORATE TRAINING
+                    Super Admin + Employee
+                ================================================= */}
+
                 <Route
                     path="/dashboard/:companyId/corporate-training"
                     element={
-                        <DashboardLayout>
-                            <CorporateTraining />
-                        </DashboardLayout>
+                        <RoleRoute
+                            allowedRoles={[
+                                "super_admin",
+                                "employee",
+                            ]}
+                        >
+                            <DashboardLayout>
+                                <CorporateTraining />
+                            </DashboardLayout>
+                        </RoleRoute>
                     }
                 />
 
-                {/* Projects */}
+
+                {/* =================================================
+                    PROJECTS
+                    Super Admin + Employee
+                ================================================= */}
+
                 <Route
                     path="/dashboard/:companyId/projects"
                     element={
-                        <DashboardLayout>
-                            <Projects />
-                        </DashboardLayout>
+                        <RoleRoute
+                            allowedRoles={[
+                                "super_admin",
+                                "employee",
+                            ]}
+                        >
+                            <DashboardLayout>
+                                <Projects />
+                            </DashboardLayout>
+                        </RoleRoute>
                     }
                 />
 
-                {/* Placements */}
+
+                {/* =================================================
+                    PLACEMENTS
+                    Super Admin + Employee
+                ================================================= */}
+
                 <Route
                     path="/dashboard/:companyId/placements"
                     element={
-                        <DashboardLayout>
-                            <Placements />
-                        </DashboardLayout>
+                        <RoleRoute
+                            allowedRoles={[
+                                "super_admin",
+                                "employee",
+                            ]}
+                        >
+                            <DashboardLayout>
+                                <Placements />
+                            </DashboardLayout>
+                        </RoleRoute>
                     }
                 />
 
-                {/* Reports */}
+
+                {/* =================================================
+                    REPORTS
+                    Super Admin + Employee
+                ================================================= */}
+
                 <Route
                     path="/dashboard/:companyId/reports"
                     element={
-                        <DashboardLayout>
-                            <Reports />
-                        </DashboardLayout>
+                        <RoleRoute
+                            allowedRoles={[
+                                "super_admin",
+                                "employee",
+                            ]}
+                        >
+                            <DashboardLayout>
+                                <Reports />
+                            </DashboardLayout>
+                        </RoleRoute>
                     }
                 />
 
-                {/* User Management */}
+
+                {/* =================================================
+                    USER MANAGEMENT
+                    SUPER ADMIN ONLY
+                ================================================= */}
+
                 <Route
                     path="/dashboard/:companyId/users"
                     element={
-                        <DashboardLayout>
-                            <Users />
-                        </DashboardLayout>
+                        <RoleRoute
+                            allowedRoles={[
+                                "super_admin",
+                            ]}
+                        >
+                            <DashboardLayout>
+                                <Users />
+                            </DashboardLayout>
+                        </RoleRoute>
                     }
                 />
 
-                {/* ========================================= */}
-                {/* WORK MANAGEMENT - SUPER ADMIN */}
-                {/* ========================================= */}
+
+                {/* =================================================
+                    WORK MANAGEMENT
+                    SUPER ADMIN ONLY
+                ================================================= */}
 
                 <Route
                     path="/dashboard/:companyId/work"
                     element={
-                        <DashboardLayout>
-                            <WorkManagement />
-                        </DashboardLayout>
+                        <RoleRoute
+                            allowedRoles={[
+                                "super_admin",
+                            ]}
+                        >
+                            <DashboardLayout>
+                                <WorkManagement />
+                            </DashboardLayout>
+                        </RoleRoute>
                     }
                 />
 
-                {/* ========================================= */}
-                {/* MY WORK - EMPLOYEE / INTERN */}
-                {/* ========================================= */}
+
+                {/* =================================================
+                    MY WORK
+                    EMPLOYEE + INTERN
+                ================================================= */}
 
                 <Route
                     path="/dashboard/:companyId/my-work"
                     element={
-                        <DashboardLayout>
-                            <MyWork />
-                        </DashboardLayout>
+                        <RoleRoute
+                            allowedRoles={[
+                                "employee",
+                                "intern",
+                            ]}
+                        >
+                            <DashboardLayout>
+                                <MyWork />
+                            </DashboardLayout>
+                        </RoleRoute>
                     }
                 />
 
-                {/* Default */}
+
+                {/* =================================================
+                    DEFAULT
+                ================================================= */}
+
                 <Route
                     path="/"
                     element={
@@ -188,7 +375,11 @@ const AppRoutes = () => {
                     }
                 />
 
-                {/* Unknown */}
+
+                {/* =================================================
+                    UNKNOWN ROUTE
+                ================================================= */}
+
                 <Route
                     path="*"
                     element={

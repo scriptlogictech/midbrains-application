@@ -31,14 +31,45 @@ export const getCorporateTrainings = async () => {
 // GET COMPANY CORPORATE TRAININGS
 // ========================================
 
-export const getCompanyCorporateTrainings =
-  async (companyId) => {
-    const response = await api.get(
-      `/corporate-trainings/company/${companyId}`
-    );
+export const getCompanyCorporateTrainings = async (
+  companyId
+) => {
+  const response = await api.get(
+    `/corporate-trainings/company/${companyId}`
+  );
 
-    return response.data;
-  };
+  return response.data;
+};
+
+// ========================================
+// GET CORPORATE TRAINING BY ID
+// ========================================
+
+export const getCorporateTrainingById = async (
+  trainingId
+) => {
+  const response = await api.get(
+    `/corporate-trainings/${trainingId}`
+  );
+
+  return response.data;
+};
+
+// ========================================
+// UPDATE CORPORATE TRAINING
+// ========================================
+
+export const updateCorporateTraining = async (
+  trainingId,
+  trainingData
+) => {
+  const response = await api.put(
+    `/corporate-trainings/${trainingId}`,
+    trainingData
+  );
+
+  return response.data;
+};
 
 // ========================================
 // UPDATE TRAINING STATUS
@@ -53,6 +84,20 @@ export const updateTrainingStatus = async (
     {
       trainingStatus,
     }
+  );
+
+  return response.data;
+};
+
+// ========================================
+// DELETE CORPORATE TRAINING
+// ========================================
+
+export const deleteCorporateTraining = async (
+  trainingId
+) => {
+  const response = await api.delete(
+    `/corporate-trainings/${trainingId}`
   );
 
   return response.data;

@@ -25,71 +25,131 @@ const DashboardLayout = ({ children }) => {
       path: `/dashboard/${companyId}`,
       roles: [
         "super_admin",
-        "counselor",
-        "hr",
-        "trainer",
-        "placement_coordinator",
-        "project_manager",
         "employee",
         "intern",
       ],
     },
 
+    // ==========================================
+    // Lead Management
+    // Employee + Intern can manage leads
+    // ==========================================
+
     {
       label: "Leads",
       icon: "bi-people-fill",
       path: `/dashboard/${companyId}/leads`,
-      roles: ["super_admin", "counselor"],
+      roles: [
+        "super_admin",
+        "employee",
+        "intern",
+      ],
     },
+
+    // ==========================================
+    // Follow-up Management
+    // Employee + Intern can manage follow-ups
+    // ==========================================
 
     {
       label: "Follow-ups",
       icon: "bi-calendar-check",
       path: `/dashboard/${companyId}/followups`,
-      roles: ["super_admin", "counselor"],
+      roles: [
+        "super_admin",
+        "employee",
+        "intern",
+      ],
     },
+
+    // ==========================================
+    // Admissions
+    // ==========================================
 
     {
       label: "Admissions",
       icon: "bi-person-check-fill",
       path: `/dashboard/${companyId}/admissions`,
-      roles: ["super_admin", "counselor"],
+      roles: [
+        "super_admin",
+        "employee",
+      ],
     },
+
+    // ==========================================
+    // Internships
+    // ==========================================
 
     {
       label: "Internships",
       icon: "bi-mortarboard-fill",
       path: `/dashboard/${companyId}/internships`,
-      roles: ["super_admin", "trainer"],
+      roles: [
+        "super_admin",
+        "employee",
+      ],
     },
+
+    // ==========================================
+    // Corporate Training
+    // ==========================================
 
     {
       label: "Corporate Training",
       icon: "bi-building-fill",
       path: `/dashboard/${companyId}/corporate-training`,
-      roles: ["super_admin", "trainer"],
+      roles: [
+        "super_admin",
+        "employee",
+      ],
     },
+
+    // ==========================================
+    // Projects
+    // ==========================================
 
     {
       label: "Projects",
       icon: "bi-kanban-fill",
       path: `/dashboard/${companyId}/projects`,
-      roles: ["super_admin", "project_manager"],
+      roles: [
+        "super_admin",
+        "employee",
+      ],
     },
+
+    // ==========================================
+    // Placements
+    // ==========================================
 
     {
       label: "Placements",
       icon: "bi-briefcase-fill",
       path: `/dashboard/${companyId}/placements`,
-      roles: ["super_admin", "placement_coordinator"],
+      roles: [
+        "super_admin",
+        "employee",
+      ],
     },
+
+    // ==========================================
+    // Reports
+    // ==========================================
 
     {
       label: "Reports",
       icon: "bi-bar-chart-fill",
       path: `/dashboard/${companyId}/reports`,
-      roles: ["super_admin"],
+      roles: [
+        "super_admin",
+        "employee",
+      ],
     },
+
+    // ==========================================
+    // User Management
+    // Super Admin only
+    // ==========================================
 
     {
       label: "User Management",
@@ -100,6 +160,7 @@ const DashboardLayout = ({ children }) => {
 
     // ==========================================
     // Work Management
+    // Super Admin only
     // ==========================================
 
     {
@@ -109,11 +170,19 @@ const DashboardLayout = ({ children }) => {
       roles: ["super_admin"],
     },
 
+    // ==========================================
+    // My Work
+    // Employee + Intern
+    // ==========================================
+
     {
       label: "My Work",
       icon: "bi-clipboard-check",
       path: `/dashboard/${companyId}/my-work`,
-      roles: ["employee", "intern"],
+      roles: [
+        "employee",
+        "intern",
+      ],
     },
   ];
 
@@ -121,8 +190,9 @@ const DashboardLayout = ({ children }) => {
   // Filter Menu According To User Role
   // ==========================================
 
-  const visibleMenuItems = menuItems.filter((item) =>
-    item.roles.includes(user?.role)
+  const visibleMenuItems = menuItems.filter(
+    (item) =>
+      item.roles.includes(user?.role)
   );
 
   return (
@@ -135,7 +205,9 @@ const DashboardLayout = ({ children }) => {
       {sidebarOpen && (
         <div
           className="sidebar-overlay"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() =>
+            setSidebarOpen(false)
+          }
         />
       )}
 
@@ -145,7 +217,9 @@ const DashboardLayout = ({ children }) => {
 
       <aside
         className={`dashboard-sidebar ${
-          sidebarOpen ? "sidebar-open" : ""
+          sidebarOpen
+            ? "sidebar-open"
+            : ""
         }`}
       >
 
@@ -159,7 +233,9 @@ const DashboardLayout = ({ children }) => {
 
           <div>
             <h5>Follow-up CRM</h5>
-            <small>Management System</small>
+            <small>
+              Management System
+            </small>
           </div>
 
         </div>
@@ -172,24 +248,28 @@ const DashboardLayout = ({ children }) => {
             MAIN MENU
           </div>
 
-          {visibleMenuItems.map((item) => (
+          {visibleMenuItems.map(
+            (item) => (
+              <button
+                key={item.label}
+                className="sidebar-menu-item"
+                onClick={() => {
+                  navigate(item.path);
+                  setSidebarOpen(false);
+                }}
+              >
 
-            <button
-              key={item.label}
-              className="sidebar-menu-item"
-              onClick={() => {
-                navigate(item.path);
-                setSidebarOpen(false);
-              }}
-            >
+                <i
+                  className={`bi ${item.icon}`}
+                ></i>
 
-              <i className={`bi ${item.icon}`}></i>
+                <span>
+                  {item.label}
+                </span>
 
-              <span>{item.label}</span>
-
-            </button>
-
-          ))}
+              </button>
+            )
+          )}
 
         </div>
 
@@ -201,11 +281,15 @@ const DashboardLayout = ({ children }) => {
 
           <button
             className="sidebar-menu-item"
-            onClick={() => navigate("/companies")}
+            onClick={() =>
+              navigate("/companies")
+            }
           >
             <i className="bi bi-arrow-left-circle"></i>
 
-            <span>Change Company</span>
+            <span>
+              Change Company
+            </span>
           </button>
 
           <button
@@ -214,7 +298,9 @@ const DashboardLayout = ({ children }) => {
           >
             <i className="bi bi-box-arrow-right"></i>
 
-            <span>Logout</span>
+            <span>
+              Logout
+            </span>
           </button>
 
         </div>
@@ -233,7 +319,9 @@ const DashboardLayout = ({ children }) => {
 
           <button
             className="mobile-menu-btn"
-            onClick={() => setSidebarOpen(true)}
+            onClick={() =>
+              setSidebarOpen(true)
+            }
           >
             <i className="bi bi-list"></i>
           </button>
@@ -253,8 +341,15 @@ const DashboardLayout = ({ children }) => {
               </strong>
 
               <small>
-                {user?.role === "super_admin"
+                {user?.role ===
+                "super_admin"
                   ? "Super Admin"
+                  : user?.role ===
+                    "employee"
+                  ? "Employee"
+                  : user?.role ===
+                    "intern"
+                  ? "Intern"
                   : user?.role}
               </small>
 

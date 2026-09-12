@@ -42,6 +42,36 @@ export const getCompanyInternships = async (
 };
 
 // ========================================
+// GET INTERNSHIP BY ID
+// ========================================
+
+export const getInternshipById = async (
+  internshipId
+) => {
+  const response = await api.get(
+    `/internships/${internshipId}`
+  );
+
+  return response.data;
+};
+
+// ========================================
+// UPDATE INTERNSHIP
+// ========================================
+
+export const updateInternship = async (
+  internshipId,
+  internshipData
+) => {
+  const response = await api.put(
+    `/internships/${internshipId}`,
+    internshipData
+  );
+
+  return response.data;
+};
+
+// ========================================
 // UPDATE INTERNSHIP STATUS
 // ========================================
 
@@ -54,6 +84,20 @@ export const updateInternshipStatus = async (
     {
       status,
     }
+  );
+
+  return response.data;
+};
+
+// ========================================
+// DELETE INTERNSHIP
+// ========================================
+
+export const deleteInternship = async (
+  internshipId
+) => {
+  const response = await api.delete(
+    `/internships/${internshipId}`
   );
 
   return response.data;

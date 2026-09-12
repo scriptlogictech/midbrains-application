@@ -1,348 +1,440 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 
-const allowedRoles = [
-  "counselor",
-  "hr",
-  "trainer",
-  "placement_coordinator",
-  "project_manager",
-  "employee",
-  "intern"
-];
+/*
+|--------------------------------------------------------------------------
+| Allowed Roles
+|--------------------------------------------------------------------------
+*/
 
-// ========================================
-// CREATE USER
-// ========================================
+const allowedRoles = ["employee", "intern"];
 
-exports.createUser = async (req, res) => {
-  try {
-    let {
-      fullName,
-      email,
-      password,
-      role,
-      company,
-    } = req.body;
+/*
+|--------------------------------------------------------------------------
+| Company Access Helper
+|--------------------------------------------------------------------------
+| Super Admin can access any company.
+| Employee and Intern can access only their own company.
+|--------------------------------------------------------------------------
+*/
 
-    if (
-      !fullName ||
-      !email ||
-      !password ||
-      !role ||
-      !company
-    ) {
-      return res.status(400).json({
-        message:
-          "Full name, email, password, role and company are required",
-      });
+const hasCompanyAccess = (req, companyId) => {
+    if (req.user.role === "super_admin") {
+        return true;
     }
 
-    email = email.toLowerCase().trim();
-
-    if (!allowedRoles.includes(role)) {
-      return res.status(400).json({
-        message: "Invalid role",
-      });
+    if (!req.user.company || !companyId) {
+        return false;
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({
-        message:
-          "Password must be at least 6 characters",
-      });
-    }
-
-    const existingUser = await User.findOne({
-      email,
-    });
-
-    if (existingUser) {
-      return res.status(400).json({
-        message: "Email already in use",
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(
-      password,
-      10
-    );
-
-    const user = await User.create({
-      fullName,
-      email,
-      password: hashedPassword,
-      role,
-      company,
-    });
-
-    const safeUser = {
-      _id: user._id,
-      fullName: user.fullName,
-      email: user.email,
-      role: user.role,
-      company: user.company,
-      isActive: user.isActive,
-      createdAt: user.createdAt,
-    };
-
-    res.status(201).json({
-      success: true,
-      message: "User created successfully",
-      user: safeUser,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
+    return req.user.company.toString() === companyId.toString();
 };
 
-// ========================================
-// GET ALL USERS
-// ========================================
+/*
+|--------------------------------------------------------------------------
+| Create User
+|--------------------------------------------------------------------------
+*/
 
-exports.getUsers = async (req, res) => {
-  try {
-    const users = await User.find()
-      .select("-password")
-      .populate("company", "companyName companyCode")
-      .sort({ createdAt: -1 });
+const createUser = async (req, res) => {
+    try {
+        const {
+            fullName,
+            email,
+            password,
+            role,
+            company,
+        } = req.body;
 
-    res.status(200).json({
-      success: true,
-      count: users.length,
-      users,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
+        // Validate required fields
+        if (!fullName || !email || !password || !role || !company) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Full name, email, password, role and company are required",
+            });
+        }
 
-// ========================================
-// GET USERS BY COMPANY
-// ========================================
+        // Validate role
+        if (!allowedRoles.includes(role)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid role",
+            });
+        }
 
-exports.getCompanyUsers = async (req, res) => {
-  try {
-    const { companyId } = req.params;
+        // Normalize email
+        const normalizedEmail = email.toLowerCase().trim();
 
-    const users = await User.find({
-      company: companyId,
-      role: {
-        $in: allowedRoles,
-      },
-    })
-      .select("-password")
-      .populate("company", "companyName companyCode")
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      count: users.length,
-      users,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-// ========================================
-// GET COUNSELORS BY COMPANY
-// ========================================
-
-exports.getCompanyCounselors = async (
-  req,
-  res
-) => {
-  try {
-    const { companyId } = req.params;
-
-    const counselors = await User.find({
-      company: companyId,
-      role: "counselor",
-      isActive: true,
-    })
-      .select("_id fullName email company")
-      .sort({ fullName: 1 });
-
-    res.status(200).json({
-      success: true,
-      count: counselors.length,
-      counselors,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-// ========================================
-// UPDATE USER
-// ========================================
-
-exports.updateUser = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const {
-      fullName,
-      email,
-      password,
-      role,
-      company,
-    } = req.body
-
-    const user = await User.findById(id);
-
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
-    }
-
-    if (user.role === "super_admin") {
-      return res.status(403).json({
-        message:
-          "Super Admin cannot be modified from User Management",
-      });
-    }
-
-    if (email) {
-      const normalizedEmail =
-        email.toLowerCase().trim();
-
-      const emailExists = await User.findOne({
-        email: normalizedEmail,
-        _id: {
-          $ne: id,
-        },
-      });
-
-      if (emailExists) {
-        return res.status(400).json({
-          message: "Email already in use",
+        // Check existing user
+        const existingUser = await User.findOne({
+            email: normalizedEmail,
         });
-      }
 
-      user.email = normalizedEmail;
-    }
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                message: "User with this email already exists",
+            });
+        }
 
-    if (fullName) {
-      user.fullName = fullName;
-    }
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-    if (role) {
-      if (!allowedRoles.includes(role)) {
-        return res.status(400).json({
-          message: "Invalid role",
+        // Create user
+        const user = await User.create({
+            fullName: fullName.trim(),
+            email: normalizedEmail,
+            password: hashedPassword,
+            role,
+            company,
+            isActive: true,
         });
-      }
 
-      user.role = role;
-    }
+        // Remove password from response
+        const userResponse = user.toObject();
+        delete userResponse.password;
 
-    if (company) {
-      user.company = company;
-    }
-
-    if (password) {
-      if (password.length < 6) {
-        return res.status(400).json({
-          message:
-            "Password must be at least 6 characters",
+        return res.status(201).json({
+            success: true,
+            message: "User created successfully",
+            user: userResponse,
         });
-      }
+    } catch (error) {
+        console.error("Create User Error:", error);
 
-      user.password = await bcrypt.hash(
-        password,
-        10
-      );
+        return res.status(500).json({
+            success: false,
+            message: "Server error while creating user",
+            error: error.message,
+        });
     }
-
-    await user.save();
-
-    const safeUser = {
-      _id: user._id,
-      fullName: user.fullName,
-      email: user.email,
-      role: user.role,
-      company: user.company,
-      isActive: user.isActive,
-      updatedAt: user.updatedAt,
-    };
-
-    res.status(200).json({
-      success: true,
-      message: "User updated successfully",
-      user: safeUser,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
 };
 
-// ========================================
-// UPDATE USER STATUS
-// ========================================
+/*
+|--------------------------------------------------------------------------
+| Get All Users
+|--------------------------------------------------------------------------
+| Super Admin only through route middleware.
+|--------------------------------------------------------------------------
+*/
 
-exports.updateUserStatus = async (
-  req,
-  res
-) => {
-  try {
-    const { id } = req.params;
-    const { isActive } = req.body;
+const getUsers = async (req, res) => {
+    try {
+        const users = await User.find()
+            .select("-password")
+            .populate("company", "companyName companyCode")
+            .sort({ createdAt: -1 });
 
-    const user = await User.findById(id);
+        return res.status(200).json({
+            success: true,
+            users,
+        });
+    } catch (error) {
+        console.error("Get Users Error:", error);
 
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+        return res.status(500).json({
+            success: false,
+            message: "Server error while fetching users",
+            error: error.message,
+        });
     }
+};
 
-    if (user.role === "super_admin") {
-      return res.status(403).json({
-        message:
-          "Super Admin status cannot be changed",
-      });
+/*
+|--------------------------------------------------------------------------
+| Get Users By Company
+|--------------------------------------------------------------------------
+| Used by Leads page to load Employee and Intern assignment options.
+|
+| Super Admin:
+|   Can access any company.
+|
+| Employee / Intern:
+|   Can access only their own company.
+|
+| Super Admin is excluded from company assignment list.
+|--------------------------------------------------------------------------
+*/
+
+const getCompanyUsers = async (req, res) => {
+    try {
+        const { companyId } = req.params;
+
+        if (!companyId) {
+            return res.status(400).json({
+                success: false,
+                message: "Company ID is required",
+            });
+        }
+
+        // Enforce company isolation
+        if (!hasCompanyAccess(req, companyId)) {
+            return res.status(403).json({
+                success: false,
+                message: "Access denied for this company",
+            });
+        }
+
+        const users = await User.find({
+            company: companyId,
+            role: {
+                $in: ["employee", "intern"],
+            },
+        })
+            .select("-password")
+            .populate("company", "companyName companyCode")
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            success: true,
+            users,
+        });
+    } catch (error) {
+        console.error("Get Company Users Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server error while fetching company users",
+            error: error.message,
+        });
     }
+};
 
-    user.isActive = Boolean(isActive);
+/*
+|--------------------------------------------------------------------------
+| Get Company Employees
+|--------------------------------------------------------------------------
+| Compatibility endpoint.
+|
+| Returns only active Employees from the requested company.
+|--------------------------------------------------------------------------
+*/
 
-    await user.save();
+const getCompanyCounselors = async (req, res) => {
+    try {
+        const { companyId } = req.params;
 
-    res.status(200).json({
-      success: true,
-      message: user.isActive
-        ? "User activated successfully"
-        : "User deactivated successfully",
-      user: {
-        _id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-        company: user.company,
-        isActive: user.isActive,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
+        if (!companyId) {
+            return res.status(400).json({
+                success: false,
+                message: "Company ID is required",
+            });
+        }
+
+        // Enforce company isolation
+        if (!hasCompanyAccess(req, companyId)) {
+            return res.status(403).json({
+                success: false,
+                message: "Access denied for this company",
+            });
+        }
+
+        const users = await User.find({
+            company: companyId,
+            role: "employee",
+            isActive: true,
+        })
+            .select("-password")
+            .populate("company", "companyName companyCode")
+            .sort({ fullName: 1 });
+
+        return res.status(200).json({
+            success: true,
+            users,
+        });
+    } catch (error) {
+        console.error("Get Company Employees Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server error while fetching company employees",
+            error: error.message,
+        });
+    }
+};
+
+/*
+|--------------------------------------------------------------------------
+| Update User
+|--------------------------------------------------------------------------
+| Super Admin only through route middleware.
+|--------------------------------------------------------------------------
+*/
+
+const updateUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const {
+            fullName,
+            email,
+            password,
+            role,
+            company,
+            isActive,
+        } = req.body;
+
+        const user = await User.findById(id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        // Super Admin cannot be modified
+        if (user.role === "super_admin") {
+            return res.status(403).json({
+                success: false,
+                message: "Super Admin cannot be modified",
+            });
+        }
+
+        // Validate role if provided
+        if (role && !allowedRoles.includes(role)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid role",
+            });
+        }
+
+        // Check email duplication
+        if (email) {
+            const normalizedEmail = email.toLowerCase().trim();
+
+            const existingUser = await User.findOne({
+                email: normalizedEmail,
+                _id: { $ne: id },
+            });
+
+            if (existingUser) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Another user with this email already exists",
+                });
+            }
+
+            user.email = normalizedEmail;
+        }
+
+        // Update fields
+        if (fullName) {
+            user.fullName = fullName.trim();
+        }
+
+        if (role) {
+            user.role = role;
+        }
+
+        if (company) {
+            user.company = company;
+        }
+
+        if (typeof isActive === "boolean") {
+            user.isActive = isActive;
+        }
+
+        // Update password if provided
+        if (password) {
+            user.password = await bcrypt.hash(password, 10);
+        }
+
+        const updatedUser = await user.save();
+
+        const userResponse = updatedUser.toObject();
+        delete userResponse.password;
+
+        return res.status(200).json({
+            success: true,
+            message: "User updated successfully",
+            user: userResponse,
+        });
+    } catch (error) {
+        console.error("Update User Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server error while updating user",
+            error: error.message,
+        });
+    }
+};
+
+/*
+|--------------------------------------------------------------------------
+| Update User Status
+|--------------------------------------------------------------------------
+| Super Admin only through route middleware.
+|--------------------------------------------------------------------------
+*/
+
+const updateUserStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { isActive } = req.body;
+
+        const user = await User.findById(id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        // Protect Super Admin
+        if (user.role === "super_admin") {
+            return res.status(403).json({
+                success: false,
+                message: "Super Admin status cannot be changed",
+            });
+        }
+
+        if (typeof isActive !== "boolean") {
+            return res.status(400).json({
+                success: false,
+                message: "isActive must be true or false",
+            });
+        }
+
+        user.isActive = isActive;
+
+        await user.save();
+
+        const userResponse = user.toObject();
+        delete userResponse.password;
+
+        return res.status(200).json({
+            success: true,
+            message: `User ${
+                isActive ? "activated" : "deactivated"
+            } successfully`,
+            user: userResponse,
+        });
+    } catch (error) {
+        console.error("Update User Status Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server error while updating user status",
+            error: error.message,
+        });
+    }
+};
+
+/*
+|--------------------------------------------------------------------------
+| Exports
+|--------------------------------------------------------------------------
+*/
+
+module.exports = {
+    createUser,
+    getUsers,
+    getCompanyUsers,
+    getCompanyCounselors,
+    updateUser,
+    updateUserStatus,
 };

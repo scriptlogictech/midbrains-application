@@ -9,7 +9,9 @@ import { useParams } from "react-router-dom";
 import {
   createPlacement,
   getCompanyPlacements,
+  updatePlacement,
   updatePlacementStatus,
+  deletePlacement,
 } from "../../services/placementService";
 
 import { getCompanyAdmissions } from "../../services/admissionService";
@@ -34,6 +36,9 @@ const Placements = () => {
   const [statusLoading, setStatusLoading] =
     useState("");
 
+  const [deleteLoading, setDeleteLoading] =
+    useState("");
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -44,6 +49,9 @@ const Placements = () => {
     useState(false);
 
   const [selectedPlacement, setSelectedPlacement] =
+    useState(null);
+
+  const [editingPlacement, setEditingPlacement] =
     useState(null);
 
   const [search, setSearch] = useState("");
@@ -81,6 +89,8 @@ const Placements = () => {
   // ========================================
 
   const fetchPlacements = async () => {
+    if (!companyId) return;
+
     try {
       setLoading(true);
       setError("");
@@ -114,6 +124,8 @@ const Placements = () => {
   // ========================================
 
   const fetchAdmissions = async () => {
+    if (!companyId) return;
+
     try {
       setLoadingAdmissions(true);
 
@@ -170,11 +182,81 @@ const Placements = () => {
   // ========================================
 
   const openAddModal = () => {
+    setEditingPlacement(null);
+
     setFormData(initialForm);
 
     setError("");
     setSuccess("");
 
+    setShowModal(true);
+
+    fetchAdmissions();
+  };
+
+  // ========================================
+  // OPEN EDIT MODAL
+  // ========================================
+
+  const openEditModal = (placement) => {
+    setEditingPlacement(placement);
+
+    setFormData({
+      admission:
+        placement.admission?._id ||
+        placement.admission ||
+        "",
+
+      hiringCompany:
+        placement.hiringCompany || "",
+
+      jobRole:
+        placement.jobRole || "",
+
+      package:
+        placement.package ?? "",
+
+      interviewDate: placement.interviewDate
+        ? new Date(
+            placement.interviewDate
+          )
+            .toISOString()
+            .split("T")[0]
+        : "",
+
+      hrName:
+        placement.hrName || "",
+
+      hrContact:
+        placement.hrContact || "",
+
+      interviewStatus:
+        placement.interviewStatus ||
+        "pending",
+
+      joiningDate: placement.joiningDate
+        ? new Date(
+            placement.joiningDate
+          )
+            .toISOString()
+            .split("T")[0]
+        : "",
+
+      joiningStatus:
+        placement.joiningStatus ||
+        "not_joined",
+
+      offerLetter:
+        placement.offerLetter || "",
+
+      remarks:
+        placement.remarks || "",
+    });
+
+    setError("");
+    setSuccess("");
+
+    setShowDetailsModal(false);
     setShowModal(true);
 
     fetchAdmissions();
@@ -188,6 +270,7 @@ const Placements = () => {
     if (submitLoading) return;
 
     setShowModal(false);
+    setEditingPlacement(null);
     setFormData(initialForm);
     setError("");
   };
@@ -220,6 +303,19 @@ const Placements = () => {
     if (packageAmount < 0) {
       setError(
         "Package cannot be negative."
+      );
+
+      return;
+    }
+
+    if (
+      formData.interviewDate &&
+      formData.joiningDate &&
+      new Date(formData.joiningDate) <
+        new Date(formData.interviewDate)
+    ) {
+      setError(
+        "Joining date cannot be before interview date."
       );
 
       return;
@@ -274,27 +370,39 @@ const Placements = () => {
           undefined,
       };
 
-      await createPlacement(
-        placementData
-      );
+      if (editingPlacement) {
+        await updatePlacement(
+          editingPlacement._id,
+          placementData
+        );
 
-      setSuccess(
-        "Placement record created successfully."
-      );
+        setSuccess(
+          "Placement record updated successfully."
+        );
+      } else {
+        await createPlacement(
+          placementData
+        );
+
+        setSuccess(
+          "Placement record created successfully."
+        );
+      }
 
       setShowModal(false);
+      setEditingPlacement(null);
       setFormData(initialForm);
 
       await fetchPlacements();
     } catch (error) {
       console.error(
-        "Failed to create placement:",
+        "Failed to save placement:",
         error
       );
 
       setError(
         error.response?.data?.message ||
-          "Failed to create placement."
+          "Failed to save placement."
       );
     } finally {
       setSubmitLoading(false);
@@ -342,6 +450,52 @@ const Placements = () => {
       );
     } finally {
       setStatusLoading("");
+    }
+  };
+
+  // ========================================
+  // DELETE PLACEMENT
+  // ========================================
+
+  const handleDeletePlacement = async (
+    placementId
+  ) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this placement record?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeleteLoading(placementId);
+
+      setError("");
+      setSuccess("");
+
+      await deletePlacement(
+        placementId
+      );
+
+      setSuccess(
+        "Placement record deleted successfully."
+      );
+
+      setShowDetailsModal(false);
+      setSelectedPlacement(null);
+
+      await fetchPlacements();
+    } catch (error) {
+      console.error(
+        "Failed to delete placement:",
+        error
+      );
+
+      setError(
+        error.response?.data?.message ||
+          "Failed to delete placement."
+      );
+    } finally {
+      setDeleteLoading("");
     }
   };
 
@@ -620,6 +774,7 @@ const Placements = () => {
         </div>
 
         <button
+          type="button"
           className="btn btn-primary"
           onClick={openAddModal}
         >
@@ -885,6 +1040,7 @@ const Placements = () => {
             <div className="col-lg-2 d-flex align-items-end">
 
               <button
+                type="button"
                 className="btn btn-light border w-100"
                 onClick={resetFilters}
               >
@@ -931,6 +1087,7 @@ const Placements = () => {
             </div>
 
             <button
+              type="button"
               className="btn btn-outline-primary btn-sm"
               onClick={fetchPlacements}
             >
@@ -1184,20 +1341,39 @@ const Placements = () => {
 
                         <td>
 
-                          <button
-                            className="btn btn-sm btn-outline-primary"
-                            onClick={() =>
-                              openDetails(
-                                placement
-                              )
-                            }
-                          >
+                          <div className="d-flex gap-2">
 
-                            <i className="bi bi-eye me-1"></i>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() =>
+                                openDetails(
+                                  placement
+                                )
+                              }
+                            >
 
-                            View
+                              <i className="bi bi-eye me-1"></i>
 
-                          </button>
+                              View
+
+                            </button>
+
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-secondary"
+                              onClick={() =>
+                                openEditModal(
+                                  placement
+                                )
+                              }
+                            >
+
+                              <i className="bi bi-pencil"></i>
+
+                            </button>
+
+                          </div>
 
                         </td>
 
@@ -1219,7 +1395,7 @@ const Placements = () => {
       </div>
 
       {/* ========================================
-          ADD PLACEMENT MODAL
+          ADD / EDIT PLACEMENT MODAL
       ======================================== */}
 
       {showModal && (
@@ -1241,16 +1417,25 @@ const Placements = () => {
               <div>
 
                 <h5 className="mb-1 fw-bold">
-                  Add Placement
+
+                  {editingPlacement
+                    ? "Edit Placement"
+                    : "Add Placement"}
+
                 </h5>
 
                 <small className="text-muted">
-                  Create a new placement record.
+
+                  {editingPlacement
+                    ? "Update placement information."
+                    : "Create a new placement record."}
+
                 </small>
 
               </div>
 
               <button
+                type="button"
                 className="btn-close"
                 onClick={closeModal}
                 disabled={
@@ -1695,7 +1880,11 @@ const Placements = () => {
 
                     <>
                       <i className="bi bi-check2-circle me-2"></i>
-                      Create Placement
+
+                      {editingPlacement
+                        ? "Update Placement"
+                        : "Create Placement"}
+
                     </>
 
                   )}
@@ -1746,6 +1935,7 @@ const Placements = () => {
                 </div>
 
                 <button
+                  type="button"
                   className="btn-close"
                   onClick={closeDetails}
                 ></button>
@@ -1916,7 +2106,8 @@ const Placements = () => {
                       <div className="fw-semibold">
 
                         {
-                          selectedPlacement.hiringCompany ||
+                          selectedPlacement
+                            .hiringCompany ||
                           "-"
                         }
 
@@ -1933,7 +2124,8 @@ const Placements = () => {
                       <div className="fw-semibold">
 
                         {
-                          selectedPlacement.jobRole ||
+                          selectedPlacement
+                            .jobRole ||
                           "-"
                         }
 
@@ -2176,10 +2368,57 @@ const Placements = () => {
               <div className="custom-modal-footer">
 
                 <button
+                  type="button"
                   className="btn btn-light border"
                   onClick={closeDetails}
                 >
                   Close
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={() =>
+                    openEditModal(
+                      selectedPlacement
+                    )
+                  }
+                >
+                  <i className="bi bi-pencil me-2"></i>
+                  Edit
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-outline-danger"
+                  disabled={
+                    deleteLoading ===
+                    selectedPlacement._id
+                  }
+                  onClick={() =>
+                    handleDeletePlacement(
+                      selectedPlacement._id
+                    )
+                  }
+                >
+
+                  {deleteLoading ===
+                  selectedPlacement._id ? (
+
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      Deleting...
+                    </>
+
+                  ) : (
+
+                    <>
+                      <i className="bi bi-trash me-2"></i>
+                      Delete
+                    </>
+
+                  )}
+
                 </button>
 
               </div>

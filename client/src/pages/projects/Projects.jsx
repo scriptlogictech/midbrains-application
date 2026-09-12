@@ -9,7 +9,9 @@ import { useParams } from "react-router-dom";
 import {
   createProject,
   getCompanyProjects,
+  updateProject,
   updateProjectStatus,
+  deleteProject,
 } from "../../services/projectService";
 
 import { getCompanyUsers } from "../../services/userService";
@@ -25,34 +27,24 @@ const Projects = () => {
   const [users, setUsers] = useState([]);
 
   const [loading, setLoading] = useState(true);
-  const [loadingUsers, setLoadingUsers] =
-    useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
-  const [submitLoading, setSubmitLoading] =
-    useState(false);
-
-  const [statusLoading, setStatusLoading] =
-    useState("");
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [statusLoading, setStatusLoading] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState("");
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const [showModal, setShowModal] =
-    useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-  const [showDetailsModal, setShowDetailsModal] =
-    useState(false);
-
-  const [selectedProject, setSelectedProject] =
-    useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [editingProject, setEditingProject] = useState(null);
 
   const [search, setSearch] = useState("");
-
-  const [paymentFilter, setPaymentFilter] =
-    useState("all");
-
-  const [statusFilter, setStatusFilter] =
-    useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   // ========================================
   // FORM
@@ -77,20 +69,20 @@ const Projects = () => {
     remarks: "",
   };
 
-  const [formData, setFormData] =
-    useState(initialForm);
+  const [formData, setFormData] = useState(initialForm);
 
   // ========================================
   // FETCH PROJECTS
   // ========================================
 
   const fetchProjects = async () => {
+    if (!companyId) return;
+
     try {
       setLoading(true);
       setError("");
 
-      const data =
-        await getCompanyProjects(companyId);
+      const data = await getCompanyProjects(companyId);
 
       setProjects(
         data?.projects ||
@@ -118,18 +110,30 @@ const Projects = () => {
   // ========================================
 
   const fetchUsers = async () => {
+    if (!companyId) return;
+
     try {
       setLoadingUsers(true);
 
-      const data =
-        await getCompanyUsers(companyId);
+      const data = await getCompanyUsers(companyId);
 
-      setUsers(
+      const userList =
         data?.users ||
-          data?.data ||
-          data ||
-          []
-      );
+        data?.data ||
+        data ||
+        [];
+
+      // Only active employees can be assigned
+      // as project developers.
+      const employeeUsers = Array.isArray(userList)
+        ? userList.filter(
+            (user) =>
+              user.role === "employee" &&
+              user.isActive !== false
+          )
+        : [];
+
+      setUsers(employeeUsers);
     } catch (error) {
       console.error(
         "Failed to load company users:",
@@ -174,6 +178,8 @@ const Projects = () => {
   // ========================================
 
   const openAddModal = () => {
+    setEditingProject(null);
+
     setFormData({
       ...initialForm,
       startDate: new Date()
@@ -183,20 +189,72 @@ const Projects = () => {
 
     setError("");
     setSuccess("");
-
     setShowModal(true);
 
     fetchUsers();
   };
 
   // ========================================
-  // CLOSE ADD MODAL
+  // OPEN EDIT MODAL
+  // ========================================
+
+  const openEditModal = (project) => {
+    setEditingProject(project);
+
+    setFormData({
+      clientName: project.clientName || "",
+      clientCompany: project.clientCompany || "",
+      contactNumber: project.contactNumber || "",
+      email: project.email || "",
+      projectTitle: project.projectTitle || "",
+      projectDescription:
+        project.projectDescription || "",
+      technology: project.technology || "",
+      assignedDeveloper:
+        project.assignedDeveloper?._id ||
+        project.assignedDeveloper ||
+        "",
+      startDate: project.startDate
+        ? new Date(project.startDate)
+            .toISOString()
+            .split("T")[0]
+        : "",
+      deadline: project.deadline
+        ? new Date(project.deadline)
+            .toISOString()
+            .split("T")[0]
+        : "",
+      budget: project.budget ?? "",
+      paidAmount: project.paidAmount ?? "",
+      paymentStatus:
+        project.paymentStatus || "pending",
+      projectStatus:
+        project.projectStatus || "pending",
+      deliveryDate: project.deliveryDate
+        ? new Date(project.deliveryDate)
+            .toISOString()
+            .split("T")[0]
+        : "",
+      remarks: project.remarks || "",
+    });
+
+    setError("");
+    setSuccess("");
+    setShowDetailsModal(false);
+    setShowModal(true);
+
+    fetchUsers();
+  };
+
+  // ========================================
+  // CLOSE ADD / EDIT MODAL
   // ========================================
 
   const closeModal = () => {
     if (submitLoading) return;
 
     setShowModal(false);
+    setEditingProject(null);
     setFormData(initialForm);
     setError("");
   };
@@ -225,25 +283,17 @@ const Projects = () => {
       return;
     }
 
-    const budget =
-      Number(formData.budget) || 0;
-
+    const budget = Number(formData.budget) || 0;
     const paidAmount =
       Number(formData.paidAmount) || 0;
 
     if (budget < 0) {
-      setError(
-        "Budget cannot be negative."
-      );
-
+      setError("Budget cannot be negative.");
       return;
     }
 
     if (paidAmount < 0) {
-      setError(
-        "Paid amount cannot be negative."
-      );
-
+      setError("Paid amount cannot be negative.");
       return;
     }
 
@@ -273,8 +323,7 @@ const Projects = () => {
 
     if (
       formData.deliveryDate &&
-      new Date(formData.deliveryDate) <
-        startDate
+      new Date(formData.deliveryDate) < startDate
     ) {
       setError(
         "Delivery date cannot be before start date."
@@ -289,8 +338,7 @@ const Projects = () => {
       const projectData = {
         company: companyId,
 
-        clientName:
-          formData.clientName.trim(),
+        clientName: formData.clientName.trim(),
 
         clientCompany:
           formData.clientCompany.trim() ||
@@ -300,8 +348,7 @@ const Projects = () => {
           formData.contactNumber.trim(),
 
         email:
-          formData.email.trim() ||
-          undefined,
+          formData.email.trim() || undefined,
 
         projectTitle:
           formData.projectTitle.trim(),
@@ -318,11 +365,9 @@ const Projects = () => {
           formData.assignedDeveloper ||
           undefined,
 
-        startDate:
-          formData.startDate,
+        startDate: formData.startDate,
 
-        deadline:
-          formData.deadline,
+        deadline: formData.deadline,
 
         budget,
 
@@ -335,33 +380,43 @@ const Projects = () => {
           formData.projectStatus,
 
         deliveryDate:
-          formData.deliveryDate ||
-          undefined,
+          formData.deliveryDate || undefined,
 
         remarks:
-          formData.remarks.trim() ||
-          undefined,
+          formData.remarks.trim() || undefined,
       };
 
-      await createProject(projectData);
+      if (editingProject) {
+        await updateProject(
+          editingProject._id,
+          projectData
+        );
 
-      setSuccess(
-        "Project created successfully."
-      );
+        setSuccess(
+          "Project updated successfully."
+        );
+      } else {
+        await createProject(projectData);
+
+        setSuccess(
+          "Project created successfully."
+        );
+      }
 
       setShowModal(false);
+      setEditingProject(null);
       setFormData(initialForm);
 
       await fetchProjects();
     } catch (error) {
       console.error(
-        "Failed to create project:",
+        "Failed to save project:",
         error
       );
 
       setError(
         error.response?.data?.message ||
-          "Failed to create project."
+          "Failed to save project."
       );
     } finally {
       setSubmitLoading(false);
@@ -404,6 +459,50 @@ const Projects = () => {
       );
     } finally {
       setStatusLoading("");
+    }
+  };
+
+  // ========================================
+  // DELETE PROJECT
+  // ========================================
+
+  const handleDeleteProject = async (
+    projectId
+  ) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this project?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeleteLoading(projectId);
+
+      setError("");
+      setSuccess("");
+
+      await deleteProject(projectId);
+
+      setSuccess(
+        "Project deleted successfully."
+      );
+
+      setShowDetailsModal(false);
+      setSelectedProject(null);
+
+      await fetchProjects();
+    } catch (error) {
+      console.error(
+        "Failed to delete project:",
+        error
+      );
+
+      setError(
+        error.response?.data?.message ||
+          "Failed to delete project."
+      );
+    } finally {
+      setDeleteLoading("");
     }
   };
 
@@ -478,8 +577,7 @@ const Projects = () => {
 
     const inProgress = projects.filter(
       (item) =>
-        item.projectStatus ===
-        "in_progress"
+        item.projectStatus === "in_progress"
     ).length;
 
     const testing = projects.filter(
@@ -489,14 +587,12 @@ const Projects = () => {
 
     const completed = projects.filter(
       (item) =>
-        item.projectStatus ===
-        "completed"
+        item.projectStatus === "completed"
     ).length;
 
     const delivered = projects.filter(
       (item) =>
-        item.projectStatus ===
-        "delivered"
+        item.projectStatus === "delivered"
     ).length;
 
     const totalBudget = projects.reduce(
@@ -540,13 +636,14 @@ const Projects = () => {
   const formatDate = (date) => {
     if (!date) return "-";
 
-    return new Date(
-      date
-    ).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return new Date(date).toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }
+    );
   };
 
   const formatStatus = (status) => {
@@ -559,9 +656,7 @@ const Projects = () => {
       );
   };
 
-  const getProjectStatusBadge = (
-    status
-  ) => {
+  const getProjectStatusBadge = (status) => {
     const badgeMap = {
       pending: "secondary",
       in_progress: "primary",
@@ -571,10 +666,7 @@ const Projects = () => {
       cancelled: "danger",
     };
 
-    return (
-      badgeMap[status] ||
-      "secondary"
-    );
+    return badgeMap[status] || "secondary";
   };
 
   const getPaymentBadge = (status) => {
@@ -584,10 +676,7 @@ const Projects = () => {
       paid: "success",
     };
 
-    return (
-      badgeMap[status] ||
-      "secondary"
-    );
+    return badgeMap[status] || "secondary";
   };
 
   // ========================================
@@ -621,13 +710,11 @@ const Projects = () => {
   if (loading) {
     return (
       <div className="dashboard-loading">
-
         <div className="spinner-border text-primary"></div>
 
         <p className="mt-3 mb-0">
           Loading projects...
         </p>
-
       </div>
     );
   }
@@ -639,14 +726,11 @@ const Projects = () => {
   return (
     <div className="projects-page">
 
-      {/* ========================================
-          HEADER
-      ======================================== */}
+      {/* HEADER */}
 
       <div className="dashboard-page-header">
 
         <div>
-
           <h2 className="fw-bold mb-1">
             Projects
           </h2>
@@ -655,10 +739,10 @@ const Projects = () => {
             Manage client projects,
             developers, deadlines and payments.
           </p>
-
         </div>
 
         <button
+          type="button"
           className="btn btn-primary"
           onClick={openAddModal}
         >
@@ -668,38 +752,27 @@ const Projects = () => {
 
       </div>
 
-      {/* ========================================
-          ALERTS
-      ======================================== */}
+      {/* ALERTS */}
 
       {error && !showModal && (
         <div className="alert alert-danger">
-
           <i className="bi bi-exclamation-triangle me-2"></i>
-
           {error}
-
         </div>
       )}
 
       {success && (
         <div className="alert alert-success">
-
           <i className="bi bi-check-circle me-2"></i>
-
           {success}
-
         </div>
       )}
 
-      {/* ========================================
-          SUMMARY
-      ======================================== */}
+      {/* SUMMARY */}
 
       <div className="row g-4 mb-4">
 
         <div className="col-xl-3 col-md-6">
-
           <div className="project-stat-card">
 
             <div className="project-stat-icon primary">
@@ -717,11 +790,9 @@ const Projects = () => {
             </div>
 
           </div>
-
         </div>
 
         <div className="col-xl-3 col-md-6">
-
           <div className="project-stat-card">
 
             <div className="project-stat-icon info">
@@ -739,11 +810,9 @@ const Projects = () => {
             </div>
 
           </div>
-
         </div>
 
         <div className="col-xl-3 col-md-6">
-
           <div className="project-stat-card">
 
             <div className="project-stat-icon warning">
@@ -761,11 +830,9 @@ const Projects = () => {
             </div>
 
           </div>
-
         </div>
 
         <div className="col-xl-3 col-md-6">
-
           <div className="project-stat-card">
 
             <div className="project-stat-icon success">
@@ -778,21 +845,16 @@ const Projects = () => {
               </div>
 
               <h3 className="mb-0 fw-bold">
-                {formatCurrency(
-                  summary.totalPaid
-                )}
+                {formatCurrency(summary.totalPaid)}
               </h3>
             </div>
 
           </div>
-
         </div>
 
       </div>
 
-      {/* ========================================
-          FILTERS
-      ======================================== */}
+      {/* FILTERS */}
 
       <div className="card border-0 shadow-sm mb-4">
 
@@ -818,9 +880,7 @@ const Projects = () => {
                   placeholder="Search client, project, technology or developer..."
                   value={search}
                   onChange={(e) =>
-                    setSearch(
-                      e.target.value
-                    )
+                    setSearch(e.target.value)
                   }
                 />
 
@@ -838,27 +898,14 @@ const Projects = () => {
                 className="form-select"
                 value={paymentFilter}
                 onChange={(e) =>
-                  setPaymentFilter(
-                    e.target.value
-                  )
+                  setPaymentFilter(e.target.value)
                 }
               >
 
-                <option value="all">
-                  All
-                </option>
-
-                <option value="pending">
-                  Pending
-                </option>
-
-                <option value="partial">
-                  Partial
-                </option>
-
-                <option value="paid">
-                  Paid
-                </option>
+                <option value="all">All</option>
+                <option value="pending">Pending</option>
+                <option value="partial">Partial</option>
+                <option value="paid">Paid</option>
 
               </select>
 
@@ -874,9 +921,7 @@ const Projects = () => {
                 className="form-select"
                 value={statusFilter}
                 onChange={(e) =>
-                  setStatusFilter(
-                    e.target.value
-                  )
+                  setStatusFilter(e.target.value)
                 }
               >
 
@@ -915,6 +960,7 @@ const Projects = () => {
             <div className="col-lg-2 d-flex align-items-end">
 
               <button
+                type="button"
                 className="btn btn-light border w-100"
                 onClick={resetFilters}
               >
@@ -930,9 +976,7 @@ const Projects = () => {
 
       </div>
 
-      {/* ========================================
-          PROJECT TABLE
-      ======================================== */}
+      {/* PROJECT TABLE */}
 
       <div className="card border-0 shadow-sm">
 
@@ -947,15 +991,14 @@ const Projects = () => {
               </h5>
 
               <small className="text-muted">
-                Showing{" "}
-                {filteredProjects.length}{" "}
-                of{" "}
+                Showing {filteredProjects.length} of{" "}
                 {projects.length}
               </small>
 
             </div>
 
             <button
+              type="button"
               className="btn btn-outline-primary btn-sm"
               onClick={fetchProjects}
             >
@@ -995,9 +1038,7 @@ const Projects = () => {
               <table className="table align-middle mb-0">
 
                 <thead>
-
                   <tr>
-
                     <th>Client</th>
                     <th>Project</th>
                     <th>Technology</th>
@@ -1008,9 +1049,7 @@ const Projects = () => {
                     <th>Payment</th>
                     <th>Status</th>
                     <th>Action</th>
-
                   </tr>
-
                 </thead>
 
                 <tbody>
@@ -1018,11 +1057,7 @@ const Projects = () => {
                   {filteredProjects.map(
                     (project) => (
 
-                      <tr
-                        key={
-                          project._id
-                        }
-                      >
+                      <tr key={project._id}>
 
                         {/* CLIENT */}
 
@@ -1031,33 +1066,21 @@ const Projects = () => {
                           <div className="d-flex align-items-center">
 
                             <div className="project-avatar">
-
                               {(
-                                project.clientName ||
-                                "C"
+                                project.clientName || "C"
                               )
                                 .charAt(0)
                                 .toUpperCase()}
-
                             </div>
 
                             <div>
 
                               <div className="fw-semibold">
-
-                                {
-                                  project.clientName
-                                }
-
+                                {project.clientName}
                               </div>
 
                               <small className="text-muted">
-
-                                {
-                                  project.clientCompany ||
-                                  "-"
-                                }
-
+                                {project.clientCompany || "-"}
                               </small>
 
                             </div>
@@ -1071,20 +1094,12 @@ const Projects = () => {
                         <td>
 
                           <div className="fw-semibold">
-
-                            {
-                              project.projectTitle
-                            }
-
+                            {project.projectTitle}
                           </div>
 
                           <small className="text-muted">
-
                             Started{" "}
-                            {formatDate(
-                              project.startDate
-                            )}
-
+                            {formatDate(project.startDate)}
                           </small>
 
                         </td>
@@ -1092,60 +1107,35 @@ const Projects = () => {
                         {/* TECHNOLOGY */}
 
                         <td>
-
-                          {
-                            project.technology ||
-                            "-"
-                          }
-
+                          {project.technology || "-"}
                         </td>
 
                         {/* DEVELOPER */}
 
                         <td>
-
-                          {
-                            project
-                              .assignedDeveloper
-                              ?.fullName || (
-
-                              <span className="text-muted">
-                                Unassigned
-                              </span>
-
-                            )
-                          }
-
+                          {project.assignedDeveloper?.fullName || (
+                            <span className="text-muted">
+                              Unassigned
+                            </span>
+                          )}
                         </td>
 
                         {/* DEADLINE */}
 
                         <td>
-
-                          {formatDate(
-                            project.deadline
-                          )}
-
+                          {formatDate(project.deadline)}
                         </td>
 
                         {/* BUDGET */}
 
                         <td className="fw-semibold">
-
-                          {formatCurrency(
-                            project.budget
-                          )}
-
+                          {formatCurrency(project.budget)}
                         </td>
 
                         {/* PAID */}
 
                         <td>
-
-                          {formatCurrency(
-                            project.paidAmount
-                          )}
-
+                          {formatCurrency(project.paidAmount)}
                         </td>
 
                         {/* PAYMENT */}
@@ -1157,11 +1147,9 @@ const Projects = () => {
                               project.paymentStatus
                             )}`}
                           >
-
                             {formatStatus(
                               project.paymentStatus
                             )}
-
                           </span>
 
                         </td>
@@ -1172,12 +1160,9 @@ const Projects = () => {
 
                           <select
                             className="form-select form-select-sm project-status-select"
-                            value={
-                              project.projectStatus
-                            }
+                            value={project.projectStatus}
                             disabled={
-                              statusLoading ===
-                              project._id
+                              statusLoading === project._id
                             }
                             onChange={(e) =>
                               handleStatusChange(
@@ -1219,20 +1204,30 @@ const Projects = () => {
 
                         <td>
 
-                          <button
-                            className="btn btn-sm btn-outline-primary"
-                            onClick={() =>
-                              openDetails(
-                                project
-                              )
-                            }
-                          >
+                          <div className="d-flex gap-2">
 
-                            <i className="bi bi-eye me-1"></i>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() =>
+                                openDetails(project)
+                              }
+                            >
+                              <i className="bi bi-eye me-1"></i>
+                              View
+                            </button>
 
-                            View
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-secondary"
+                              onClick={() =>
+                                openEditModal(project)
+                              }
+                            >
+                              <i className="bi bi-pencil"></i>
+                            </button>
 
-                          </button>
+                          </div>
 
                         </td>
 
@@ -1254,7 +1249,7 @@ const Projects = () => {
       </div>
 
       {/* ========================================
-          ADD PROJECT MODAL
+          ADD / EDIT PROJECT MODAL
       ======================================== */}
 
       {showModal && (
@@ -1276,41 +1271,37 @@ const Projects = () => {
               <div>
 
                 <h5 className="mb-1 fw-bold">
-                  Add Project
+                  {editingProject
+                    ? "Edit Project"
+                    : "Add Project"}
                 </h5>
 
                 <small className="text-muted">
-                  Create a new client project.
+                  {editingProject
+                    ? "Update project information."
+                    : "Create a new client project."}
                 </small>
 
               </div>
 
               <button
+                type="button"
                 className="btn-close"
                 onClick={closeModal}
-                disabled={
-                  submitLoading
-                }
+                disabled={submitLoading}
               ></button>
 
             </div>
 
-            <form
-              onSubmit={handleSubmit}
-            >
+            <form onSubmit={handleSubmit}>
 
               <div className="custom-modal-body">
 
                 {error && (
-
                   <div className="alert alert-danger">
-
                     <i className="bi bi-exclamation-triangle me-2"></i>
-
                     {error}
-
                   </div>
-
                 )}
 
                 <div className="row g-3">
@@ -1320,13 +1311,10 @@ const Projects = () => {
                   <div className="col-md-6">
 
                     <label className="form-label">
-
                       Client Name{" "}
-
                       <span className="text-danger">
                         *
                       </span>
-
                     </label>
 
                     <input
@@ -1334,12 +1322,8 @@ const Projects = () => {
                       name="clientName"
                       className="form-control"
                       placeholder="Enter client name"
-                      value={
-                        formData.clientName
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.clientName}
+                      onChange={handleChange}
                     />
 
                   </div>
@@ -1357,12 +1341,8 @@ const Projects = () => {
                       name="clientCompany"
                       className="form-control"
                       placeholder="Enter company name"
-                      value={
-                        formData.clientCompany
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.clientCompany}
+                      onChange={handleChange}
                     />
 
                   </div>
@@ -1372,13 +1352,10 @@ const Projects = () => {
                   <div className="col-md-6">
 
                     <label className="form-label">
-
                       Contact Number{" "}
-
                       <span className="text-danger">
                         *
                       </span>
-
                     </label>
 
                     <input
@@ -1386,12 +1363,8 @@ const Projects = () => {
                       name="contactNumber"
                       className="form-control"
                       placeholder="Enter contact number"
-                      value={
-                        formData.contactNumber
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.contactNumber}
+                      onChange={handleChange}
                     />
 
                   </div>
@@ -1409,12 +1382,8 @@ const Projects = () => {
                       name="email"
                       className="form-control"
                       placeholder="Enter email"
-                      value={
-                        formData.email
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.email}
+                      onChange={handleChange}
                     />
 
                   </div>
@@ -1424,13 +1393,10 @@ const Projects = () => {
                   <div className="col-12">
 
                     <label className="form-label">
-
                       Project Title{" "}
-
                       <span className="text-danger">
                         *
                       </span>
-
                     </label>
 
                     <input
@@ -1438,12 +1404,8 @@ const Projects = () => {
                       name="projectTitle"
                       className="form-control"
                       placeholder="Enter project title"
-                      value={
-                        formData.projectTitle
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.projectTitle}
+                      onChange={handleChange}
                     />
 
                   </div>
@@ -1461,12 +1423,8 @@ const Projects = () => {
                       className="form-control"
                       rows="3"
                       placeholder="Describe the project..."
-                      value={
-                        formData.projectDescription
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.projectDescription}
+                      onChange={handleChange}
                     ></textarea>
 
                   </div>
@@ -1484,12 +1442,8 @@ const Projects = () => {
                       name="technology"
                       className="form-control"
                       placeholder="e.g. MERN Stack"
-                      value={
-                        formData.technology
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.technology}
+                      onChange={handleChange}
                     />
 
                   </div>
@@ -1505,53 +1459,31 @@ const Projects = () => {
                     <select
                       name="assignedDeveloper"
                       className="form-select"
-                      value={
-                        formData.assignedDeveloper
-                      }
-                      onChange={
-                        handleChange
-                      }
-                      disabled={
-                        loadingUsers
-                      }
+                      value={formData.assignedDeveloper}
+                      onChange={handleChange}
+                      disabled={loadingUsers}
                     >
 
                       <option value="">
-
                         {loadingUsers
                           ? "Loading developers..."
                           : "Select developer"}
-
                       </option>
 
-                      {users
-                        .filter(
-                          (user) =>
-                            user.isActive !==
-                              false &&
-                            user.role ===
-                              "project_manager"
-                        )
-                        .map((user) => (
-
-                          <option
-                            key={
-                              user._id
-                            }
-                            value={
-                              user._id
-                            }
-                          >
-
-                            {
-                              user.fullName
-                            }
-
-                          </option>
-
-                        ))}
+                      {users.map((user) => (
+                        <option
+                          key={user._id}
+                          value={user._id}
+                        >
+                          {user.fullName}
+                        </option>
+                      ))}
 
                     </select>
+
+                    <small className="text-muted">
+                      Only active employees can be assigned as developers.
+                    </small>
 
                   </div>
 
@@ -1560,25 +1492,18 @@ const Projects = () => {
                   <div className="col-md-6">
 
                     <label className="form-label">
-
                       Start Date{" "}
-
                       <span className="text-danger">
                         *
                       </span>
-
                     </label>
 
                     <input
                       type="date"
                       name="startDate"
                       className="form-control"
-                      value={
-                        formData.startDate
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.startDate}
+                      onChange={handleChange}
                     />
 
                   </div>
@@ -1588,25 +1513,18 @@ const Projects = () => {
                   <div className="col-md-6">
 
                     <label className="form-label">
-
                       Deadline{" "}
-
                       <span className="text-danger">
                         *
                       </span>
-
                     </label>
 
                     <input
                       type="date"
                       name="deadline"
                       className="form-control"
-                      value={
-                        formData.deadline
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.deadline}
+                      onChange={handleChange}
                     />
 
                   </div>
@@ -1631,12 +1549,8 @@ const Projects = () => {
                         className="form-control"
                         min="0"
                         placeholder="0"
-                        value={
-                          formData.budget
-                        }
-                        onChange={
-                          handleChange
-                        }
+                        value={formData.budget}
+                        onChange={handleChange}
                       />
 
                     </div>
@@ -1663,12 +1577,8 @@ const Projects = () => {
                         className="form-control"
                         min="0"
                         placeholder="0"
-                        value={
-                          formData.paidAmount
-                        }
-                        onChange={
-                          handleChange
-                        }
+                        value={formData.paidAmount}
+                        onChange={handleChange}
                       />
 
                     </div>
@@ -1686,12 +1596,8 @@ const Projects = () => {
                     <select
                       name="paymentStatus"
                       className="form-select"
-                      value={
-                        formData.paymentStatus
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.paymentStatus}
+                      onChange={handleChange}
                     >
 
                       <option value="pending">
@@ -1721,12 +1627,8 @@ const Projects = () => {
                     <select
                       name="projectStatus"
                       className="form-select"
-                      value={
-                        formData.projectStatus
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.projectStatus}
+                      onChange={handleChange}
                     >
 
                       <option value="pending">
@@ -1769,12 +1671,8 @@ const Projects = () => {
                       type="date"
                       name="deliveryDate"
                       className="form-control"
-                      value={
-                        formData.deliveryDate
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.deliveryDate}
+                      onChange={handleChange}
                     />
 
                   </div>
@@ -1792,12 +1690,8 @@ const Projects = () => {
                       className="form-control"
                       rows="3"
                       placeholder="Enter remarks..."
-                      value={
-                        formData.remarks
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.remarks}
+                      onChange={handleChange}
                     ></textarea>
 
                   </div>
@@ -1812,9 +1706,7 @@ const Projects = () => {
                   type="button"
                   className="btn btn-light border"
                   onClick={closeModal}
-                  disabled={
-                    submitLoading
-                  }
+                  disabled={submitLoading}
                 >
                   Cancel
                 </button>
@@ -1822,25 +1714,21 @@ const Projects = () => {
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={
-                    submitLoading
-                  }
+                  disabled={submitLoading}
                 >
 
                   {submitLoading ? (
-
                     <>
                       <span className="spinner-border spinner-border-sm me-2"></span>
                       Saving...
                     </>
-
                   ) : (
-
                     <>
                       <i className="bi bi-check2-circle me-2"></i>
-                      Create Project
+                      {editingProject
+                        ? "Update Project"
+                        : "Create Project"}
                     </>
-
                   )}
 
                 </button>
@@ -1889,6 +1777,7 @@ const Projects = () => {
                 </div>
 
                 <button
+                  type="button"
                   className="btn-close"
                   onClick={closeDetails}
                 ></button>
@@ -1902,36 +1791,26 @@ const Projects = () => {
                 <div className="project-detail-profile">
 
                   <div className="project-detail-avatar">
-
                     {(
                       selectedProject.clientName ||
                       "C"
                     )
                       .charAt(0)
                       .toUpperCase()}
-
                   </div>
 
                   <div>
 
                     <h5 className="mb-1">
-
-                      {
-                        selectedProject.projectTitle
-                      }
-
+                      {selectedProject.projectTitle}
                     </h5>
 
                     <p className="text-muted mb-0">
-
-                      {
-                        selectedProject.clientName
-                      }
+                      {selectedProject.clientName}
 
                       {selectedProject.clientCompany
                         ? ` • ${selectedProject.clientCompany}`
                         : ""}
-
                     </p>
 
                   </div>
@@ -1943,11 +1822,8 @@ const Projects = () => {
                 <div className="project-detail-section">
 
                   <h6>
-
                     <i className="bi bi-person me-2"></i>
-
                     Client Information
-
                   </h6>
 
                   <div className="row g-3">
@@ -1959,12 +1835,7 @@ const Projects = () => {
                       </small>
 
                       <div className="fw-semibold">
-
-                        {
-                          selectedProject.clientName ||
-                          "-"
-                        }
-
+                        {selectedProject.clientName || "-"}
                       </div>
 
                     </div>
@@ -1976,12 +1847,7 @@ const Projects = () => {
                       </small>
 
                       <div className="fw-semibold">
-
-                        {
-                          selectedProject.clientCompany ||
-                          "-"
-                        }
-
+                        {selectedProject.clientCompany || "-"}
                       </div>
 
                     </div>
@@ -1993,12 +1859,7 @@ const Projects = () => {
                       </small>
 
                       <div className="fw-semibold">
-
-                        {
-                          selectedProject.contactNumber ||
-                          "-"
-                        }
-
+                        {selectedProject.contactNumber || "-"}
                       </div>
 
                     </div>
@@ -2010,12 +1871,7 @@ const Projects = () => {
                       </small>
 
                       <div className="fw-semibold">
-
-                        {
-                          selectedProject.email ||
-                          "-"
-                        }
-
+                        {selectedProject.email || "-"}
                       </div>
 
                     </div>
@@ -2029,11 +1885,8 @@ const Projects = () => {
                 <div className="project-detail-section">
 
                   <h6>
-
                     <i className="bi bi-folder me-2"></i>
-
                     Project Information
-
                   </h6>
 
                   <div className="row g-3">
@@ -2045,12 +1898,7 @@ const Projects = () => {
                       </small>
 
                       <div className="fw-semibold">
-
-                        {
-                          selectedProject.projectTitle ||
-                          "-"
-                        }
-
+                        {selectedProject.projectTitle || "-"}
                       </div>
 
                     </div>
@@ -2062,12 +1910,8 @@ const Projects = () => {
                       </small>
 
                       <div className="text-muted">
-
-                        {
-                          selectedProject.projectDescription ||
-                          "No description added."
-                        }
-
+                        {selectedProject.projectDescription ||
+                          "No description added."}
                       </div>
 
                     </div>
@@ -2079,12 +1923,7 @@ const Projects = () => {
                       </small>
 
                       <div className="fw-semibold">
-
-                        {
-                          selectedProject.technology ||
-                          "-"
-                        }
-
+                        {selectedProject.technology || "-"}
                       </div>
 
                     </div>
@@ -2096,14 +1935,9 @@ const Projects = () => {
                       </small>
 
                       <div className="fw-semibold">
-
-                        {
-                          selectedProject
-                            .assignedDeveloper
-                            ?.fullName ||
-                          "Unassigned"
-                        }
-
+                        {selectedProject.assignedDeveloper
+                          ?.fullName ||
+                          "Unassigned"}
                       </div>
 
                     </div>
@@ -2115,11 +1949,9 @@ const Projects = () => {
                       </small>
 
                       <div className="fw-semibold">
-
                         {formatDate(
                           selectedProject.startDate
                         )}
-
                       </div>
 
                     </div>
@@ -2131,11 +1963,9 @@ const Projects = () => {
                       </small>
 
                       <div className="fw-semibold">
-
                         {formatDate(
                           selectedProject.deadline
                         )}
-
                       </div>
 
                     </div>
@@ -2147,11 +1977,9 @@ const Projects = () => {
                       </small>
 
                       <div className="fw-semibold">
-
                         {formatDate(
                           selectedProject.deliveryDate
                         )}
-
                       </div>
 
                     </div>
@@ -2165,11 +1993,8 @@ const Projects = () => {
                 <div className="project-detail-section">
 
                   <h6>
-
                     <i className="bi bi-currency-rupee me-2"></i>
-
                     Financial Information
-
                   </h6>
 
                   <div className="row g-3">
@@ -2181,11 +2006,9 @@ const Projects = () => {
                       </small>
 
                       <div className="fw-bold">
-
                         {formatCurrency(
                           selectedProject.budget
                         )}
-
                       </div>
 
                     </div>
@@ -2197,11 +2020,9 @@ const Projects = () => {
                       </small>
 
                       <div className="fw-bold">
-
                         {formatCurrency(
                           selectedProject.paidAmount
                         )}
-
                       </div>
 
                     </div>
@@ -2213,7 +2034,6 @@ const Projects = () => {
                       </small>
 
                       <div className="fw-bold">
-
                         {formatCurrency(
                           Math.max(
                             0,
@@ -2225,7 +2045,6 @@ const Projects = () => {
                               ) || 0)
                           )
                         )}
-
                       </div>
 
                     </div>
@@ -2243,11 +2062,9 @@ const Projects = () => {
                             selectedProject.paymentStatus
                           )}`}
                         >
-
                           {formatStatus(
                             selectedProject.paymentStatus
                           )}
-
                         </span>
 
                       </div>
@@ -2267,11 +2084,9 @@ const Projects = () => {
                             selectedProject.projectStatus
                           )}`}
                         >
-
                           {formatStatus(
                             selectedProject.projectStatus
                           )}
-
                         </span>
 
                       </div>
@@ -2287,20 +2102,13 @@ const Projects = () => {
                 <div className="project-detail-section">
 
                   <h6>
-
                     <i className="bi bi-chat-left-text me-2"></i>
-
                     Remarks
-
                   </h6>
 
                   <p className="text-muted mb-0">
-
-                    {
-                      selectedProject.remarks ||
-                      "No remarks added."
-                    }
-
+                    {selectedProject.remarks ||
+                      "No remarks added."}
                   </p>
 
                 </div>
@@ -2310,10 +2118,51 @@ const Projects = () => {
               <div className="custom-modal-footer">
 
                 <button
+                  type="button"
                   className="btn btn-light border"
                   onClick={closeDetails}
                 >
                   Close
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={() =>
+                    openEditModal(selectedProject)
+                  }
+                >
+                  <i className="bi bi-pencil me-2"></i>
+                  Edit
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-outline-danger"
+                  disabled={
+                    deleteLoading ===
+                    selectedProject._id
+                  }
+                  onClick={() =>
+                    handleDeleteProject(
+                      selectedProject._id
+                    )
+                  }
+                >
+
+                  {deleteLoading ===
+                  selectedProject._id ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-trash me-2"></i>
+                      Delete
+                    </>
+                  )}
+
                 </button>
 
               </div>

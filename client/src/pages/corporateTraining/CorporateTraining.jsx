@@ -83,6 +83,8 @@ const CorporateTraining = () => {
   // ========================================
 
   const fetchTrainings = async () => {
+    if (!companyId) return;
+
     try {
       setLoading(true);
       setError("");
@@ -118,18 +120,42 @@ const CorporateTraining = () => {
   // ========================================
 
   const fetchUsers = async () => {
+    if (!companyId) return;
+
     try {
       setLoadingUsers(true);
 
       const data =
         await getCompanyUsers(companyId);
 
-      setUsers(
+      const companyUsers =
         data?.users ||
-          data?.data ||
-          data ||
-          []
-      );
+        data?.data ||
+        data ||
+        [];
+
+      /*
+       * Only active Employees can be trainers.
+       *
+       * Roles available in the system:
+       * super_admin
+       * employee
+       * intern
+       *
+       * Super Admin and Intern are NOT trainers.
+       */
+
+      const employeeUsers = Array.isArray(
+        companyUsers
+      )
+        ? companyUsers.filter(
+            (user) =>
+              user.role === "employee" &&
+              user.isActive !== false
+          )
+        : [];
+
+      setUsers(employeeUsers);
     } catch (error) {
       console.error(
         "Failed to load company users:",
@@ -633,6 +659,7 @@ const CorporateTraining = () => {
         </div>
 
         <button
+          type="button"
           className="btn btn-primary"
           onClick={openAddModal}
         >
@@ -905,6 +932,7 @@ const CorporateTraining = () => {
             <div className="col-lg-2 d-flex align-items-end">
 
               <button
+                type="button"
                 className="btn btn-light border w-100"
                 onClick={resetFilters}
               >
@@ -946,6 +974,7 @@ const CorporateTraining = () => {
             </div>
 
             <button
+              type="button"
               className="btn btn-outline-primary btn-sm"
               onClick={fetchTrainings}
             >
@@ -1263,6 +1292,7 @@ const CorporateTraining = () => {
                         <td>
 
                           <button
+                            type="button"
                             className="btn btn-sm btn-outline-primary"
                             onClick={() =>
                               openDetails(
@@ -1329,6 +1359,7 @@ const CorporateTraining = () => {
               </div>
 
               <button
+                type="button"
                 className="btn-close"
                 onClick={closeModal}
                 disabled={
@@ -1578,23 +1609,14 @@ const CorporateTraining = () => {
 
                         {loadingUsers
                           ? "Loading trainers..."
+                          : users.length === 0
+                          ? "No active employees available"
                           : "Select trainer"}
 
                       </option>
 
-                      {users
-                        .filter(
-                          (user) =>
-                            user.isActive !==
-                              false &&
-                            (
-                              user.role ===
-                                "trainer" ||
-                              user.role ===
-                                "super_admin"
-                            )
-                        )
-                        .map((user) => (
+                      {users.map(
+                        (user) => (
 
                           <option
                             key={
@@ -1609,17 +1631,19 @@ const CorporateTraining = () => {
                               user.fullName
                             }
 
-                            {" - "}
-
-                            {formatStatus(
-                              user.role
-                            )}
+                            {" - Employee"}
 
                           </option>
 
-                        ))}
+                        )
+                      )}
 
                     </select>
+
+                    <small className="text-muted">
+                      Only active employees can be
+                      assigned as trainers.
+                    </small>
 
                   </div>
 
@@ -1900,6 +1924,7 @@ const CorporateTraining = () => {
                 </div>
 
                 <button
+                  type="button"
                   className="btn-close"
                   onClick={closeDetails}
                 ></button>
@@ -2268,6 +2293,7 @@ const CorporateTraining = () => {
               <div className="custom-modal-footer">
 
                 <button
+                  type="button"
                   className="btn btn-light border"
                   onClick={closeDetails}
                 >
