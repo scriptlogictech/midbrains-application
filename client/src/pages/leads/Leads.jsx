@@ -1,4 +1,8 @@
-import { useEffect, useState } from "react";
+import {
+    useEffect,
+    useState,
+} from "react";
+
 import { useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
@@ -10,13 +14,16 @@ import {
     addCommunication,
 } from "../../services/leadService";
 
-import { getCompanyEmployeesAndInterns } from "../../services/userService";
+import {
+    getCompanyEmployeesAndInterns,
+} from "../../services/userService";
 
 import "./Leads.css";
 
 const Leads = () => {
     const { user } = useAuth();
-    const { companyId: routeCompanyId } = useParams();
+    const { companyId: routeCompanyId } =
+        useParams();
 
     // ============================================================
     // COMPANY ID
@@ -33,20 +40,39 @@ const Leads = () => {
     // ============================================================
 
     const [leads, setLeads] = useState([]);
-    const [employeesAndInterns, setEmployeesAndInterns] = useState([]);
 
-    const [loading, setLoading] = useState(true);
-    const [userLoading, setUserLoading] = useState(true);
+    const [
+        employeesAndInterns,
+        setEmployeesAndInterns,
+    ] = useState([]);
 
-    const [error, setError] = useState("");
+    const [loading, setLoading] =
+        useState(true);
 
-    const [showModal, setShowModal] = useState(false);
-    const [showDetailsModal, setShowDetailsModal] = useState(false);
-    const [showCommunicationModal, setShowCommunicationModal] =
+    const [userLoading, setUserLoading] =
+        useState(true);
+
+    const [error, setError] =
+        useState("");
+
+    const [showModal, setShowModal] =
         useState(false);
 
-    const [editingLead, setEditingLead] = useState(null);
-    const [selectedLead, setSelectedLead] = useState(null);
+    const [
+        showDetailsModal,
+        setShowDetailsModal,
+    ] = useState(false);
+
+    const [
+        showCommunicationModal,
+        setShowCommunicationModal,
+    ] = useState(false);
+
+    const [editingLead, setEditingLead] =
+        useState(null);
+
+    const [selectedLead, setSelectedLead] =
+        useState(null);
 
     // ============================================================
     // FILTER STATES
@@ -64,14 +90,15 @@ const Leads = () => {
         limit: 10,
     });
 
-    const [pagination, setPagination] = useState({
-        page: 1,
-        limit: 10,
-        total: 0,
-        totalPages: 1,
-        hasNextPage: false,
-        hasPreviousPage: false,
-    });
+    const [pagination, setPagination] =
+        useState({
+            page: 1,
+            limit: 10,
+            total: 0,
+            totalPages: 1,
+            hasNextPage: false,
+            hasPreviousPage: false,
+        });
 
     // ============================================================
     // FORM STATES
@@ -94,9 +121,13 @@ const Leads = () => {
         admissionDate: "",
     };
 
-    const [formData, setFormData] = useState(initialForm);
+    const [formData, setFormData] =
+        useState(initialForm);
 
-    const [communicationData, setCommunicationData] = useState({
+    const [
+        communicationData,
+        setCommunicationData,
+    ] = useState({
         type: "call",
         message: "",
     });
@@ -173,34 +204,48 @@ const Leads = () => {
     // FETCH EMPLOYEES + INTERNS
     // ============================================================
 
-    const fetchEmployeesAndInterns = async () => {
-        if (!companyId) {
-            setUserLoading(false);
-            return;
-        }
+    const fetchEmployeesAndInterns =
+        async () => {
+            if (!companyId) {
+                setUserLoading(false);
+                return;
+            }
 
-        try {
-            setUserLoading(true);
+            try {
+                setUserLoading(true);
 
-            const response =
-                await getCompanyEmployeesAndInterns(
-                    companyId
+                const response =
+                    await getCompanyEmployeesAndInterns(
+                        companyId
+                    );
+
+                const users =
+                    response?.users || [];
+
+                // ONLY EMPLOYEE + INTERN
+                const allowedUsers =
+                    users.filter(
+                        (item) =>
+                            item.role ===
+                                "employee" ||
+                            item.role ===
+                                "intern"
+                    );
+
+                setEmployeesAndInterns(
+                    allowedUsers
+                );
+            } catch (err) {
+                console.error(
+                    "Fetch Employees and Interns Error:",
+                    err
                 );
 
-            setEmployeesAndInterns(
-                response?.users || []
-            );
-        } catch (err) {
-            console.error(
-                "Fetch Employees and Interns Error:",
-                err
-            );
-
-            setEmployeesAndInterns([]);
-        } finally {
-            setUserLoading(false);
-        }
-    };
+                setEmployeesAndInterns([]);
+            } finally {
+                setUserLoading(false);
+            }
+        };
 
     // ============================================================
     // INITIAL LOAD
@@ -238,7 +283,10 @@ const Leads = () => {
     // ============================================================
 
     const handleFilterChange = (e) => {
-        const { name, value } = e.target;
+        const {
+            name,
+            value,
+        } = e.target;
 
         setFilters((prev) => ({
             ...prev,
@@ -266,7 +314,10 @@ const Leads = () => {
     // ============================================================
 
     const handleFormChange = (e) => {
-        const { name, value } = e.target;
+        const {
+            name,
+            value,
+        } = e.target;
 
         setFormData((prev) => ({
             ...prev,
@@ -281,6 +332,7 @@ const Leads = () => {
     const handleAddLead = () => {
         setEditingLead(null);
         setFormData(initialForm);
+        setError("");
         setShowModal(true);
     };
 
@@ -292,25 +344,42 @@ const Leads = () => {
         setEditingLead(lead);
 
         setFormData({
-            fullName: lead.fullName || "",
+            fullName:
+                lead.fullName || "",
+
             contactNumber:
                 lead.contactNumber || "",
-            email: lead.email || "",
-            city: lead.city || "",
+
+            email:
+                lead.email || "",
+
+            city:
+                lead.city || "",
+
             courseInterested:
-                lead.courseInterested || "",
+                lead.courseInterested ||
+                "",
+
             inquiryType:
-                lead.inquiryType || "course",
+                lead.inquiryType ||
+                "course",
+
             leadSource:
                 lead.leadSource || "",
+
             assignedCounselor:
                 lead.assignedCounselor?._id ||
                 lead.assignedCounselor ||
                 "",
+
             priority:
-                lead.priority || "medium",
+                lead.priority ||
+                "medium",
+
             status:
-                lead.status || "new",
+                lead.status ||
+                "new",
+
             nextFollowUpDate:
                 lead.nextFollowUpDate
                     ? new Date(
@@ -319,12 +388,18 @@ const Leads = () => {
                           .toISOString()
                           .split("T")[0]
                     : "",
-            notes: lead.notes || "",
+
+            notes:
+                lead.notes || "",
+
             expectedFees:
-                lead.expectedFees !== undefined &&
-                lead.expectedFees !== null
+                lead.expectedFees !==
+                    undefined &&
+                lead.expectedFees !==
+                    null
                     ? lead.expectedFees
                     : "",
+
             admissionDate:
                 lead.admissionDate
                     ? new Date(
@@ -335,7 +410,19 @@ const Leads = () => {
                     : "",
         });
 
+        setError("");
         setShowModal(true);
+    };
+
+    // ============================================================
+    // CLOSE LEAD MODAL
+    // ============================================================
+
+    const closeLeadModal = () => {
+        setShowModal(false);
+        setEditingLead(null);
+        setFormData(initialForm);
+        setError("");
     };
 
     // ============================================================
@@ -348,28 +435,46 @@ const Leads = () => {
         try {
             setError("");
 
+            if (!companyId) {
+                setError(
+                    "Company information is missing."
+                );
+
+                return;
+            }
+
             const payload = {
                 ...formData,
                 company: companyId,
             };
 
-            if (payload.expectedFees === "") {
+            if (
+                payload.expectedFees ===
+                ""
+            ) {
                 delete payload.expectedFees;
             } else {
-                payload.expectedFees = Number(
-                    payload.expectedFees
-                );
+                payload.expectedFees =
+                    Number(
+                        payload.expectedFees
+                    );
             }
 
-            if (!payload.assignedCounselor) {
+            if (
+                !payload.assignedCounselor
+            ) {
                 delete payload.assignedCounselor;
             }
 
-            if (!payload.nextFollowUpDate) {
+            if (
+                !payload.nextFollowUpDate
+            ) {
                 delete payload.nextFollowUpDate;
             }
 
-            if (!payload.admissionDate) {
+            if (
+                !payload.admissionDate
+            ) {
                 delete payload.admissionDate;
             }
 
@@ -382,9 +487,7 @@ const Leads = () => {
                 await createLead(payload);
             }
 
-            setShowModal(false);
-            setEditingLead(null);
-            setFormData(initialForm);
+            closeLeadModal();
 
             await fetchLeads();
         } catch (err) {
@@ -420,7 +523,8 @@ const Leads = () => {
 
             if (
                 selectedLead &&
-                selectedLead._id === leadId
+                selectedLead._id ===
+                    leadId
             ) {
                 setSelectedLead((prev) => ({
                     ...prev,
@@ -444,9 +548,16 @@ const Leads = () => {
     // VIEW DETAILS
     // ============================================================
 
-    const handleViewDetails = (lead) => {
+    const handleViewDetails = (
+        lead
+    ) => {
         setSelectedLead(lead);
         setShowDetailsModal(true);
+    };
+
+    const closeDetailsModal = () => {
+        setSelectedLead(null);
+        setShowDetailsModal(false);
     };
 
     // ============================================================
@@ -466,65 +577,84 @@ const Leads = () => {
         setShowCommunicationModal(true);
     };
 
-    const handleCommunicationChange = (
-        e
-    ) => {
-        const { name, value } = e.target;
+    const handleCommunicationChange =
+        (e) => {
+            const {
+                name,
+                value,
+            } = e.target;
 
-        setCommunicationData((prev) => ({
-            ...prev,
-            [name]: value,
-        }));
-    };
-
-    const handleAddCommunication = async (
-        e
-    ) => {
-        e.preventDefault();
-
-        if (!selectedLead) return;
-
-        try {
-            setError("");
-
-            await addCommunication(
-                selectedLead._id,
-                communicationData
+            setCommunicationData(
+                (prev) => ({
+                    ...prev,
+                    [name]: value,
+                })
             );
+        };
 
-            setShowCommunicationModal(false);
+    const handleAddCommunication =
+        async (e) => {
+            e.preventDefault();
 
-            setCommunicationData({
-                type: "call",
-                message: "",
-            });
+            if (!selectedLead) return;
 
-            await fetchLeads();
-        } catch (err) {
-            console.error(
-                "Add Communication Error:",
-                err
-            );
+            try {
+                setError("");
 
-            setError(
-                err?.response?.data?.message ||
-                    "Failed to add communication"
-            );
-        }
-    };
+                if (
+                    !communicationData.message.trim()
+                ) {
+                    setError(
+                        "Communication message is required."
+                    );
+
+                    return;
+                }
+
+                await addCommunication(
+                    selectedLead._id,
+                    communicationData
+                );
+
+                setShowCommunicationModal(
+                    false
+                );
+
+                setCommunicationData({
+                    type: "call",
+                    message: "",
+                });
+
+                await fetchLeads();
+            } catch (err) {
+                console.error(
+                    "Add Communication Error:",
+                    err
+                );
+
+                setError(
+                    err?.response?.data
+                        ?.message ||
+                        "Failed to add communication"
+                );
+            }
+        };
 
     // ============================================================
     // PAGINATION
     // ============================================================
 
     const handlePreviousPage = () => {
-        if (!pagination.hasPreviousPage) {
+        if (
+            !pagination.hasPreviousPage
+        ) {
             return;
         }
 
         setFilters((prev) => ({
             ...prev,
-            page: pagination.page - 1,
+            page:
+                pagination.page - 1,
         }));
     };
 
@@ -535,7 +665,8 @@ const Leads = () => {
 
         setFilters((prev) => ({
             ...prev,
-            page: pagination.page + 1,
+            page:
+                pagination.page + 1,
         }));
     };
 
@@ -556,6 +687,7 @@ const Leads = () => {
         ) {
             return (
                 assignedUser.fullName ||
+                assignedUser.name ||
                 "Unknown"
             );
         }
@@ -569,6 +701,7 @@ const Leads = () => {
 
         return (
             user?.fullName ||
+            user?.name ||
             "Unknown"
         );
     };
@@ -584,7 +717,9 @@ const Leads = () => {
             typeof assignedUser ===
             "object"
         ) {
-            return assignedUser.role || "";
+            return (
+                assignedUser.role || ""
+            );
         }
 
         const user =
@@ -597,28 +732,26 @@ const Leads = () => {
         return user?.role || "";
     };
 
+    // ============================================================
+    // ROLE LABEL
+    // ============================================================
+
+    // ONLY TWO ROLES CAN BE ASSIGNED TO A LEAD:
+    // EMPLOYEE OR INTERN
+
     const getRoleLabel = (
         role
     ) => {
         if (
-            role ===
-            "employee"
+            role === "employee"
         ) {
             return "Employee";
         }
 
         if (
-            role ===
-            "intern"
+            role === "intern"
         ) {
             return "Intern";
-        }
-
-        if (
-            role ===
-            "super_admin"
-        ) {
-            return "Super Admin";
         }
 
         return "";
@@ -630,9 +763,12 @@ const Leads = () => {
         const labels = {
             new: "New",
             contacted: "Contacted",
-            interested: "Interested",
-            follow_up: "Follow Up",
-            converted: "Converted",
+            interested:
+                "Interested",
+            follow_up:
+                "Follow Up",
+            converted:
+                "Converted",
             not_interested:
                 "Not Interested",
             closed: "Closed",
@@ -649,11 +785,13 @@ const Leads = () => {
     ) => {
         const labels = {
             course: "Course",
-            internship: "Internship",
+            internship:
+                "Internship",
             corporate_training:
                 "Corporate Training",
             project: "Project",
-            placement: "Placement",
+            placement:
+                "Placement",
         };
 
         return (
@@ -702,6 +840,7 @@ const Leads = () => {
     if (!companyId) {
         return (
             <div className="empty-state">
+
                 <i className="bi bi-building"></i>
 
                 <h3>
@@ -712,6 +851,7 @@ const Leads = () => {
                     Please select a company
                     before managing leads.
                 </p>
+
             </div>
         );
     }
@@ -723,10 +863,14 @@ const Leads = () => {
     return (
         <div className="leads-page">
 
-            {/* ================= HEADER ================= */}
+            {/* ====================================================
+                HEADER
+            ==================================================== */}
 
             <div className="page-header">
+
                 <div>
+
                     <h1>
                         Lead Management
                     </h1>
@@ -737,38 +881,51 @@ const Leads = () => {
                         follow-ups and
                         communications.
                     </p>
+
                 </div>
 
                 <button
+                    type="button"
                     className="btn btn-primary"
                     onClick={
                         handleAddLead
                     }
                 >
                     <i className="bi bi-plus-lg"></i>
+
                     Add Lead
                 </button>
+
             </div>
 
-            {/* ================= ERROR ================= */}
+            {/* ====================================================
+                ERROR
+            ==================================================== */}
 
             {error && (
                 <div className="alert alert-danger">
+
                     <i className="bi bi-exclamation-triangle"></i>
+
                     {error}
+
                 </div>
             )}
 
-            {/* ================= FILTERS ================= */}
+            {/* ====================================================
+                FILTERS
+            ==================================================== */}
 
             <div className="filters-card">
 
                 <div className="filter-group search-group">
+
                     <label>
                         Search
                     </label>
 
                     <div className="search-input">
+
                         <i className="bi bi-search"></i>
 
                         <input
@@ -782,10 +939,13 @@ const Leads = () => {
                                 handleFilterChange
                             }
                         />
+
                     </div>
+
                 </div>
 
                 <div className="filter-group">
+
                     <label>
                         Status
                     </label>
@@ -799,6 +959,7 @@ const Leads = () => {
                             handleFilterChange
                         }
                     >
+
                         <option value="">
                             All Status
                         </option>
@@ -830,10 +991,13 @@ const Leads = () => {
                         <option value="closed">
                             Closed
                         </option>
+
                     </select>
+
                 </div>
 
                 <div className="filter-group">
+
                     <label>
                         Priority
                     </label>
@@ -847,6 +1011,7 @@ const Leads = () => {
                             handleFilterChange
                         }
                     >
+
                         <option value="">
                             All Priority
                         </option>
@@ -862,10 +1027,13 @@ const Leads = () => {
                         <option value="high">
                             High
                         </option>
+
                     </select>
+
                 </div>
 
                 <div className="filter-group">
+
                     <label>
                         Inquiry Type
                     </label>
@@ -879,6 +1047,7 @@ const Leads = () => {
                             handleFilterChange
                         }
                     >
+
                         <option value="">
                             All Types
                         </option>
@@ -902,12 +1071,19 @@ const Leads = () => {
                         <option value="placement">
                             Placement
                         </option>
+
                     </select>
+
                 </div>
 
+                {/* =================================================
+                    ASSIGNED EMPLOYEE / INTERN
+                ================================================= */}
+
                 <div className="filter-group">
+
                     <label>
-                        Assigned To
+                        Assigned Employee / Intern
                     </label>
 
                     <select
@@ -919,8 +1095,9 @@ const Leads = () => {
                             handleFilterChange
                         }
                     >
+
                         <option value="">
-                            All Users
+                            All Employees / Interns
                         </option>
 
                         {employeesAndInterns.map(
@@ -933,23 +1110,30 @@ const Leads = () => {
                                         item._id
                                     }
                                 >
+
                                     {
-                                        item.fullName
-                                    }{" "}
-                                    (
-                                    {
-                                        getRoleLabel(
-                                            item.role
-                                        )
+                                        item.fullName ||
+                                        item.name
                                     }
-                                    )
+
+                                    {" ("}
+
+                                    {getRoleLabel(
+                                        item.role
+                                    )}
+
+                                    {")"}
+
                                 </option>
                             )
                         )}
+
                     </select>
+
                 </div>
 
                 <div className="filter-group">
+
                     <label>
                         From Date
                     </label>
@@ -964,9 +1148,11 @@ const Leads = () => {
                             handleFilterChange
                         }
                     />
+
                 </div>
 
                 <div className="filter-group">
+
                     <label>
                         To Date
                     </label>
@@ -981,25 +1167,35 @@ const Leads = () => {
                             handleFilterChange
                         }
                     />
+
                 </div>
 
                 <button
+                    type="button"
                     className="btn btn-secondary clear-filter-btn"
                     onClick={
                         clearFilters
                     }
                 >
+
                     <i className="bi bi-x-circle"></i>
+
                     Clear
+
                 </button>
+
             </div>
 
-            {/* ================= TABLE ================= */}
+            {/* ====================================================
+                TABLE
+            ==================================================== */}
 
             <div className="table-card">
 
                 <div className="table-header">
+
                     <div>
+
                         <h3>
                             All Leads
                         </h3>
@@ -1011,26 +1207,33 @@ const Leads = () => {
                             }{" "}
                             total leads
                         </span>
+
                     </div>
 
                     {userLoading && (
                         <span className="loading-text">
-                            Loading users...
+                            Loading employees and interns...
                         </span>
                     )}
+
                 </div>
 
                 {loading ? (
+
                     <div className="loading-container">
+
                         <div className="spinner"></div>
 
                         <p>
                             Loading leads...
                         </p>
+
                     </div>
-                ) : leads.length ===
-                  0 ? (
+
+                ) : leads.length === 0 ? (
+
                     <div className="empty-state">
+
                         <i className="bi bi-people"></i>
 
                         <h3>
@@ -1044,22 +1247,33 @@ const Leads = () => {
                         </p>
 
                         <button
+                            type="button"
                             className="btn btn-primary"
                             onClick={
                                 handleAddLead
                             }
                         >
+
                             <i className="bi bi-plus-lg"></i>
+
                             Add First Lead
+
                         </button>
+
                     </div>
+
                 ) : (
+
                     <>
+
                         <div className="table-responsive">
+
                             <table className="leads-table">
 
                                 <thead>
+
                                     <tr>
+
                                         <th>
                                             Lead
                                         </th>
@@ -1073,7 +1287,7 @@ const Leads = () => {
                                         </th>
 
                                         <th>
-                                            Assigned To
+                                            Assigned Employee / Intern
                                         </th>
 
                                         <th>
@@ -1091,12 +1305,16 @@ const Leads = () => {
                                         <th>
                                             Actions
                                         </th>
+
                                     </tr>
+
                                 </thead>
 
                                 <tbody>
+
                                     {leads.map(
                                         (lead) => {
+
                                             const role =
                                                 getUserRole(
                                                     lead.assignedCounselor
@@ -1108,8 +1326,13 @@ const Leads = () => {
                                                         lead._id
                                                     }
                                                 >
+
+                                                    {/* LEAD */}
+
                                                     <td>
+
                                                         <div className="lead-info">
+
                                                             <strong>
                                                                 {
                                                                     lead.fullName
@@ -1122,33 +1345,49 @@ const Leads = () => {
                                                                     "-"
                                                                 }
                                                             </span>
+
                                                         </div>
+
                                                     </td>
 
+                                                    {/* CONTACT */}
+
                                                     <td>
+
                                                         <div className="contact-info">
+
                                                             <span>
+
                                                                 <i className="bi bi-telephone"></i>
 
                                                                 {
                                                                     lead.contactNumber
                                                                 }
+
                                                             </span>
 
                                                             {lead.email && (
                                                                 <span>
+
                                                                     <i className="bi bi-envelope"></i>
 
                                                                     {
                                                                         lead.email
                                                                     }
+
                                                                 </span>
                                                             )}
+
                                                         </div>
+
                                                     </td>
 
+                                                    {/* INQUIRY */}
+
                                                     <td>
+
                                                         <div className="inquiry-info">
+
                                                             <strong>
                                                                 {getInquiryTypeLabel(
                                                                     lead.inquiryType
@@ -1162,11 +1401,17 @@ const Leads = () => {
                                                                     }
                                                                 </span>
                                                             )}
+
                                                         </div>
+
                                                     </td>
 
+                                                    {/* ASSIGNED USER */}
+
                                                     <td>
+
                                                         <div className="assigned-user">
+
                                                             <span>
                                                                 {getUserName(
                                                                     lead.assignedCounselor
@@ -1180,10 +1425,15 @@ const Leads = () => {
                                                                     )}
                                                                 </small>
                                                             )}
+
                                                         </div>
+
                                                     </td>
 
+                                                    {/* PRIORITY */}
+
                                                     <td>
+
                                                         <span
                                                             className={`priority-badge ${lead.priority}`}
                                                         >
@@ -1191,9 +1441,13 @@ const Leads = () => {
                                                                 lead.priority
                                                             )}
                                                         </span>
+
                                                     </td>
 
+                                                    {/* STATUS */}
+
                                                     <td>
+
                                                         <select
                                                             className={`status-select ${lead.status}`}
                                                             value={
@@ -1204,12 +1458,11 @@ const Leads = () => {
                                                             ) =>
                                                                 handleStatusChange(
                                                                     lead._id,
-                                                                    e
-                                                                        .target
-                                                                        .value
+                                                                    e.target.value
                                                                 )
                                                             }
                                                         >
+
                                                             <option value="new">
                                                                 New
                                                             </option>
@@ -1237,19 +1490,29 @@ const Leads = () => {
                                                             <option value="closed">
                                                                 Closed
                                                             </option>
+
                                                         </select>
+
                                                     </td>
 
+                                                    {/* NEXT FOLLOW-UP */}
+
                                                     <td>
+
                                                         {formatDate(
                                                             lead.nextFollowUpDate
                                                         )}
+
                                                     </td>
 
+                                                    {/* ACTIONS */}
+
                                                     <td>
+
                                                         <div className="action-buttons">
 
                                                             <button
+                                                                type="button"
                                                                 className="icon-btn"
                                                                 title="View Details"
                                                                 onClick={() =>
@@ -1258,10 +1521,13 @@ const Leads = () => {
                                                                     )
                                                                 }
                                                             >
+
                                                                 <i className="bi bi-eye"></i>
+
                                                             </button>
 
                                                             <button
+                                                                type="button"
                                                                 className="icon-btn"
                                                                 title="Edit Lead"
                                                                 onClick={() =>
@@ -1270,10 +1536,13 @@ const Leads = () => {
                                                                     )
                                                                 }
                                                             >
+
                                                                 <i className="bi bi-pencil"></i>
+
                                                             </button>
 
                                                             <button
+                                                                type="button"
                                                                 className="icon-btn"
                                                                 title="Add Communication"
                                                                 onClick={() =>
@@ -1282,38 +1551,50 @@ const Leads = () => {
                                                                     )
                                                                 }
                                                             >
+
                                                                 <i className="bi bi-chat-left-text"></i>
+
                                                             </button>
 
                                                         </div>
+
                                                     </td>
+
                                                 </tr>
                                             );
                                         }
                                     )}
+
                                 </tbody>
 
                             </table>
+
                         </div>
 
-                        {/* ================= PAGINATION ================= */}
+                        {/* PAGINATION */}
 
                         <div className="pagination">
 
                             <span>
+
                                 Page{" "}
+
                                 {
                                     pagination.page
                                 }{" "}
+
                                 of{" "}
+
                                 {
                                     pagination.totalPages
                                 }
+
                             </span>
 
                             <div>
 
                                 <button
+                                    type="button"
                                     className="btn btn-secondary"
                                     disabled={
                                         !pagination.hasPreviousPage
@@ -1322,11 +1603,15 @@ const Leads = () => {
                                         handlePreviousPage
                                     }
                                 >
+
                                     <i className="bi bi-chevron-left"></i>
+
                                     Previous
+
                                 </button>
 
                                 <button
+                                    type="button"
                                     className="btn btn-secondary"
                                     disabled={
                                         !pagination.hasNextPage
@@ -1335,29 +1620,36 @@ const Leads = () => {
                                         handleNextPage
                                     }
                                 >
+
                                     Next
 
                                     <i className="bi bi-chevron-right"></i>
+
                                 </button>
 
                             </div>
 
                         </div>
+
                     </>
+
                 )}
+
             </div>
 
-            {/* =====================================================
+            {/* ====================================================
                 ADD / EDIT LEAD MODAL
-            ===================================================== */}
+            ==================================================== */}
 
             {showModal && (
+
                 <div
                     className="modal-overlay"
-                    onClick={() =>
-                        setShowModal(false)
+                    onClick={
+                        closeLeadModal
                     }
                 >
+
                     <div
                         className="modal-content large-modal"
                         onClick={(e) =>
@@ -1368,10 +1660,13 @@ const Leads = () => {
                         <div className="modal-header">
 
                             <div>
+
                                 <h2>
+
                                     {editingLead
                                         ? "Edit Lead"
                                         : "Add New Lead"}
+
                                 </h2>
 
                                 <p>
@@ -1379,17 +1674,19 @@ const Leads = () => {
                                     information
                                     below.
                                 </p>
+
                             </div>
 
                             <button
+                                type="button"
                                 className="modal-close"
-                                onClick={() =>
-                                    setShowModal(
-                                        false
-                                    )
+                                onClick={
+                                    closeLeadModal
                                 }
                             >
+
                                 <i className="bi bi-x-lg"></i>
+
                             </button>
 
                         </div>
@@ -1413,6 +1710,7 @@ const Leads = () => {
                                 <div className="form-grid">
 
                                     <div className="form-group">
+
                                         <label>
                                             Full Name *
                                         </label>
@@ -1429,9 +1727,11 @@ const Leads = () => {
                                             required
                                             placeholder="Enter full name"
                                         />
+
                                     </div>
 
                                     <div className="form-group">
+
                                         <label>
                                             Contact Number *
                                         </label>
@@ -1448,9 +1748,11 @@ const Leads = () => {
                                             required
                                             placeholder="Enter contact number"
                                         />
+
                                     </div>
 
                                     <div className="form-group">
+
                                         <label>
                                             Email
                                         </label>
@@ -1466,9 +1768,11 @@ const Leads = () => {
                                             }
                                             placeholder="Enter email"
                                         />
+
                                     </div>
 
                                     <div className="form-group">
+
                                         <label>
                                             City
                                         </label>
@@ -1484,9 +1788,11 @@ const Leads = () => {
                                             }
                                             placeholder="Enter city"
                                         />
+
                                     </div>
 
                                 </div>
+
                             </div>
 
                             {/* LEAD INFORMATION */}
@@ -1500,6 +1806,7 @@ const Leads = () => {
                                 <div className="form-grid">
 
                                     <div className="form-group">
+
                                         <label>
                                             Inquiry Type *
                                         </label>
@@ -1514,6 +1821,7 @@ const Leads = () => {
                                             }
                                             required
                                         >
+
                                             <option value="course">
                                                 Course
                                             </option>
@@ -1533,10 +1841,13 @@ const Leads = () => {
                                             <option value="placement">
                                                 Placement
                                             </option>
+
                                         </select>
+
                                     </div>
 
                                     <div className="form-group">
+
                                         <label>
                                             Course Interested
                                         </label>
@@ -1552,9 +1863,11 @@ const Leads = () => {
                                             }
                                             placeholder="Enter course"
                                         />
+
                                     </div>
 
                                     <div className="form-group">
+
                                         <label>
                                             Lead Source
                                         </label>
@@ -1568,6 +1881,7 @@ const Leads = () => {
                                                 handleFormChange
                                             }
                                         >
+
                                             <option value="">
                                                 Select Source
                                             </option>
@@ -1615,10 +1929,15 @@ const Leads = () => {
                                             <option value="project_client">
                                                 Project Client
                                             </option>
+
                                         </select>
+
                                     </div>
 
+                                    {/* ASSIGNED EMPLOYEE / INTERN */}
+
                                     <div className="form-group">
+
                                         <label>
                                             Assigned Employee / Intern
                                         </label>
@@ -1632,6 +1951,7 @@ const Leads = () => {
                                                 handleFormChange
                                             }
                                         >
+
                                             <option value="">
                                                 Select Employee / Intern
                                             </option>
@@ -1648,23 +1968,30 @@ const Leads = () => {
                                                             item._id
                                                         }
                                                     >
+
                                                         {
-                                                            item.fullName
-                                                        }{" "}
-                                                        (
-                                                        {
-                                                            getRoleLabel(
-                                                                item.role
-                                                            )
+                                                            item.fullName ||
+                                                            item.name
                                                         }
-                                                        )
+
+                                                        {" ("}
+
+                                                        {getRoleLabel(
+                                                            item.role
+                                                        )}
+
+                                                        {")"}
+
                                                     </option>
                                                 )
                                             )}
+
                                         </select>
+
                                     </div>
 
                                     <div className="form-group">
+
                                         <label>
                                             Priority
                                         </label>
@@ -1678,6 +2005,7 @@ const Leads = () => {
                                                 handleFormChange
                                             }
                                         >
+
                                             <option value="low">
                                                 Low
                                             </option>
@@ -1689,10 +2017,13 @@ const Leads = () => {
                                             <option value="high">
                                                 High
                                             </option>
+
                                         </select>
+
                                     </div>
 
                                     <div className="form-group">
+
                                         <label>
                                             Status
                                         </label>
@@ -1706,6 +2037,7 @@ const Leads = () => {
                                                 handleFormChange
                                             }
                                         >
+
                                             <option value="new">
                                                 New
                                             </option>
@@ -1733,10 +2065,13 @@ const Leads = () => {
                                             <option value="closed">
                                                 Closed
                                             </option>
+
                                         </select>
+
                                     </div>
 
                                 </div>
+
                             </div>
 
                             {/* FOLLOW-UP INFORMATION */}
@@ -1751,6 +2086,7 @@ const Leads = () => {
                                 <div className="form-grid">
 
                                     <div className="form-group">
+
                                         <label>
                                             Next Follow-up Date
                                         </label>
@@ -1765,9 +2101,11 @@ const Leads = () => {
                                                 handleFormChange
                                             }
                                         />
+
                                     </div>
 
                                     <div className="form-group">
+
                                         <label>
                                             Expected Fees
                                         </label>
@@ -1784,9 +2122,11 @@ const Leads = () => {
                                             placeholder="Enter expected fees"
                                             min="0"
                                         />
+
                                     </div>
 
                                     <div className="form-group">
+
                                         <label>
                                             Admission Date
                                         </label>
@@ -1801,6 +2141,7 @@ const Leads = () => {
                                                 handleFormChange
                                             }
                                         />
+
                                     </div>
 
                                 </div>
@@ -1834,10 +2175,8 @@ const Leads = () => {
                                 <button
                                     type="button"
                                     className="btn btn-secondary"
-                                    onClick={() =>
-                                        setShowModal(
-                                            false
-                                        )
+                                    onClick={
+                                        closeLeadModal
                                     }
                                 >
                                     Cancel
@@ -1847,34 +2186,39 @@ const Leads = () => {
                                     type="submit"
                                     className="btn btn-primary"
                                 >
+
                                     <i className="bi bi-check-lg"></i>
 
                                     {editingLead
                                         ? "Update Lead"
                                         : "Create Lead"}
+
                                 </button>
 
                             </div>
 
                         </form>
+
                     </div>
+
                 </div>
+
             )}
 
-            {/* =====================================================
+            {/* ====================================================
                 LEAD DETAILS MODAL
-            ===================================================== */}
+            ==================================================== */}
 
             {showDetailsModal &&
                 selectedLead && (
+
                     <div
                         className="modal-overlay"
-                        onClick={() =>
-                            setShowDetailsModal(
-                                false
-                            )
+                        onClick={
+                            closeDetailsModal
                         }
                     >
+
                         <div
                             className="modal-content"
                             onClick={(e) =>
@@ -1885,6 +2229,7 @@ const Leads = () => {
                             <div className="modal-header">
 
                                 <div>
+
                                     <h2>
                                         Lead Details
                                     </h2>
@@ -1893,30 +2238,37 @@ const Leads = () => {
                                         Complete lead
                                         information.
                                     </p>
+
                                 </div>
 
                                 <button
+                                    type="button"
                                     className="modal-close"
-                                    onClick={() =>
-                                        setShowDetailsModal(
-                                            false
-                                        )
+                                    onClick={
+                                        closeDetailsModal
                                     }
                                 >
+
                                     <i className="bi bi-x-lg"></i>
+
                                 </button>
 
                             </div>
 
                             <div className="details-content">
 
+                                {/* PROFILE */}
+
                                 <div className="details-profile">
 
                                     <div className="profile-icon">
+
                                         <i className="bi bi-person"></i>
+
                                     </div>
 
                                     <div>
+
                                         <h3>
                                             {
                                                 selectedLead.fullName
@@ -1928,13 +2280,17 @@ const Leads = () => {
                                                 selectedLead.status
                                             )}
                                         </span>
+
                                     </div>
 
                                 </div>
 
+                                {/* DETAILS */}
+
                                 <div className="details-grid">
 
                                     <div className="detail-item">
+
                                         <label>
                                             Contact Number
                                         </label>
@@ -1944,9 +2300,11 @@ const Leads = () => {
                                                 selectedLead.contactNumber
                                             }
                                         </strong>
+
                                     </div>
 
                                     <div className="detail-item">
+
                                         <label>
                                             Email
                                         </label>
@@ -1957,9 +2315,11 @@ const Leads = () => {
                                                 "-"
                                             }
                                         </strong>
+
                                     </div>
 
                                     <div className="detail-item">
+
                                         <label>
                                             City
                                         </label>
@@ -1970,9 +2330,11 @@ const Leads = () => {
                                                 "-"
                                             }
                                         </strong>
+
                                     </div>
 
                                     <div className="detail-item">
+
                                         <label>
                                             Inquiry Type
                                         </label>
@@ -1982,9 +2344,11 @@ const Leads = () => {
                                                 selectedLead.inquiryType
                                             )}
                                         </strong>
+
                                     </div>
 
                                     <div className="detail-item">
+
                                         <label>
                                             Course Interested
                                         </label>
@@ -1995,9 +2359,11 @@ const Leads = () => {
                                                 "-"
                                             }
                                         </strong>
+
                                     </div>
 
                                     <div className="detail-item">
+
                                         <label>
                                             Lead Source
                                         </label>
@@ -2008,14 +2374,19 @@ const Leads = () => {
                                                 "-"
                                             }
                                         </strong>
+
                                     </div>
 
+                                    {/* ASSIGNED USER */}
+
                                     <div className="detail-item">
+
                                         <label>
                                             Assigned Employee / Intern
                                         </label>
 
                                         <strong>
+
                                             {getUserName(
                                                 selectedLead.assignedCounselor
                                             )}
@@ -2024,20 +2395,24 @@ const Leads = () => {
                                                 selectedLead.assignedCounselor
                                             ) && (
                                                 <small>
-                                                    {" "}
-                                                    (
+                                                    {" ("}
+
                                                     {getRoleLabel(
                                                         getUserRole(
                                                             selectedLead.assignedCounselor
                                                         )
                                                     )}
-                                                    )
+
+                                                    {")"}
                                                 </small>
                                             )}
+
                                         </strong>
+
                                     </div>
 
                                     <div className="detail-item">
+
                                         <label>
                                             Priority
                                         </label>
@@ -2047,9 +2422,11 @@ const Leads = () => {
                                                 selectedLead.priority
                                             )}
                                         </strong>
+
                                     </div>
 
                                     <div className="detail-item">
+
                                         <label>
                                             Next Follow-up
                                         </label>
@@ -2059,14 +2436,17 @@ const Leads = () => {
                                                 selectedLead.nextFollowUpDate
                                             )}
                                         </strong>
+
                                     </div>
 
                                     <div className="detail-item">
+
                                         <label>
                                             Expected Fees
                                         </label>
 
                                         <strong>
+
                                             {selectedLead.expectedFees
                                                 ? `₹${Number(
                                                       selectedLead.expectedFees
@@ -2074,10 +2454,13 @@ const Leads = () => {
                                                       "en-IN"
                                                   )}`
                                                 : "-"}
+
                                         </strong>
+
                                     </div>
 
                                     <div className="detail-item">
+
                                         <label>
                                             Admission Date
                                         </label>
@@ -2087,9 +2470,11 @@ const Leads = () => {
                                                 selectedLead.admissionDate
                                             )}
                                         </strong>
+
                                     </div>
 
                                     <div className="detail-item">
+
                                         <label>
                                             Created Date
                                         </label>
@@ -2099,9 +2484,12 @@ const Leads = () => {
                                                 selectedLead.createdAt
                                             )}
                                         </strong>
+
                                     </div>
 
                                 </div>
+
+                                {/* NOTES */}
 
                                 <div className="detail-section">
 
@@ -2130,8 +2518,10 @@ const Leads = () => {
                                         </h3>
 
                                         <button
+                                            type="button"
                                             className="btn btn-primary btn-sm"
                                             onClick={() => {
+
                                                 setShowDetailsModal(
                                                     false
                                                 );
@@ -2139,16 +2529,22 @@ const Leads = () => {
                                                 handleOpenCommunication(
                                                     selectedLead
                                                 );
+
                                             }}
                                         >
+
                                             <i className="bi bi-plus-lg"></i>
+
                                             Add
+
                                         </button>
 
                                     </div>
 
-                                    {selectedLead.communicationHistory
+                                    {selectedLead
+                                        .communicationHistory
                                         ?.length ? (
+
                                         <div className="communication-list">
 
                                             {[
@@ -2160,6 +2556,7 @@ const Leads = () => {
                                                         item,
                                                         index
                                                     ) => (
+
                                                         <div
                                                             className="communication-item"
                                                             key={
@@ -2168,6 +2565,7 @@ const Leads = () => {
                                                         >
 
                                                             <div className="communication-icon">
+
                                                                 <i
                                                                     className={`bi ${
                                                                         item.type ===
@@ -2182,11 +2580,13 @@ const Leads = () => {
                                                                             : "bi-people"
                                                                     }`}
                                                                 ></i>
+
                                                             </div>
 
                                                             <div className="communication-content">
 
                                                                 <div>
+
                                                                     <strong>
                                                                         {
                                                                             item.type
@@ -2198,6 +2598,7 @@ const Leads = () => {
                                                                             item.date
                                                                         )}
                                                                     </span>
+
                                                                 </div>
 
                                                                 <p>
@@ -2209,16 +2610,20 @@ const Leads = () => {
                                                             </div>
 
                                                         </div>
+
                                                     )
                                                 )}
 
                                         </div>
+
                                     ) : (
+
                                         <p className="empty-text">
                                             No communication
                                             history
                                             available.
                                         </p>
+
                                     )}
 
                                 </div>
@@ -2228,19 +2633,20 @@ const Leads = () => {
                             <div className="modal-footer">
 
                                 <button
+                                    type="button"
                                     className="btn btn-secondary"
-                                    onClick={() =>
-                                        setShowDetailsModal(
-                                            false
-                                        )
+                                    onClick={
+                                        closeDetailsModal
                                     }
                                 >
                                     Close
                                 </button>
 
                                 <button
+                                    type="button"
                                     className="btn btn-primary"
                                     onClick={() => {
+
                                         setShowDetailsModal(
                                             false
                                         );
@@ -2248,24 +2654,31 @@ const Leads = () => {
                                         handleEditLead(
                                             selectedLead
                                         );
+
                                     }}
                                 >
+
                                     <i className="bi bi-pencil"></i>
+
                                     Edit Lead
+
                                 </button>
 
                             </div>
 
                         </div>
+
                     </div>
+
                 )}
 
-            {/* =====================================================
+            {/* ====================================================
                 COMMUNICATION MODAL
-            ===================================================== */}
+            ==================================================== */}
 
             {showCommunicationModal &&
                 selectedLead && (
+
                     <div
                         className="modal-overlay"
                         onClick={() =>
@@ -2274,6 +2687,7 @@ const Leads = () => {
                             )
                         }
                     >
+
                         <div
                             className="modal-content"
                             onClick={(e) =>
@@ -2284,6 +2698,7 @@ const Leads = () => {
                             <div className="modal-header">
 
                                 <div>
+
                                     <h2>
                                         Add Communication
                                     </h2>
@@ -2291,15 +2706,19 @@ const Leads = () => {
                                     <p>
                                         Add communication
                                         details for{" "}
+
                                         <strong>
                                             {
                                                 selectedLead.fullName
                                             }
                                         </strong>
+
                                     </p>
+
                                 </div>
 
                                 <button
+                                    type="button"
                                     className="modal-close"
                                     onClick={() =>
                                         setShowCommunicationModal(
@@ -2307,7 +2726,9 @@ const Leads = () => {
                                         )
                                     }
                                 >
+
                                     <i className="bi bi-x-lg"></i>
+
                                 </button>
 
                             </div>
@@ -2334,6 +2755,7 @@ const Leads = () => {
                                         }
                                         required
                                     >
+
                                         <option value="call">
                                             Phone Call
                                         </option>
@@ -2349,6 +2771,7 @@ const Leads = () => {
                                         <option value="meeting">
                                             Meeting
                                         </option>
+
                                     </select>
 
                                 </div>
@@ -2392,8 +2815,11 @@ const Leads = () => {
                                         type="submit"
                                         className="btn btn-primary"
                                     >
+
                                         <i className="bi bi-check-lg"></i>
+
                                         Add Communication
+
                                     </button>
 
                                 </div>
@@ -2401,7 +2827,9 @@ const Leads = () => {
                             </form>
 
                         </div>
+
                     </div>
+
                 )}
 
         </div>
