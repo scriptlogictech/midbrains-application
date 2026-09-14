@@ -109,6 +109,9 @@ const Leads = () => {
         contactNumber: "",
         email: "",
         city: "",
+        leadDate: new Date()
+            .toISOString()
+            .split("T")[0],
         courseInterested: "",
         inquiryType: "course",
         leadSource: "",
@@ -331,7 +334,14 @@ const Leads = () => {
 
     const handleAddLead = () => {
         setEditingLead(null);
-        setFormData(initialForm);
+
+        setFormData({
+            ...initialForm,
+            leadDate: new Date()
+                .toISOString()
+                .split("T")[0],
+        });
+
         setError("");
         setShowModal(true);
     };
@@ -355,6 +365,17 @@ const Leads = () => {
 
             city:
                 lead.city || "",
+
+            leadDate:
+                lead.leadDate
+                    ? new Date(
+                          lead.leadDate
+                      )
+                          .toISOString()
+                          .split("T")[0]
+                    : new Date()
+                          .toISOString()
+                          .split("T")[0],
 
             courseInterested:
                 lead.courseInterested ||
@@ -448,6 +469,10 @@ const Leads = () => {
                 company: companyId,
             };
 
+            // ----------------------------------------------------
+            // EXPECTED FEES
+            // ----------------------------------------------------
+
             if (
                 payload.expectedFees ===
                 ""
@@ -460,11 +485,19 @@ const Leads = () => {
                     );
             }
 
+            // ----------------------------------------------------
+            // ASSIGNED USER
+            // ----------------------------------------------------
+
             if (
                 !payload.assignedCounselor
             ) {
                 delete payload.assignedCounselor;
             }
+
+            // ----------------------------------------------------
+            // OPTIONAL DATES
+            // ----------------------------------------------------
 
             if (
                 !payload.nextFollowUpDate
@@ -477,6 +510,22 @@ const Leads = () => {
             ) {
                 delete payload.admissionDate;
             }
+
+            // ----------------------------------------------------
+            // LEAD DATE
+            // ----------------------------------------------------
+
+            if (!payload.leadDate) {
+                setError(
+                    "Lead date is required."
+                );
+
+                return;
+            }
+
+            // ----------------------------------------------------
+            // CREATE / UPDATE
+            // ----------------------------------------------------
 
             if (editingLead) {
                 await updateLead(
@@ -1135,7 +1184,7 @@ const Leads = () => {
                 <div className="filter-group">
 
                     <label>
-                        From Date
+                        From Lead Date
                     </label>
 
                     <input
@@ -1154,7 +1203,7 @@ const Leads = () => {
                 <div className="filter-group">
 
                     <label>
-                        To Date
+                        To Lead Date
                     </label>
 
                     <input
@@ -1279,6 +1328,10 @@ const Leads = () => {
                                         </th>
 
                                         <th>
+                                            Lead Date
+                                        </th>
+
+                                        <th>
                                             Contact
                                         </th>
 
@@ -1348,6 +1401,14 @@ const Leads = () => {
 
                                                         </div>
 
+                                                    </td>
+
+                                                    {/* LEAD DATE */}
+
+                                                    <td>
+                                                        {formatDate(
+                                                            lead.leadDate
+                                                        )}
                                                     </td>
 
                                                     {/* CONTACT */}
@@ -1804,6 +1865,28 @@ const Leads = () => {
                                 </h3>
 
                                 <div className="form-grid">
+
+                                    {/* LEAD DATE */}
+
+                                    <div className="form-group">
+
+                                        <label>
+                                            Lead Date *
+                                        </label>
+
+                                        <input
+                                            type="date"
+                                            name="leadDate"
+                                            value={
+                                                formData.leadDate
+                                            }
+                                            onChange={
+                                                handleFormChange
+                                            }
+                                            required
+                                        />
+
+                                    </div>
 
                                     <div className="form-group">
 
@@ -2329,6 +2412,22 @@ const Leads = () => {
                                                 selectedLead.city ||
                                                 "-"
                                             }
+                                        </strong>
+
+                                    </div>
+
+                                    {/* LEAD DATE */}
+
+                                    <div className="detail-item">
+
+                                        <label>
+                                            Lead Date
+                                        </label>
+
+                                        <strong>
+                                            {formatDate(
+                                                selectedLead.leadDate
+                                            )}
                                         </strong>
 
                                     </div>

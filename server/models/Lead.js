@@ -39,6 +39,16 @@ const leadSchema = new mongoose.Schema(
         },
 
         // ==========================================
+        // Lead Date
+        // ==========================================
+        // The actual date on which the lead was received.
+
+        leadDate: {
+            type: Date,
+            default: Date.now,
+        },
+
+        // ==========================================
         // Course / Inquiry
         // ==========================================
 
@@ -86,7 +96,7 @@ const leadSchema = new mongoose.Schema(
         // "assignedCounselor" to avoid breaking
         // the existing frontend/database structure.
         //
-        // It can now reference either:
+        // It can reference either:
         // - Employee
         // - Intern
 

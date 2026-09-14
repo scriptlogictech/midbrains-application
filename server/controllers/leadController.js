@@ -177,20 +177,20 @@ exports.getLeads = async (req, res) => {
         }
 
         // --------------------------------------------------------
-        // DATE FILTER
+        // LEAD DATE FILTER
         // --------------------------------------------------------
 
         if (startDate || endDate) {
-            filter.createdAt = {};
+            filter.leadDate = {};
 
             if (startDate) {
-                filter.createdAt.$gte = new Date(
+                filter.leadDate.$gte = new Date(
                     `${startDate}T00:00:00`
                 );
             }
 
             if (endDate) {
-                filter.createdAt.$lte = new Date(
+                filter.leadDate.$lte = new Date(
                     `${endDate}T23:59:59.999`
                 );
             }
@@ -233,6 +233,7 @@ exports.getLeads = async (req, res) => {
                         "fullName email role"
                     )
                     .sort({
+                        leadDate: -1,
                         createdAt: -1,
                     })
                     .skip(skip)
@@ -291,6 +292,7 @@ exports.createLead = async (req, res) => {
             contactNumber,
             email,
             city,
+            leadDate,
             courseInterested,
             inquiryType,
             leadSource,
@@ -398,23 +400,42 @@ exports.createLead = async (req, res) => {
 
         const lead = await Lead.create({
             company: targetCompany,
+
             fullName: fullName.trim(),
+
             contactNumber:
                 contactNumber.trim(),
+
             email: email
                 ? email.trim().toLowerCase()
                 : undefined,
+
             city,
+
+            // Use provided lead date.
+            // If not provided, Lead model default Date.now is used.
+            leadDate: leadDate || undefined,
+
             courseInterested,
+
             inquiryType,
+
             leadSource,
+
             assignedCounselor,
+
             priority,
+
             status,
+
             nextFollowUpDate,
+
             notes,
+
             expectedFees,
+
             admissionDate,
+
             createdBy: req.user._id,
         });
 
@@ -503,6 +524,7 @@ exports.updateLead = async (req, res) => {
             contactNumber,
             email,
             city,
+            leadDate,
             courseInterested,
             inquiryType,
             leadSource,
@@ -569,6 +591,17 @@ exports.updateLead = async (req, res) => {
 
         if (city !== undefined) {
             updateData.city = city;
+        }
+
+        // --------------------------------------------------------
+        // UPDATE LEAD DATE
+        // --------------------------------------------------------
+
+        if (
+            leadDate !== undefined
+        ) {
+            updateData.leadDate =
+                leadDate;
         }
 
         if (
