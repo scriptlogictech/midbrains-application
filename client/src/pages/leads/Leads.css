@@ -4,11 +4,21 @@
 
 .leads-page {
     width: 100%;
+    max-width: 100%;
+
     min-height: 100%;
+
     padding: 24px;
+
     background: #f7f8fc;
     color: #172033;
+
     box-sizing: border-box;
+
+    /*
+       Prevent the Leads page itself from creating
+       horizontal scrolling.
+    */
     overflow-x: hidden;
 }
 
@@ -22,7 +32,13 @@
     justify-content: space-between;
 
     gap: 20px;
+
+    width: 100%;
+    max-width: 100%;
+
     margin-bottom: 24px;
+
+    box-sizing: border-box;
 }
 
 .leads-page .page-header h1 {
@@ -33,6 +49,8 @@
     font-size: 28px;
     font-weight: 700;
     line-height: 1.25;
+
+    word-break: break-word;
 }
 
 .leads-page .page-header p {
@@ -102,7 +120,9 @@
 
 .leads-page .btn:disabled {
     opacity: 0.55;
+
     cursor: not-allowed;
+
     transform: none;
 }
 
@@ -116,6 +136,9 @@
 
     gap: 10px;
 
+    width: 100%;
+    max-width: 100%;
+
     margin-bottom: 20px;
     padding: 13px 16px;
 
@@ -125,11 +148,15 @@
     line-height: 1.5;
 
     box-sizing: border-box;
+
+    overflow-wrap: anywhere;
 }
 
 .leads-page .alert-danger {
     background: #fef2f2;
+
     border: 1px solid #fecaca;
+
     color: #b91c1c;
 }
 
@@ -144,8 +171,8 @@
        Normal desktop:
        4 columns.
 
-       This prevents all 8 filters from being squeezed
-       into one row when the dashboard has a sidebar.
+       This prevents the filters from going outside
+       the available dashboard content area.
     */
 
     grid-template-columns:
@@ -157,6 +184,7 @@
     max-width: 100%;
 
     padding: 18px;
+
     margin-bottom: 24px;
 
     background: #ffffff;
@@ -175,6 +203,8 @@
 .leads-page .filter-group {
     width: 100%;
     min-width: 0;
+    max-width: 100%;
+
     box-sizing: border-box;
 }
 
@@ -187,7 +217,10 @@
 
     font-size: 12px;
     font-weight: 600;
+
     line-height: 1.4;
+
+    word-break: break-word;
 }
 
 .leads-page .filter-group input,
@@ -237,6 +270,9 @@
 
     width: 100%;
     min-width: 0;
+    max-width: 100%;
+
+    box-sizing: border-box;
 }
 
 .leads-page .search-input i {
@@ -264,9 +300,13 @@
 
 .leads-page .clear-filter-btn {
     width: 100%;
+    max-width: 100%;
+
     height: 40px;
 
     white-space: nowrap;
+
+    box-sizing: border-box;
 }
 
 /* ============================================================
@@ -276,13 +316,13 @@
 @media (min-width: 1600px) {
     .leads-page .filters-card {
         grid-template-columns:
-            1.4fr
-            1fr
-            1fr
-            1fr
-            1.4fr
-            0.9fr
-            0.9fr
+            minmax(150px, 1.4fr)
+            minmax(120px, 1fr)
+            minmax(120px, 1fr)
+            minmax(130px, 1fr)
+            minmax(160px, 1.4fr)
+            minmax(110px, 0.9fr)
+            minmax(110px, 0.9fr)
             auto;
     }
 
@@ -292,7 +332,7 @@
 }
 
 /* ============================================================
-   NORMAL DESKTOP / LAPTOP
+   DESKTOP
 ============================================================ */
 
 @media (max-width: 1599px) {
@@ -302,15 +342,33 @@
     }
 
     /*
-       Search gets two columns because it needs more space.
+       Search gets two columns because its placeholder
+       needs additional width.
     */
 
     .leads-page .search-group {
         grid-column: span 2;
     }
+}
 
-    .leads-page .clear-filter-btn {
-        width: 100%;
+/* ============================================================
+   SMALL DESKTOP / TABLET
+============================================================ */
+
+@media (max-width: 1200px) {
+    .leads-page {
+        padding: 20px;
+    }
+
+    .leads-page .filters-card {
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
+
+        gap: 14px;
+    }
+
+    .leads-page .search-group {
+        grid-column: span 2;
     }
 }
 
@@ -318,7 +376,11 @@
    TABLET
 ============================================================ */
 
-@media (max-width: 1000px) {
+@media (max-width: 900px) {
+    .leads-page {
+        padding: 18px;
+    }
+
     .leads-page .filters-card {
         grid-template-columns:
             repeat(2, minmax(0, 1fr));
@@ -338,6 +400,39 @@
 ============================================================ */
 
 @media (max-width: 600px) {
+    .leads-page {
+        padding: 14px;
+    }
+
+    /* --------------------------------------------------------
+       HEADER
+    -------------------------------------------------------- */
+
+    .leads-page .page-header {
+        flex-direction: column;
+        align-items: stretch;
+
+        gap: 14px;
+
+        margin-bottom: 18px;
+    }
+
+    .leads-page .page-header h1 {
+        font-size: 22px;
+    }
+
+    .leads-page .page-header p {
+        font-size: 12px;
+    }
+
+    .leads-page .page-header .btn {
+        width: 100%;
+    }
+
+    /* --------------------------------------------------------
+       FILTERS
+    -------------------------------------------------------- */
+
     .leads-page .filters-card {
         grid-template-columns: 1fr;
 
@@ -394,6 +489,9 @@
 
     gap: 15px;
 
+    width: 100%;
+    max-width: 100%;
+
     padding: 18px 20px;
 
     border-bottom: 1px solid #edf0f4;
@@ -408,82 +506,80 @@
 
     font-size: 17px;
     font-weight: 700;
+
+    word-break: break-word;
 }
 
 .leads-page .table-header span {
     color: #6b7280;
-    font-size: 12px;
-}
 
-.leads-page .loading-text {
-    color: #6b7280;
     font-size: 12px;
 }
 
 /* ============================================================
-   TABLE RESPONSIVE WRAPPER
+   TABLE RESPONSIVE
+   NO HORIZONTAL SCROLL
 ============================================================ */
 
 .leads-page .table-responsive {
     width: 100%;
     max-width: 100%;
 
-    overflow-x: auto;
-    overflow-y: hidden;
+    /*
+       IMPORTANT:
+       No horizontal scrolling.
+    */
 
-    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden;
+    overflow-y: visible;
 
-    scrollbar-width: thin;
+    box-sizing: border-box;
 }
-
-.leads-page .table-responsive::-webkit-scrollbar {
-    height: 7px;
-}
-
-.leads-page .table-responsive::-webkit-scrollbar-track {
-    background: #f1f5f9;
-}
-
-.leads-page .table-responsive::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 10px;
-}
-
-/* ============================================================
-   LEADS TABLE
-============================================================ */
 
 .leads-page .leads-table {
     width: 100%;
-    min-width: 1120px;
+    max-width: 100%;
+
+    /*
+       Fixed layout allows columns to shrink
+       according to the available page width.
+    */
+
+    table-layout: fixed;
 
     border-collapse: collapse;
+
+    box-sizing: border-box;
 }
 
-.leads-page .leads-table thead {
-    background: #f8fafc;
-}
+/* ============================================================
+   TABLE CELLS
+============================================================ */
 
 .leads-page .leads-table th {
-    padding: 13px 16px;
+    padding: 13px 10px;
 
     border-bottom: 1px solid #e5e7eb;
 
     color: #6b7280;
 
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
 
     text-align: left;
+
     text-transform: uppercase;
 
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
 
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+
+    box-sizing: border-box;
 }
 
 .leads-page .leads-table td {
-    padding: 15px 16px;
+    padding: 14px 10px;
 
     border-bottom: 1px solid #edf0f4;
 
@@ -491,7 +587,12 @@
 
     color: #374151;
 
-    font-size: 13px;
+    font-size: 12px;
+
+    overflow-wrap: anywhere;
+    word-break: break-word;
+
+    box-sizing: border-box;
 }
 
 .leads-page .leads-table tbody tr {
@@ -517,7 +618,9 @@
 
     gap: 4px;
 
-    min-width: 150px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .leads-page .lead-info strong {
@@ -526,12 +629,17 @@
     font-size: 13px;
     font-weight: 650;
 
+    overflow-wrap: anywhere;
     word-break: break-word;
 }
 
 .leads-page .lead-info span {
     color: #8a93a3;
+
     font-size: 11px;
+
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 /* ============================================================
@@ -544,25 +652,33 @@
 
     gap: 5px;
 
-    min-width: 150px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .leads-page .contact-info span {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
 
-    gap: 7px;
+    gap: 6px;
 
     color: #4b5563;
 
-    font-size: 12px;
+    font-size: 11px;
 
-    white-space: nowrap;
+    white-space: normal;
+
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .leads-page .contact-info i {
+    flex-shrink: 0;
+
     color: #8a93a3;
-    font-size: 12px;
+
+    font-size: 11px;
 }
 
 /* ============================================================
@@ -575,27 +691,37 @@
 
     gap: 4px;
 
-    min-width: 120px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .leads-page .inquiry-info strong {
     color: #374151;
 
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
+
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .leads-page .inquiry-info span {
-    max-width: 150px;
-
-    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
 
     color: #8a93a3;
 
-    font-size: 11px;
+    font-size: 10px;
 
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow: visible;
+
+    text-overflow: unset;
+
+    white-space: normal;
+
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 /* ============================================================
@@ -608,30 +734,37 @@
 
     gap: 4px;
 
-    min-width: 145px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .leads-page .assigned-user span {
     color: #374151;
 
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
 
+    overflow-wrap: anywhere;
     word-break: break-word;
 }
 
 .leads-page .assigned-user small {
     width: fit-content;
+    max-width: 100%;
 
-    padding: 3px 7px;
+    padding: 3px 6px;
 
     border-radius: 5px;
 
     background: #eff6ff;
     color: #2563eb;
 
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 600;
+
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 /* ============================================================
@@ -643,14 +776,18 @@
     align-items: center;
     justify-content: center;
 
-    padding: 5px 9px;
+    max-width: 100%;
+
+    padding: 5px 8px;
 
     border-radius: 20px;
 
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
 
-    white-space: nowrap;
+    white-space: normal;
+
+    overflow-wrap: anywhere;
 }
 
 .leads-page .priority-badge.low {
@@ -673,10 +810,14 @@
 ============================================================ */
 
 .leads-page .status-select {
-    min-width: 125px;
+    width: 100%;
+    max-width: 100%;
+
+    min-width: 0;
+
     height: 34px;
 
-    padding: 0 28px 0 9px;
+    padding: 0 5px;
 
     border: 1px solid #d7dce5;
     border-radius: 6px;
@@ -684,7 +825,9 @@
     background: #ffffff;
     color: #374151;
 
-    font-size: 11px;
+    font-family: inherit;
+
+    font-size: 10px;
     font-weight: 600;
 
     outline: none;
@@ -741,7 +884,9 @@
     display: flex;
     align-items: center;
 
-    gap: 6px;
+    gap: 5px;
+
+    flex-wrap: wrap;
 }
 
 .leads-page .icon-btn {
@@ -749,8 +894,8 @@
     align-items: center;
     justify-content: center;
 
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
 
     flex-shrink: 0;
 
@@ -762,7 +907,7 @@
     background: #ffffff;
     color: #5b6472;
 
-    font-size: 13px;
+    font-size: 12px;
 
     cursor: pointer;
 
@@ -775,7 +920,9 @@
 
 .leads-page .icon-btn:hover {
     background: #f5f7fb;
+
     border-color: #c8ced8;
+
     color: #2563eb;
 
     transform: translateY(-1px);
@@ -813,6 +960,7 @@
     height: 34px;
 
     border: 3px solid #e5e7eb;
+
     border-top-color: #2563eb;
 
     border-radius: 50%;
@@ -895,6 +1043,9 @@
 
     gap: 15px;
 
+    width: 100%;
+    max-width: 100%;
+
     padding: 15px 20px;
 
     border-top: 1px solid #edf0f4;
@@ -904,7 +1055,10 @@
 
 .leads-page .pagination > span {
     color: #6b7280;
+
     font-size: 12px;
+
+    overflow-wrap: anywhere;
 }
 
 .leads-page .pagination > div {
@@ -912,6 +1066,8 @@
     align-items: center;
 
     gap: 8px;
+
+    flex-wrap: wrap;
 }
 
 .leads-page .pagination .btn {
@@ -928,6 +1084,7 @@
 
 .leads-page .modal-overlay {
     position: fixed;
+
     inset: 0;
 
     z-index: 9999;
@@ -944,6 +1101,7 @@
     background: rgba(15, 23, 42, 0.55);
 
     overflow-y: auto;
+    overflow-x: hidden;
 
     box-sizing: border-box;
 }
@@ -954,10 +1112,12 @@
 
 .leads-page .modal-content {
     width: min(680px, 100%);
+    max-width: 100%;
 
     max-height: calc(100vh - 40px);
 
     overflow-y: auto;
+    overflow-x: hidden;
 
     background: #ffffff;
 
@@ -979,6 +1139,7 @@
 @keyframes leadsModalIn {
     from {
         opacity: 0;
+
         transform:
             translateY(10px)
             scale(0.99);
@@ -986,6 +1147,7 @@
 
     to {
         opacity: 1;
+
         transform:
             translateY(0)
             scale(1);
@@ -1017,6 +1179,8 @@
 
     font-size: 20px;
     font-weight: 700;
+
+    word-break: break-word;
 }
 
 .leads-page .modal-header p {
@@ -1026,6 +1190,8 @@
 
     font-size: 12px;
     line-height: 1.5;
+
+    overflow-wrap: anywhere;
 }
 
 .leads-page .modal-close {
@@ -1055,6 +1221,7 @@
 
 .leads-page .modal-close:hover {
     background: #e5e7eb;
+
     color: #111827;
 }
 
@@ -1064,9 +1231,15 @@
 
 .leads-page .lead-form {
     width: 100%;
+    max-width: 100%;
+
+    box-sizing: border-box;
 }
 
 .leads-page .form-section {
+    width: 100%;
+    max-width: 100%;
+
     padding: 22px;
 
     border-bottom: 1px solid #edf0f4;
@@ -1090,11 +1263,17 @@
         repeat(2, minmax(0, 1fr));
 
     gap: 17px;
+
+    width: 100%;
+    max-width: 100%;
 }
 
 .leads-page .form-group {
     width: 100%;
     min-width: 0;
+    max-width: 100%;
+
+    box-sizing: border-box;
 }
 
 .leads-page .form-group.full-width {
@@ -1110,12 +1289,15 @@
 
     font-size: 12px;
     font-weight: 600;
+
+    word-break: break-word;
 }
 
 .leads-page .form-group input,
 .leads-page .form-group select,
 .leads-page .form-group textarea {
     width: 100%;
+    min-width: 0;
     max-width: 100%;
 
     border: 1px solid #d7dce5;
@@ -1176,6 +1358,9 @@
 
     gap: 10px;
 
+    width: 100%;
+    max-width: 100%;
+
     padding: 16px 22px;
 
     background: #ffffff;
@@ -1190,6 +1375,9 @@
 ============================================================ */
 
 .leads-page .details-content {
+    width: 100%;
+    max-width: 100%;
+
     padding: 22px;
 
     box-sizing: border-box;
@@ -1233,11 +1421,14 @@
     font-size: 18px;
     font-weight: 700;
 
+    overflow-wrap: anywhere;
     word-break: break-word;
 }
 
 .leads-page .details-profile span {
     display: inline-flex;
+
+    max-width: 100%;
 
     padding: 4px 9px;
 
@@ -1248,6 +1439,8 @@
 
     font-size: 10px;
     font-weight: 700;
+
+    overflow-wrap: anywhere;
 }
 
 /* ============================================================
@@ -1262,11 +1455,15 @@
 
     gap: 18px;
 
+    width: 100%;
+    max-width: 100%;
+
     margin-bottom: 22px;
 }
 
 .leads-page .detail-item {
     min-width: 0;
+    max-width: 100%;
 
     padding: 13px;
 
@@ -1301,6 +1498,7 @@
     font-size: 13px;
     font-weight: 600;
 
+    overflow-wrap: anywhere;
     word-break: break-word;
 }
 
@@ -1316,10 +1514,15 @@
 ============================================================ */
 
 .leads-page .detail-section {
+    width: 100%;
+    max-width: 100%;
+
     padding-top: 20px;
     margin-top: 20px;
 
     border-top: 1px solid #edf0f4;
+
+    box-sizing: border-box;
 }
 
 .leads-page .detail-section > label {
@@ -1334,6 +1537,9 @@
 }
 
 .leads-page .detail-section > p {
+    width: 100%;
+    max-width: 100%;
+
     margin: 0;
 
     padding: 12px;
@@ -1348,7 +1554,11 @@
     line-height: 1.6;
 
     white-space: pre-wrap;
+
+    overflow-wrap: anywhere;
     word-break: break-word;
+
+    box-sizing: border-box;
 }
 
 .leads-page .section-title-row {
@@ -1368,6 +1578,8 @@
 
     font-size: 15px;
     font-weight: 700;
+
+    overflow-wrap: anywhere;
 }
 
 /* ============================================================
@@ -1379,12 +1591,18 @@
     flex-direction: column;
 
     gap: 12px;
+
+    width: 100%;
+    max-width: 100%;
 }
 
 .leads-page .communication-item {
     display: flex;
 
     gap: 12px;
+
+    width: 100%;
+    max-width: 100%;
 
     padding: 13px;
 
@@ -1416,6 +1634,8 @@
 
 .leads-page .communication-content {
     min-width: 0;
+    max-width: 100%;
+
     flex: 1;
 }
 
@@ -1436,6 +1656,8 @@
     font-weight: 700;
 
     text-transform: capitalize;
+
+    overflow-wrap: anywhere;
 }
 
 .leads-page .communication-content span {
@@ -1443,7 +1665,9 @@
 
     font-size: 10px;
 
-    white-space: nowrap;
+    white-space: normal;
+
+    overflow-wrap: anywhere;
 }
 
 .leads-page .communication-content p {
@@ -1454,119 +1678,48 @@
     font-size: 12px;
     line-height: 1.55;
 
+    overflow-wrap: anywhere;
     word-break: break-word;
 }
 
 .leads-page .empty-text {
     color: #9ca3af !important;
+
     text-align: center;
 }
 
 /* ============================================================
-   TABLET / SMALL DESKTOP
-============================================================ */
-
-@media (max-width: 1200px) {
-    .leads-page {
-        padding: 20px;
-    }
-
-    .leads-page .filters-card {
-        grid-template-columns:
-            repeat(3, minmax(0, 1fr));
-    }
-
-    .leads-page .search-group {
-        grid-column: span 2;
-    }
-}
-
-/* ============================================================
-   TABLET
+   MOBILE TABLE ADJUSTMENTS
 ============================================================ */
 
 @media (max-width: 900px) {
-    .leads-page .filters-card {
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-
-        gap: 14px;
-
-        padding: 16px;
+    .leads-page .leads-table {
+        table-layout: auto;
     }
 
-    .leads-page .search-group {
-        grid-column: span 2;
+    .leads-page .leads-table th,
+    .leads-page .leads-table td {
+        padding: 10px 7px;
+
+        font-size: 10px;
     }
 
-    .leads-page .form-grid {
-        grid-template-columns: 1fr;
+    .leads-page .action-buttons {
+        flex-wrap: wrap;
     }
 
-    .leads-page .details-grid {
-        grid-template-columns: 1fr;
+    .leads-page .status-select {
+        height: 32px;
+
+        font-size: 9px;
     }
 }
 
 /* ============================================================
-   MOBILE
+   MOBILE DETAILS / MODAL
 ============================================================ */
 
 @media (max-width: 600px) {
-    .leads-page {
-        padding: 14px;
-    }
-
-    /* HEADER */
-
-    .leads-page .page-header {
-        flex-direction: column;
-        align-items: stretch;
-
-        gap: 14px;
-
-        margin-bottom: 18px;
-    }
-
-    .leads-page .page-header h1 {
-        font-size: 22px;
-    }
-
-    .leads-page .page-header p {
-        font-size: 12px;
-    }
-
-    .leads-page .page-header .btn {
-        width: 100%;
-    }
-
-    /* FILTER */
-
-    .leads-page .filters-card {
-        grid-template-columns: 1fr;
-
-        gap: 13px;
-
-        padding: 14px;
-
-        border-radius: 10px;
-    }
-
-    .leads-page .search-group {
-        grid-column: auto;
-    }
-
-    .leads-page .filter-group input,
-    .leads-page .filter-group select {
-        height: 42px;
-    }
-
-    .leads-page .clear-filter-btn {
-        width: 100%;
-    }
-
-    /* TABLE */
-
     .leads-page .table-header {
         flex-direction: column;
         align-items: flex-start;
@@ -1577,17 +1730,6 @@
     .leads-page .table-header h3 {
         font-size: 16px;
     }
-
-    /*
-       Keep table wide enough to remain readable.
-       User can scroll horizontally.
-    */
-
-    .leads-page .table-responsive {
-        overflow-x: auto;
-    }
-
-    /* PAGINATION */
 
     .leads-page .pagination {
         flex-direction: column;
@@ -1608,32 +1750,36 @@
         flex: 1;
     }
 
-    /* MODAL */
+    /* --------------------------------------------------------
+       MODAL
+    -------------------------------------------------------- */
 
     .leads-page .modal-overlay {
         align-items: flex-start;
 
-        padding: 8px;
+        padding: 7px;
     }
 
     .leads-page .modal-content {
         width: 100%;
+        max-width: 100%;
 
-        max-height: calc(100vh - 16px);
+        max-height: calc(100vh - 14px);
 
         border-radius: 10px;
     }
 
     .leads-page .large-modal {
         width: 100%;
+        max-width: 100%;
     }
 
     .leads-page .modal-header,
     .leads-page .form-section,
     .leads-page .details-content,
     .leads-page .modal-footer {
-        padding-left: 15px;
-        padding-right: 15px;
+        padding-left: 14px;
+        padding-right: 14px;
     }
 
     .leads-page .modal-header {
@@ -1651,9 +1797,20 @@
 
     .leads-page .modal-footer .btn {
         flex: 1;
+        min-width: 120px;
     }
 
-    /* DETAILS */
+    /* --------------------------------------------------------
+       FORM
+    -------------------------------------------------------- */
+
+    .leads-page .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* --------------------------------------------------------
+       DETAILS
+    -------------------------------------------------------- */
 
     .leads-page .details-grid {
         grid-template-columns: 1fr;
@@ -1692,7 +1849,9 @@
         font-size: 12px;
     }
 
-    /* EMPTY STATE */
+    /* --------------------------------------------------------
+       EMPTY STATE
+    -------------------------------------------------------- */
 
     .leads-page .empty-state {
         min-height: 280px;
@@ -1715,7 +1874,9 @@
         font-size: 12px;
     }
 
-    /* MODAL */
+    /* --------------------------------------------------------
+       MODAL
+    -------------------------------------------------------- */
 
     .leads-page .modal-overlay {
         padding: 5px;
@@ -1752,7 +1913,9 @@
         font-size: 14px;
     }
 
-    /* PROFILE */
+    /* --------------------------------------------------------
+       PROFILE
+    -------------------------------------------------------- */
 
     .leads-page .details-profile {
         align-items: flex-start;
@@ -1771,7 +1934,9 @@
         font-size: 16px;
     }
 
-    /* DETAILS */
+    /* --------------------------------------------------------
+       DETAILS
+    -------------------------------------------------------- */
 
     .leads-page .detail-item {
         padding: 11px;
@@ -1781,7 +1946,9 @@
         font-size: 12px;
     }
 
-    /* COMMUNICATION */
+    /* --------------------------------------------------------
+       COMMUNICATION
+    -------------------------------------------------------- */
 
     .leads-page .communication-item {
         padding: 11px;
@@ -1833,6 +2000,8 @@
 
     .leads-page .modal-footer .btn {
         width: 100%;
+        min-width: 0;
+
         flex: none;
     }
 
@@ -1845,4 +2014,29 @@
     .leads-page .section-title-row .btn {
         width: 100%;
     }
+}
+
+/* ============================================================
+   GLOBAL SAFETY
+   Prevent long content from creating horizontal overflow.
+============================================================ */
+
+.leads-page *,
+.leads-page *::before,
+.leads-page *::after {
+    box-sizing: border-box;
+}
+
+.leads-page img,
+.leads-page svg,
+.leads-page video,
+.leads-page canvas {
+    max-width: 100%;
+}
+
+.leads-page input,
+.leads-page select,
+.leads-page textarea,
+.leads-page button {
+    max-width: 100%;
 }
