@@ -5,6 +5,12 @@ const bcrypt = require("bcryptjs");
 |--------------------------------------------------------------------------
 | Allowed Roles
 |--------------------------------------------------------------------------
+| Only these roles can be created/updated as normal users.
+|
+| super_admin = Admin
+| employee    = Employee
+| intern      = Intern
+|--------------------------------------------------------------------------
 */
 
 const allowedRoles = ["employee", "intern"];
@@ -13,26 +19,45 @@ const allowedRoles = ["employee", "intern"];
 |--------------------------------------------------------------------------
 | Company Access Helper
 |--------------------------------------------------------------------------
-| Super Admin can access any company.
-| Employee and Intern can access only their own company.
+| Super Admin:
+|   Can access any company.
+|
+| Employee / Intern:
+|   Can access only their own company.
+|
+| IMPORTANT:
+| authMiddleware.js populates req.user.company.
+| Therefore req.user.company can be either:
+|
+| 1. ObjectId
+| 2. Populated Company object
 |--------------------------------------------------------------------------
 */
 
 const hasCompanyAccess = (req, companyId) => {
+    // Super Admin can access all companies
     if (req.user.role === "super_admin") {
         return true;
     }
 
+    // Employee / Intern must have a company
     if (!req.user.company || !companyId) {
         return false;
     }
 
-    return req.user.company.toString() === companyId.toString();
+    // If company is populated, use company._id
+    const userCompanyId = req.user.company._id
+        ? req.user.company._id.toString()
+        : req.user.company.toString();
+
+    return userCompanyId === companyId.toString();
 };
 
 /*
 |--------------------------------------------------------------------------
 | Create User
+|--------------------------------------------------------------------------
+| Only Super Admin can create Employee / Intern.
 |--------------------------------------------------------------------------
 */
 
@@ -47,7 +72,13 @@ const createUser = async (req, res) => {
         } = req.body;
 
         // Validate required fields
-        if (!fullName || !email || !password || !role || !company) {
+        if (
+            !fullName ||
+            !email ||
+            !password ||
+            !role ||
+            !company
+        ) {
             return res.status(400).json({
                 success: false,
                 message:
@@ -64,7 +95,9 @@ const createUser = async (req, res) => {
         }
 
         // Normalize email
-        const normalizedEmail = email.toLowerCase().trim();
+        const normalizedEmail = email
+            .toLowerCase()
+            .trim();
 
         // Check existing user
         const existingUser = await User.findOne({
@@ -79,7 +112,10 @@ const createUser = async (req, res) => {
         }
 
         // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(
+            password,
+            10
+        );
 
         // Create user
         const user = await User.create({
@@ -93,6 +129,7 @@ const createUser = async (req, res) => {
 
         // Remove password from response
         const userResponse = user.toObject();
+
         delete userResponse.password;
 
         return res.status(201).json({
@@ -123,7 +160,10 @@ const getUsers = async (req, res) => {
     try {
         const users = await User.find()
             .select("-password")
-            .populate("company", "companyName companyCode")
+            .populate(
+                "company",
+                "companyName companyCode"
+            )
             .sort({ createdAt: -1 });
 
         return res.status(200).json({
@@ -135,7 +175,8 @@ const getUsers = async (req, res) => {
 
         return res.status(500).json({
             success: false,
-            message: "Server error while fetching users",
+            message:
+                "Server error while fetching users",
             error: error.message,
         });
     }
@@ -145,7 +186,8 @@ const getUsers = async (req, res) => {
 |--------------------------------------------------------------------------
 | Get Users By Company
 |--------------------------------------------------------------------------
-| Used by Leads page to load Employee and Intern assignment options.
+| Used by Leads page to load Employee and Intern
+| assignment options.
 |
 | Super Admin:
 |   Can access any company.
@@ -153,7 +195,7 @@ const getUsers = async (req, res) => {
 | Employee / Intern:
 |   Can access only their own company.
 |
-| Super Admin is excluded from company assignment list.
+| Super Admin is excluded from the result.
 |--------------------------------------------------------------------------
 */
 
@@ -161,6 +203,7 @@ const getCompanyUsers = async (req, res) => {
     try {
         const { companyId } = req.params;
 
+        // Validate company ID
         if (!companyId) {
             return res.status(400).json({
                 success: false,
@@ -168,13 +211,30 @@ const getCompanyUsers = async (req, res) => {
             });
         }
 
-        // Enforce company isolation
+        /*
+        |--------------------------------------------------------------------------
+        | Company Isolation
+        |--------------------------------------------------------------------------
+        | This is the important part.
+        |
+        | authMiddleware.js populates req.user.company,
+        | so hasCompanyAccess() handles the populated object correctly.
+        |--------------------------------------------------------------------------
+        */
+
         if (!hasCompanyAccess(req, companyId)) {
             return res.status(403).json({
                 success: false,
-                message: "Access denied for this company",
+                message:
+                    "Access denied for this company",
             });
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Get Employee + Intern
+        |--------------------------------------------------------------------------
+        */
 
         const users = await User.find({
             company: companyId,
@@ -183,7 +243,10 @@ const getCompanyUsers = async (req, res) => {
             },
         })
             .select("-password")
-            .populate("company", "companyName companyCode")
+            .populate(
+                "company",
+                "companyName companyCode"
+            )
             .sort({ createdAt: -1 });
 
         return res.status(200).json({
@@ -191,11 +254,15 @@ const getCompanyUsers = async (req, res) => {
             users,
         });
     } catch (error) {
-        console.error("Get Company Users Error:", error);
+        console.error(
+            "Get Company Users Error:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
-            message: "Server error while fetching company users",
+            message:
+                "Server error while fetching company users",
             error: error.message,
         });
     }
@@ -207,7 +274,13 @@ const getCompanyUsers = async (req, res) => {
 |--------------------------------------------------------------------------
 | Compatibility endpoint.
 |
-| Returns only active Employees from the requested company.
+| The existing frontend/service architecture uses the
+| name getCompanyCounselors.
+|
+| IMPORTANT:
+| "counselor" is NOT a role.
+|
+| This endpoint returns only active employees.
 |--------------------------------------------------------------------------
 */
 
@@ -215,6 +288,7 @@ const getCompanyCounselors = async (req, res) => {
     try {
         const { companyId } = req.params;
 
+        // Validate company ID
         if (!companyId) {
             return res.status(400).json({
                 success: false,
@@ -226,9 +300,16 @@ const getCompanyCounselors = async (req, res) => {
         if (!hasCompanyAccess(req, companyId)) {
             return res.status(403).json({
                 success: false,
-                message: "Access denied for this company",
+                message:
+                    "Access denied for this company",
             });
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Only Active Employees
+        |--------------------------------------------------------------------------
+        */
 
         const users = await User.find({
             company: companyId,
@@ -236,7 +317,10 @@ const getCompanyCounselors = async (req, res) => {
             isActive: true,
         })
             .select("-password")
-            .populate("company", "companyName companyCode")
+            .populate(
+                "company",
+                "companyName companyCode"
+            )
             .sort({ fullName: 1 });
 
         return res.status(200).json({
@@ -244,11 +328,15 @@ const getCompanyCounselors = async (req, res) => {
             users,
         });
     } catch (error) {
-        console.error("Get Company Employees Error:", error);
+        console.error(
+            "Get Company Employees Error:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
-            message: "Server error while fetching company employees",
+            message:
+                "Server error while fetching company employees",
             error: error.message,
         });
     }
@@ -259,6 +347,12 @@ const getCompanyCounselors = async (req, res) => {
 | Update User
 |--------------------------------------------------------------------------
 | Super Admin only through route middleware.
+|
+| Can update:
+| - Employee
+| - Intern
+|
+| Super Admin itself cannot be modified.
 |--------------------------------------------------------------------------
 */
 
@@ -275,6 +369,7 @@ const updateUser = async (req, res) => {
             isActive,
         } = req.body;
 
+        // Find user
         const user = await User.findById(id);
 
         if (!user) {
@@ -288,62 +383,108 @@ const updateUser = async (req, res) => {
         if (user.role === "super_admin") {
             return res.status(403).json({
                 success: false,
-                message: "Super Admin cannot be modified",
+                message:
+                    "Super Admin cannot be modified",
             });
         }
 
         // Validate role if provided
-        if (role && !allowedRoles.includes(role)) {
+        if (
+            role &&
+            !allowedRoles.includes(role)
+        ) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid role",
             });
         }
 
-        // Check email duplication
-        if (email) {
-            const normalizedEmail = email.toLowerCase().trim();
+        /*
+        |--------------------------------------------------------------------------
+        | Email
+        |--------------------------------------------------------------------------
+        */
 
-            const existingUser = await User.findOne({
-                email: normalizedEmail,
-                _id: { $ne: id },
-            });
+        if (email) {
+            const normalizedEmail = email
+                .toLowerCase()
+                .trim();
+
+            const existingUser =
+                await User.findOne({
+                    email: normalizedEmail,
+                    _id: { $ne: id },
+                });
 
             if (existingUser) {
                 return res.status(400).json({
                     success: false,
-                    message: "Another user with this email already exists",
+                    message:
+                        "Another user with this email already exists",
                 });
             }
 
             user.email = normalizedEmail;
         }
 
-        // Update fields
+        /*
+        |--------------------------------------------------------------------------
+        | Basic Fields
+        |--------------------------------------------------------------------------
+        */
+
         if (fullName) {
             user.fullName = fullName.trim();
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Role
+        |--------------------------------------------------------------------------
+        */
 
         if (role) {
             user.role = role;
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Company
+        |--------------------------------------------------------------------------
+        */
+
         if (company) {
             user.company = company;
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Active Status
+        |--------------------------------------------------------------------------
+        */
 
         if (typeof isActive === "boolean") {
             user.isActive = isActive;
         }
 
-        // Update password if provided
+        /*
+        |--------------------------------------------------------------------------
+        | Password
+        |--------------------------------------------------------------------------
+        */
+
         if (password) {
-            user.password = await bcrypt.hash(password, 10);
+            user.password =
+                await bcrypt.hash(password, 10);
         }
 
+        // Save changes
         const updatedUser = await user.save();
 
-        const userResponse = updatedUser.toObject();
+        // Remove password from response
+        const userResponse =
+            updatedUser.toObject();
+
         delete userResponse.password;
 
         return res.status(200).json({
@@ -356,7 +497,8 @@ const updateUser = async (req, res) => {
 
         return res.status(500).json({
             success: false,
-            message: "Server error while updating user",
+            message:
+                "Server error while updating user",
             error: error.message,
         });
     }
@@ -367,6 +509,8 @@ const updateUser = async (req, res) => {
 | Update User Status
 |--------------------------------------------------------------------------
 | Super Admin only through route middleware.
+|
+| Used to activate/deactivate Employee / Intern.
 |--------------------------------------------------------------------------
 */
 
@@ -375,6 +519,7 @@ const updateUserStatus = async (req, res) => {
         const { id } = req.params;
         const { isActive } = req.body;
 
+        // Find user
         const user = await User.findById(id);
 
         if (!user) {
@@ -388,37 +533,49 @@ const updateUserStatus = async (req, res) => {
         if (user.role === "super_admin") {
             return res.status(403).json({
                 success: false,
-                message: "Super Admin status cannot be changed",
+                message:
+                    "Super Admin status cannot be changed",
             });
         }
 
+        // Validate status
         if (typeof isActive !== "boolean") {
             return res.status(400).json({
                 success: false,
-                message: "isActive must be true or false",
+                message:
+                    "isActive must be true or false",
             });
         }
 
+        // Update status
         user.isActive = isActive;
 
         await user.save();
 
+        // Remove password
         const userResponse = user.toObject();
+
         delete userResponse.password;
 
         return res.status(200).json({
             success: true,
             message: `User ${
-                isActive ? "activated" : "deactivated"
+                isActive
+                    ? "activated"
+                    : "deactivated"
             } successfully`,
             user: userResponse,
         });
     } catch (error) {
-        console.error("Update User Status Error:", error);
+        console.error(
+            "Update User Status Error:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
-            message: "Server error while updating user status",
+            message:
+                "Server error while updating user status",
             error: error.message,
         });
     }
