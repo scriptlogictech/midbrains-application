@@ -2,6 +2,30 @@ const Lead = require("../models/Lead");
 const User = require("../models/User");
 
 // ============================================================
+// HELPER: GET COMPANY ID
+// ============================================================
+// authMiddleware.js populates req.user.company.
+// Therefore req.user.company can be:
+//
+// 1. ObjectId
+// 2. Populated Company document
+//
+// This helper always returns the actual company ID.
+// ============================================================
+
+const getUserCompanyId = (req) => {
+    if (!req.user || !req.user.company) {
+        return null;
+    }
+
+    if (req.user.company._id) {
+        return req.user.company._id.toString();
+    }
+
+    return req.user.company.toString();
+};
+
+// ============================================================
 // HELPER: CHECK COMPANY ACCESS
 // ============================================================
 
@@ -16,13 +40,14 @@ const hasCompanyAccess = (req, companyId) => {
     }
 
     // Employee / Intern can access only their own company
-    if (!req.user.company) {
+    const userCompanyId = getUserCompanyId(req);
+
+    if (!userCompanyId) {
         return false;
     }
 
     return (
-        req.user.company.toString() ===
-        companyId.toString()
+        userCompanyId === companyId.toString()
     );
 };
 
@@ -30,15 +55,21 @@ const hasCompanyAccess = (req, companyId) => {
 // HELPER: GET TARGET COMPANY
 // ============================================================
 
-const getTargetCompany = (req, requestedCompanyId) => {
+const getTargetCompany = (
+    req,
+    requestedCompanyId
+) => {
     // Super Admin can work with selected company
     if (req.user.role === "super_admin") {
         return requestedCompanyId || null;
     }
 
     // Employee / Intern must always use their own company
-    if (req.user.company) {
-        return req.user.company;
+    const userCompanyId =
+        getUserCompanyId(req);
+
+    if (userCompanyId) {
+        return userCompanyId;
     }
 
     return null;
@@ -67,15 +98,17 @@ exports.getLeads = async (req, res) => {
         // DETERMINE COMPANY
         // --------------------------------------------------------
 
-        const targetCompanyId = getTargetCompany(
-            req,
-            companyId
-        );
+        const targetCompanyId =
+            getTargetCompany(
+                req,
+                companyId
+            );
 
         if (!targetCompanyId) {
             return res.status(400).json({
                 success: false,
-                message: "Company ID is required",
+                message:
+                    "Company ID is required",
             });
         }
 
@@ -164,7 +197,8 @@ exports.getLeads = async (req, res) => {
         // --------------------------------------------------------
 
         if (inquiryType) {
-            filter.inquiryType = inquiryType;
+            filter.inquiryType =
+                inquiryType;
         }
 
         // --------------------------------------------------------
@@ -184,15 +218,17 @@ exports.getLeads = async (req, res) => {
             filter.leadDate = {};
 
             if (startDate) {
-                filter.leadDate.$gte = new Date(
-                    `${startDate}T00:00:00`
-                );
+                filter.leadDate.$gte =
+                    new Date(
+                        `${startDate}T00:00:00`
+                    );
             }
 
             if (endDate) {
-                filter.leadDate.$lte = new Date(
-                    `${endDate}T23:59:59.999`
-                );
+                filter.leadDate.$lte =
+                    new Date(
+                        `${endDate}T23:59:59.999`
+                    );
             }
         }
 
@@ -211,7 +247,8 @@ exports.getLeads = async (req, res) => {
         );
 
         const skip =
-            (currentPage - 1) * pageLimit;
+            (currentPage - 1) *
+            pageLimit;
 
         // --------------------------------------------------------
         // FETCH LEADS
@@ -274,7 +311,8 @@ exports.getLeads = async (req, res) => {
 
         return res.status(500).json({
             success: false,
-            message: "Failed to fetch leads",
+            message:
+                "Failed to fetch leads",
             error: error.message,
         });
     }
@@ -326,7 +364,10 @@ exports.createLead = async (req, res) => {
 
         let targetCompany;
 
-        if (req.user.role === "super_admin") {
+        if (
+            req.user.role ===
+            "super_admin"
+        ) {
             // Super Admin must provide company
             if (!company) {
                 return res.status(400).json({
@@ -339,7 +380,10 @@ exports.createLead = async (req, res) => {
             targetCompany = company;
         } else {
             // Employee / Intern automatically use own company
-            if (!req.user.company) {
+            const userCompanyId =
+                getUserCompanyId(req);
+
+            if (!userCompanyId) {
                 return res.status(403).json({
                     success: false,
                     message:
@@ -347,7 +391,8 @@ exports.createLead = async (req, res) => {
                 });
             }
 
-            targetCompany = req.user.company;
+            targetCompany =
+                userCompanyId;
         }
 
         // --------------------------------------------------------
@@ -401,20 +446,24 @@ exports.createLead = async (req, res) => {
         const lead = await Lead.create({
             company: targetCompany,
 
-            fullName: fullName.trim(),
+            fullName:
+                fullName.trim(),
 
             contactNumber:
                 contactNumber.trim(),
 
             email: email
-                ? email.trim().toLowerCase()
+                ? email
+                      .trim()
+                      .toLowerCase()
                 : undefined,
 
             city,
 
             // Use provided lead date.
             // If not provided, Lead model default Date.now is used.
-            leadDate: leadDate || undefined,
+            leadDate:
+                leadDate || undefined,
 
             courseInterested,
 
@@ -498,7 +547,8 @@ exports.updateLead = async (req, res) => {
         if (!lead) {
             return res.status(404).json({
                 success: false,
-                message: "Lead not found",
+                message:
+                    "Lead not found",
             });
         }
 
@@ -570,7 +620,9 @@ exports.updateLead = async (req, res) => {
 
         const updateData = {};
 
-        if (fullName !== undefined) {
+        if (
+            fullName !== undefined
+        ) {
             updateData.fullName =
                 fullName.trim();
         }
@@ -585,7 +637,9 @@ exports.updateLead = async (req, res) => {
 
         if (email !== undefined) {
             updateData.email = email
-                ? email.trim().toLowerCase()
+                ? email
+                      .trim()
+                      .toLowerCase()
                 : "";
         }
 
