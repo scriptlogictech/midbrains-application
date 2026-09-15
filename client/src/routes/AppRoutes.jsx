@@ -40,11 +40,48 @@ import { useAuth } from "../context/AuthContext";
 // ROLE PROTECTED ROUTE
 // =====================================================
 
-const RoleRoute = ({ children, allowedRoles }) => {
-    const { user } = useAuth();
+const RoleRoute = ({
+    children,
+    allowedRoles,
+}) => {
+    const {
+        user,
+        loading,
+        isAuthenticated,
+    } = useAuth();
 
-    // No logged-in user
-    if (!user) {
+    // =================================================
+    // WAIT FOR AUTHENTICATION RESTORATION
+    // =================================================
+    // When the page is refreshed, AuthContext first
+    // reads token/user from localStorage.
+    //
+    // We MUST wait until that process is finished
+    // before redirecting to login.
+    // =================================================
+
+    if (loading) {
+        return (
+            <div
+                style={{
+                    minHeight: "100vh",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "18px",
+                    fontWeight: "500",
+                }}
+            >
+                Loading...
+            </div>
+        );
+    }
+
+    // =================================================
+    // NOT AUTHENTICATED
+    // =================================================
+
+    if (!isAuthenticated || !user) {
         return (
             <Navigate
                 to="/login"
@@ -53,23 +90,50 @@ const RoleRoute = ({ children, allowedRoles }) => {
         );
     }
 
-    // User role is not allowed
-    if (!allowedRoles.includes(user.role)) {
+    // =================================================
+    // ROLE NOT ALLOWED
+    // =================================================
+
+    if (
+        !allowedRoles.includes(
+            user.role
+        )
+    ) {
+        const companyId =
+            user.company?._id ||
+            user.company ||
+            "";
+
+        // If company exists, return user to dashboard
+        if (companyId) {
+            return (
+                <Navigate
+                    to={`/dashboard/${companyId}`}
+                    replace
+                />
+            );
+        }
+
+        // If company is missing, go to login
         return (
             <Navigate
-                to={`/dashboard/${
-                    user.company?._id ||
-                    user.company ||
-                    ""
-                }`}
+                to="/login"
                 replace
             />
         );
     }
 
+    // =================================================
+    // AUTHORIZED
+    // =================================================
+
     return children;
 };
 
+
+// =====================================================
+// APPLICATION ROUTES
+// =====================================================
 
 const AppRoutes = () => {
     return (
@@ -92,7 +156,9 @@ const AppRoutes = () => {
 
                 <Route
                     path="/companies"
-                    element={<CompanySelection />}
+                    element={
+                        <CompanySelection />
+                    }
                 />
 
 
