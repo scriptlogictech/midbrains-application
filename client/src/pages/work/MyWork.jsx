@@ -36,6 +36,8 @@ const MyWork = () => {
         task: "",
         date: new Date().toISOString().split("T")[0],
         progress: 0,
+        startTime: "",
+        endTime: "",
         hoursWorked: "",
         workDescription: "",
         blockers: "",
@@ -241,15 +243,12 @@ const MyWork = () => {
             Number(endParts[0]) * 60 +
             Number(endParts[1]);
 
-        let difference =
+        const difference =
             endMinutes - startMinutes;
 
-        /*
-         * If end time is earlier than start time,
-         * consider it as work crossing midnight.
-         */
-        if (difference < 0) {
-            difference += 24 * 60;
+        // End time must be later than start time.
+        if (difference <= 0) {
+            return "";
         }
 
         return Number(
@@ -352,6 +351,8 @@ const MyWork = () => {
                 .toISOString()
                 .split("T")[0],
             progress: task?.progress || 0,
+            startTime: "",
+            endTime: "",
             hoursWorked: "",
             workDescription: "",
             blockers: "",
@@ -374,6 +375,26 @@ const MyWork = () => {
             return;
         }
 
+        if (!logForm.date) {
+            alert("Please select work date.");
+            return;
+        }
+
+        if (!logForm.startTime || !logForm.endTime) {
+            alert("Please select start time and end time.");
+            return;
+        }
+
+        const calculatedHours = calculateHours(
+            logForm.startTime,
+            logForm.endTime
+        );
+
+        if (calculatedHours === "" || Number(calculatedHours) <= 0) {
+            alert("End time must be later than start time.");
+            return;
+        }
+
         if (!logForm.workDescription.trim()) {
             alert(
                 "Please enter today's work description."
@@ -390,9 +411,9 @@ const MyWork = () => {
                 progress: Number(
                     logForm.progress
                 ),
-                hoursWorked: Number(
-                    logForm.hoursWorked || 0
-                ),
+                startTime: logForm.startTime,
+                endTime: logForm.endTime,
+                hoursWorked: Number(calculatedHours),
                 workDescription:
                     logForm.workDescription,
                 blockers: logForm.blockers,
@@ -1206,6 +1227,21 @@ const MyWork = () => {
                                         <div>
 
                                             <span>
+                                                Work Time
+                                            </span>
+
+                                            <strong>
+                                                {formatTime(log.startTime)}
+                                                {" - "}
+                                                {formatTime(log.endTime)}
+                                            </strong>
+
+                                        </div>
+
+
+                                        <div>
+
+                                            <span>
                                                 Hours Worked
                                             </span>
 
@@ -1588,25 +1624,68 @@ const MyWork = () => {
                                 <div className="form-group">
 
                                     <label>
+                                        Start Time *
+                                    </label>
+
+                                    <input
+                                        type="time"
+                                        value={logForm.startTime}
+                                        onChange={(e) => {
+                                            const startTime = e.target.value;
+
+                                            setLogForm((prev) => ({
+                                                ...prev,
+                                                startTime,
+                                                hoursWorked: calculateHours(
+                                                    startTime,
+                                                    prev.endTime
+                                                ),
+                                            }));
+                                        }}
+                                        required
+                                    />
+
+                                </div>
+
+
+                                <div className="form-group">
+
+                                    <label>
+                                        End Time *
+                                    </label>
+
+                                    <input
+                                        type="time"
+                                        value={logForm.endTime}
+                                        onChange={(e) => {
+                                            const endTime = e.target.value;
+
+                                            setLogForm((prev) => ({
+                                                ...prev,
+                                                endTime,
+                                                hoursWorked: calculateHours(
+                                                    prev.startTime,
+                                                    endTime
+                                                ),
+                                            }));
+                                        }}
+                                        required
+                                    />
+
+                                </div>
+
+
+                                <div className="form-group">
+
+                                    <label>
                                         Hours Worked
                                     </label>
 
                                     <input
                                         type="number"
-                                        min="0"
-                                        step="0.5"
-                                        value={
-                                            logForm.hoursWorked
-                                        }
-                                        onChange={(e) =>
-                                            setLogForm({
-                                                ...logForm,
-                                                hoursWorked:
-                                                    e.target
-                                                        .value,
-                                            })
-                                        }
-                                        placeholder="e.g. 6.5"
+                                        value={logForm.hoursWorked}
+                                        readOnly
+                                        placeholder="Auto calculated"
                                     />
 
                                 </div>

@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 
 const workLogSchema = new mongoose.Schema(
@@ -24,6 +25,19 @@ const workLogSchema = new mongoose.Schema(
       type: Date,
       required: true,
       default: Date.now,
+    },
+
+    // Daily work time
+    startTime: {
+      type: String,
+      trim: true,
+      match: /^([01]\d|2[0-3]):([0-5]\d)$/,
+    },
+
+    endTime: {
+      type: String,
+      trim: true,
+      match: /^([01]\d|2[0-3]):([0-5]\d)$/,
     },
 
     progress: {

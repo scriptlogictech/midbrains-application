@@ -1,16 +1,9 @@
+
 const WorkLog = require("../models/WorkLog");
 const WorkTask = require("../models/WorkTask");
 
 // ============================================================
 // HELPER: GET USER COMPANY ID
-// ============================================================
-// authMiddleware.js populates req.user.company.
-//
-// Therefore req.user.company can be:
-// 1. ObjectId
-// 2. Populated Company document
-//
-// This helper always returns the actual company ID.
 // ============================================================
 
 const getUserCompanyId = (req) => {
@@ -26,6 +19,16 @@ const getUserCompanyId = (req) => {
 };
 
 // ============================================================
+// HELPER: VALIDATE TIME FORMAT
+// ============================================================
+
+const isValidTime = (time) => {
+  if (!time) return true;
+
+  return /^([01]\d|2[0-3]):([0-5]\d)$/.test(time);
+};
+
+// ============================================================
 // CREATE DAILY WORK LOG
 // Employee / Intern
 // ============================================================
@@ -35,6 +38,8 @@ exports.createWorkLog = async (req, res) => {
     const {
       task,
       date,
+      startTime,
+      endTime,
       progress,
       hoursWorked,
       workDescription,
@@ -42,22 +47,30 @@ exports.createWorkLog = async (req, res) => {
       nextPlan,
     } = req.body;
 
-    if (
-      !task ||
-      progress === undefined ||
-      !workDescription
-    ) {
+    if (!task || progress === undefined || !workDescription) {
       return res.status(400).json({
         success: false,
-        message:
-          "Task, progress and work description are required",
+        message: "Task, progress and work description are required",
       });
     }
 
-    // --------------------------------------------------------
-    // FIND WORK TASK
-    // --------------------------------------------------------
+    // Validate time format
+    if (!isValidTime(startTime) || !isValidTime(endTime)) {
+      return res.status(400).json({
+        success: false,
+        message: "Time must be in HH:mm format",
+      });
+    }
 
+    // Validate time range
+    if (startTime && endTime && startTime >= endTime) {
+      return res.status(400).json({
+        success: false,
+        message: "End time must be after start time",
+      });
+    }
+
+    // Find work task
     const workTask = await WorkTask.findById(task);
 
     if (!workTask) {
@@ -67,58 +80,40 @@ exports.createWorkLog = async (req, res) => {
       });
     }
 
-    // --------------------------------------------------------
-    // EMPLOYEE / INTERN CAN ONLY LOG THEIR OWN TASK
-    // --------------------------------------------------------
-
+    // Employee / Intern can only log assigned tasks
     if (
       !workTask.assignedTo ||
-      workTask.assignedTo.toString() !==
-        req.user._id.toString()
+      workTask.assignedTo.toString() !== req.user._id.toString()
     ) {
       return res.status(403).json({
         success: false,
-        message:
-          "You can only add work logs for your assigned work",
+        message: "You can only add work logs for your assigned work",
       });
     }
 
-    // --------------------------------------------------------
-    // COMPANY ISOLATION
-    // --------------------------------------------------------
-
-    const userCompanyId =
-      getUserCompanyId(req);
+    // Company isolation
+    const userCompanyId = getUserCompanyId(req);
 
     if (!userCompanyId) {
       return res.status(403).json({
         success: false,
-        message:
-          "You are not assigned to a company",
+        message: "You are not assigned to a company",
       });
     }
 
-    const taskCompanyId =
-      workTask.company
-        ? workTask.company.toString()
-        : null;
+    const taskCompanyId = workTask.company
+      ? workTask.company.toString()
+      : null;
 
-    if (
-      !taskCompanyId ||
-      taskCompanyId !== userCompanyId
-    ) {
+    if (!taskCompanyId || taskCompanyId !== userCompanyId) {
       return res.status(403).json({
         success: false,
         message: "Access denied",
       });
     }
 
-    // --------------------------------------------------------
-    // VALIDATE PROGRESS
-    // --------------------------------------------------------
-
-    const numericProgress =
-      Number(progress);
+    // Validate progress
+    const numericProgress = Number(progress);
 
     if (
       Number.isNaN(numericProgress) ||
@@ -127,52 +122,37 @@ exports.createWorkLog = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Progress must be between 0 and 100",
+        message: "Progress must be between 0 and 100",
       });
     }
 
-    // --------------------------------------------------------
-    // VALIDATE HOURS
-    // --------------------------------------------------------
+    // Validate hours
+    const numericHours = Number(hoursWorked || 0);
 
-    const numericHours =
-      Number(hoursWorked || 0);
-
-    if (
-      Number.isNaN(numericHours) ||
-      numericHours < 0
-    ) {
+    if (Number.isNaN(numericHours) || numericHours < 0) {
       return res.status(400).json({
         success: false,
-        message:
-          "Hours worked cannot be negative",
+        message: "Hours worked cannot be negative",
       });
     }
 
-    // --------------------------------------------------------
-    // CREATE WORK LOG
-    // --------------------------------------------------------
+    // Create work log
+    const workLog = await WorkLog.create({
+      company: taskCompanyId,
+      task,
+      employee: req.user._id,
+      date: date || new Date(),
+      startTime,
+      endTime,
+      progress: numericProgress,
+      hoursWorked: numericHours,
+      workDescription,
+      blockers,
+      nextPlan,
+    });
 
-    const workLog =
-      await WorkLog.create({
-        company: taskCompanyId,
-        task,
-        employee: req.user._id,
-        date: date || new Date(),
-        progress: numericProgress,
-        hoursWorked: numericHours,
-        workDescription,
-        blockers,
-        nextPlan,
-      });
-
-    // --------------------------------------------------------
-    // KEEP MAIN TASK PROGRESS SYNCHRONIZED
-    // --------------------------------------------------------
-
-    workTask.progress =
-      numericProgress;
+    // Synchronize task progress
+    workTask.progress = numericProgress;
 
     if (numericProgress === 100) {
       workTask.status = "completed";
@@ -184,38 +164,19 @@ exports.createWorkLog = async (req, res) => {
 
     await workTask.save();
 
-    // --------------------------------------------------------
-    // POPULATE WORK LOG
-    // --------------------------------------------------------
-
-    const populatedLog =
-      await WorkLog.findById(
-        workLog._id
-      )
-        .populate(
-          "task",
-          "title status progress deadline"
-        )
-        .populate(
-          "employee",
-          "fullName email role"
-        )
-        .populate(
-          "company",
-          "companyName companyCode"
-        );
+    // Populate work log
+    const populatedLog = await WorkLog.findById(workLog._id)
+      .populate("task", "title status progress deadline")
+      .populate("employee", "fullName email role")
+      .populate("company", "companyName companyCode");
 
     return res.status(201).json({
       success: true,
-      message:
-        "Work log added successfully",
+      message: "Work log added successfully",
       workLog: populatedLog,
     });
   } catch (error) {
-    console.error(
-      "Create Work Log Error:",
-      error
-    );
+    console.error("Create Work Log Error:", error);
 
     return res.status(500).json({
       success: false,
@@ -229,39 +190,27 @@ exports.createWorkLog = async (req, res) => {
 // Employee / Intern
 // ============================================================
 
-exports.getMyWorkLogs = async (
-  req,
-  res
-) => {
+exports.getMyWorkLogs = async (req, res) => {
   try {
-    const userCompanyId =
-      getUserCompanyId(req);
+    const userCompanyId = getUserCompanyId(req);
 
     if (!userCompanyId) {
       return res.status(403).json({
         success: false,
-        message:
-          "You are not assigned to a company",
+        message: "You are not assigned to a company",
       });
     }
 
-    const logs =
-      await WorkLog.find({
-        employee: req.user._id,
-        company: userCompanyId,
-      })
-        .populate(
-          "task",
-          "title status progress deadline"
-        )
-        .populate(
-          "company",
-          "companyName companyCode"
-        )
-        .sort({
-          date: -1,
-          createdAt: -1,
-        });
+    const logs = await WorkLog.find({
+      employee: req.user._id,
+      company: userCompanyId,
+    })
+      .populate("task", "title status progress deadline")
+      .populate("company", "companyName companyCode")
+      .sort({
+        date: -1,
+        createdAt: -1,
+      });
 
     return res.status(200).json({
       success: true,
@@ -269,10 +218,7 @@ exports.getMyWorkLogs = async (
       logs,
     });
   } catch (error) {
-    console.error(
-      "Get My Work Logs Error:",
-      error
-    );
+    console.error("Get My Work Logs Error:", error);
 
     return res.status(500).json({
       success: false,
@@ -285,92 +231,62 @@ exports.getMyWorkLogs = async (
 // GET LOGS FOR A TASK
 // ============================================================
 
-exports.getTaskWorkLogs = async (
-  req,
-  res
-) => {
+exports.getTaskWorkLogs = async (req, res) => {
   try {
-    const { taskId } =
-      req.params;
+    const { taskId } = req.params;
 
-    const task =
-      await WorkTask.findById(
-        taskId
-      );
+    const task = await WorkTask.findById(taskId);
 
     if (!task) {
       return res.status(404).json({
         success: false,
-        message:
-          "Work task not found",
+        message: "Work task not found",
       });
     }
 
-    // --------------------------------------------------------
-    // EMPLOYEE / INTERN ACCESS
-    // --------------------------------------------------------
-
+    // Employee / Intern access
     if (
       req.user.role === "employee" ||
       req.user.role === "intern"
     ) {
-      // Only their own assigned task
       if (
         !task.assignedTo ||
-        task.assignedTo.toString() !==
-          req.user._id.toString()
+        task.assignedTo.toString() !== req.user._id.toString()
       ) {
         return res.status(403).json({
           success: false,
-          message:
-            "Access denied",
+          message: "Access denied",
         });
       }
 
-      // Company isolation
-      const userCompanyId =
-        getUserCompanyId(req);
+      const userCompanyId = getUserCompanyId(req);
 
-      const taskCompanyId =
-        task.company
-          ? task.company.toString()
-          : null;
+      const taskCompanyId = task.company
+        ? task.company.toString()
+        : null;
 
       if (
         !userCompanyId ||
         !taskCompanyId ||
-        taskCompanyId !==
-          userCompanyId
+        taskCompanyId !== userCompanyId
       ) {
         return res.status(403).json({
           success: false,
-          message:
-            "Access denied",
+          message: "Access denied",
         });
       }
     }
 
-    // --------------------------------------------------------
-    // GET LOGS
-    // --------------------------------------------------------
-
-    const logs =
-      await WorkLog.find({
-        task: taskId,
-        company: task.company,
-      })
-        .populate(
-          "employee",
-          "fullName email role"
-        )
-        .populate(
-          "task",
-          "title status progress deadline"
-        )
-        .sort({
-          date: -1,
-          createdAt: -1,
-        });
+    const logs = await WorkLog.find({
+      task: taskId,
+      company: task.company,
+    })
+      .populate("employee", "fullName email role")
+      .populate("task", "title status progress deadline")
+      .sort({
+        date: -1,
+        createdAt: -1,
+      });
 
     return res.status(200).json({
       success: true,
@@ -378,10 +294,7 @@ exports.getTaskWorkLogs = async (
       logs,
     });
   } catch (error) {
-    console.error(
-      "Get Task Work Logs Error:",
-      error
-    );
+    console.error("Get Task Work Logs Error:", error);
 
     return res.status(500).json({
       success: false,
@@ -395,10 +308,7 @@ exports.getTaskWorkLogs = async (
 // Super Admin
 // ============================================================
 
-exports.getAllWorkLogs = async (
-  req,
-  res
-) => {
+exports.getAllWorkLogs = async (req, res) => {
   try {
     const {
       companyId,
@@ -410,84 +320,44 @@ exports.getAllWorkLogs = async (
 
     const filter = {};
 
-    // --------------------------------------------------------
-    // COMPANY FILTER
-    // --------------------------------------------------------
-
     if (companyId) {
       filter.company = companyId;
     }
 
-    // --------------------------------------------------------
-    // EMPLOYEE FILTER
-    // --------------------------------------------------------
-
     if (employeeId) {
-      filter.employee =
-        employeeId;
+      filter.employee = employeeId;
     }
-
-    // --------------------------------------------------------
-    // TASK FILTER
-    // --------------------------------------------------------
 
     if (taskId) {
       filter.task = taskId;
     }
 
-    // --------------------------------------------------------
-    // DATE FILTER
-    // --------------------------------------------------------
-
-    if (
-      startDate ||
-      endDate
-    ) {
+    // Date filter
+    if (startDate || endDate) {
       filter.date = {};
 
       if (startDate) {
-        filter.date.$gte =
-          new Date(startDate);
+        filter.date.$gte = new Date(startDate);
       }
 
       if (endDate) {
-        const end =
-          new Date(endDate);
+        const end = new Date(endDate);
 
-        end.setHours(
-          23,
-          59,
-          59,
-          999
-        );
+        end.setHours(23, 59, 59, 999);
 
-        filter.date.$lte =
-          end;
+        filter.date.$lte = end;
       }
     }
 
-    // --------------------------------------------------------
-    // GET LOGS
-    // --------------------------------------------------------
-
-    const logs =
-      await WorkLog.find(filter)
-        .populate(
-          "employee",
-          "fullName email role"
-        )
-        .populate(
-          "task",
-          "title status progress deadline"
-        )
-        .populate(
-          "company",
-          "companyName companyCode"
-        )
-        .sort({
-          date: -1,
-          createdAt: -1,
-        });
+    const logs = await WorkLog.find(filter)
+      .populate("employee", "fullName email role")
+      .populate("task", "title status progress deadline")
+      .populate("company", "companyName companyCode")
+      .sort({
+        date: -1,
+        startTime: 1,
+        createdAt: -1,
+      });
 
     return res.status(200).json({
       success: true,
@@ -495,10 +365,7 @@ exports.getAllWorkLogs = async (
       logs,
     });
   } catch (error) {
-    console.error(
-      "Get All Work Logs Error:",
-      error
-    );
+    console.error("Get All Work Logs Error:", error);
 
     return res.status(500).json({
       success: false,
