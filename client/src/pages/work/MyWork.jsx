@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useState } from "react";
+
 import {
   createWorkLog,
   getMyWorkLogs,
@@ -9,10 +10,48 @@ import {
 
 import "./MyWork.css";
 
+const getToday = () => {
+  const date = new Date();
+  const offset = date.getTimezoneOffset();
+
+  return new Date(date.getTime() - offset * 60000)
+    .toISOString()
+    .split("T")[0];
+};
+
+const getDateString = (value) => {
+  if (!value) return "";
+
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+    return value.substring(0, 10);
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toISOString().split("T")[0];
+};
+
+const calculateDuration = (startTime, endTime) => {
+  if (!startTime || !endTime) return "";
+
+  const [startHour, startMinute] = startTime.split(":").map(Number);
+  const [endHour, endMinute] = endTime.split(":").map(Number);
+
+  const start = startHour * 60 + startMinute;
+  const end = endHour * 60 + endMinute;
+
+  if (end <= start) return "";
+
+  return end - start;
+};
+
 const MyWork = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -23,14 +62,14 @@ const MyWork = () => {
   const [editingLog, setEditingLog] = useState(null);
 
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split("T")[0],
+    date: getToday(),
     work: "",
     startTime: "",
     endTime: "",
   });
 
   // ============================================================
-  // FETCH LOGS
+  // FETCH WORK LOGS
   // ============================================================
 
   const fetchLogs = async () => {
@@ -42,7 +81,7 @@ const MyWork = () => {
 
       setLogs(response?.logs || []);
     } catch (err) {
-      console.error("Fetch logs error:", err);
+      console.error("Fetch work logs error:", err);
 
       setError(
         err.response?.data?.message || "Failed to fetch work logs."
@@ -69,17 +108,36 @@ const MyWork = () => {
     }));
   };
 
-  const resetForm = () => {
+  const openAddModal = () => {
+    setEditingLog(null);
+
     setFormData({
-      date: new Date().toISOString().split("T")[0],
+      date: getToday(),
       work: "",
       startTime: "",
       endTime: "",
     });
 
-    setEditingLog(null);
-    setIsModalOpen(false);
+    setError("");
+    setSuccess("");
+    setIsModalOpen(true);
   };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingLog(null);
+
+    setFormData({
+      date: getToday(),
+      work: "",
+      startTime: "",
+      endTime: "",
+    });
+  };
+
+  // ============================================================
+  // CREATE / UPDATE WORK LOG
+  // ============================================================
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -87,7 +145,9 @@ const MyWork = () => {
     setError("");
     setSuccess("");
 
-    if (!formData.date || !formData.work.trim()) {
+    const workDescription = formData.work.trim();
+
+    if (!formData.date || !workDescription) {
       setError("Date and work description are required.");
       return;
     }
@@ -104,15 +164,26 @@ const MyWork = () => {
     try {
       setSubmitting(true);
 
+      const payload = {
+        date: formData.date,
+        work: workDescription,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+      };
+
       if (editingLog) {
-        await updateWorkLog(editingLog._id || editingLog.id, formData);
+        const id = editingLog._id || editingLog.id;
+
+        await updateWorkLog(id, payload);
+
         setSuccess("Work log updated successfully.");
       } else {
-        await createWorkLog(formData);
+        await createWorkLog(payload);
+
         setSuccess("Work log added successfully.");
       }
 
-      resetForm();
+      closeModal();
       await fetchLogs();
     } catch (err) {
       console.error("Save work log error:", err);
@@ -126,16 +197,14 @@ const MyWork = () => {
   };
 
   // ============================================================
-  // EDIT LOG
+  // EDIT WORK LOG
   // ============================================================
 
   const handleEdit = (log) => {
     setEditingLog(log);
 
     setFormData({
-      date: log.date
-        ? new Date(log.date).toISOString().split("T")[0]
-        : "",
+      date: getDateString(log.date),
       work: log.work || log.description || log.task || "",
       startTime: log.startTime || "",
       endTime: log.endTime || "",
@@ -147,15 +216,15 @@ const MyWork = () => {
   };
 
   // ============================================================
-  // DELETE LOG
+  // DELETE WORK LOG
   // ============================================================
 
   const handleDelete = async (id) => {
-    const confirmDelete = window.confirm(
+    const confirmed = window.confirm(
       "Are you sure you want to delete this work log?"
     );
 
-    if (!confirmDelete) return;
+    if (!confirmed) return;
 
     try {
       setError("");
@@ -163,13 +232,11 @@ const MyWork = () => {
 
       await deleteWorkLog(id);
 
-      setSuccess("Work log deleted successfully.");
-
       setLogs((previousLogs) =>
-        previousLogs.filter(
-          (log) => (log._id || log.id) !== id
-        )
+        previousLogs.filter((log) => (log._id || log.id) !== id)
       );
+
+      setSuccess("Work log deleted successfully.");
     } catch (err) {
       console.error("Delete work log error:", err);
 
@@ -180,22 +247,8 @@ const MyWork = () => {
   };
 
   // ============================================================
-  // DATE HELPERS
+  // DATE FILTER HELPERS
   // ============================================================
-
-  const getDateString = (dateValue) => {
-    if (!dateValue) return "";
-
-    const date = new Date(dateValue);
-
-    if (Number.isNaN(date.getTime())) return "";
-
-    return date.toISOString().split("T")[0];
-  };
-
-  const getTodayString = () => {
-    return new Date().toISOString().split("T")[0];
-  };
 
   const getWeekStart = () => {
     const date = new Date();
@@ -205,19 +258,15 @@ const MyWork = () => {
 
     date.setDate(date.getDate() + difference);
 
-    return date.toISOString().split("T")[0];
+    return getDateString(date);
   };
 
   const getMonthStart = () => {
     const date = new Date();
 
-    return new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      1
-    )
-      .toISOString()
-      .split("T")[0];
+    return getDateString(
+      new Date(date.getFullYear(), date.getMonth(), 1)
+    );
   };
 
   // ============================================================
@@ -225,19 +274,23 @@ const MyWork = () => {
   // ============================================================
 
   const filteredLogs = useMemo(() => {
+    const today = getToday();
+    const weekStart = getWeekStart();
+    const monthStart = getMonthStart();
+
     return logs.filter((log) => {
       const logDate = getDateString(log.date);
 
       if (filter === "today") {
-        return logDate === getTodayString();
+        return logDate === today;
       }
 
       if (filter === "week") {
-        return logDate >= getWeekStart() && logDate <= getTodayString();
+        return logDate >= weekStart && logDate <= today;
       }
 
       if (filter === "month") {
-        return logDate >= getMonthStart() && logDate <= getTodayString();
+        return logDate >= monthStart && logDate <= today;
       }
 
       if (filter === "custom") {
@@ -266,7 +319,8 @@ const MyWork = () => {
     });
 
     return Object.entries(groups).sort(
-      ([dateA], [dateB]) => new Date(dateB) - new Date(dateA)
+      ([dateA], [dateB]) =>
+        new Date(dateB).getTime() - new Date(dateA).getTime()
     );
   }, [filteredLogs]);
 
@@ -277,11 +331,14 @@ const MyWork = () => {
   const formatDate = (date) => {
     if (!date) return "N/A";
 
-    return new Date(date).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return new Date(`${date}T00:00:00`).toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }
+    );
   };
 
   // ============================================================
@@ -290,33 +347,24 @@ const MyWork = () => {
 
   return (
     <div className="my-work-container">
+      {/* HEADER */}
+
       <div className="my-work-header">
         <div>
           <h2>My Work</h2>
-          <p>Track your daily work activities.</p>
+          <p>Track and manage your daily work activities.</p>
         </div>
 
         <button
           type="button"
           className="add-work-btn"
-          onClick={() => {
-            setEditingLog(null);
-
-            setFormData({
-              date: getTodayString(),
-              work: "",
-              startTime: "",
-              endTime: "",
-            });
-
-            setError("");
-            setSuccess("");
-            setIsModalOpen(true);
-          }}
+          onClick={openAddModal}
         >
           + Add Work
         </button>
       </div>
+
+      {/* ALERTS */}
 
       {error && <div className="error-message">{error}</div>}
 
@@ -383,6 +431,14 @@ const MyWork = () => {
       ) : groupedLogs.length === 0 ? (
         <div className="empty-work">
           <p>No work logs found.</p>
+
+          <button
+            type="button"
+            className="add-work-btn"
+            onClick={openAddModal}
+          >
+            + Add Your First Work
+          </button>
         </div>
       ) : (
         <div className="work-table-wrapper">
@@ -403,13 +459,20 @@ const MyWork = () => {
                 dailyLogs.map((log, index) => {
                   const id = log._id || log.id;
 
+                  const duration =
+                    log.duration ??
+                    calculateDuration(
+                      log.startTime,
+                      log.endTime
+                    );
+
                   return (
                     <tr key={id}>
-                      {index === 0 ? (
+                      {index === 0 && (
                         <td rowSpan={dailyLogs.length}>
                           <strong>{formatDate(date)}</strong>
                         </td>
-                      ) : null}
+                      )}
 
                       <td>
                         {log.work ||
@@ -423,9 +486,10 @@ const MyWork = () => {
                       <td>{log.endTime || "-"}</td>
 
                       <td>
-                        {log.duration !== undefined &&
-                        log.duration !== null
-                          ? `${log.duration} minutes`
+                        {duration !== "" &&
+                        duration !== null &&
+                        duration !== undefined
+                          ? `${duration} minutes`
                           : "-"}
                       </td>
 
@@ -470,13 +534,15 @@ const MyWork = () => {
               <button
                 type="button"
                 className="close-modal-btn"
-                onClick={resetForm}
+                onClick={closeModal}
               >
                 ×
               </button>
             </div>
 
             <form onSubmit={handleSubmit}>
+              {/* DATE */}
+
               <div className="form-group">
                 <label htmlFor="date">Date</label>
 
@@ -489,6 +555,8 @@ const MyWork = () => {
                   required
                 />
               </div>
+
+              {/* WORK DESCRIPTION */}
 
               <div className="form-group">
                 <label htmlFor="work">Work Description</label>
@@ -503,6 +571,8 @@ const MyWork = () => {
                   required
                 />
               </div>
+
+              {/* TIME */}
 
               <div className="form-row">
                 <div className="form-group">
@@ -530,11 +600,13 @@ const MyWork = () => {
                 </div>
               </div>
 
+              {/* ACTIONS */}
+
               <div className="modal-actions">
                 <button
                   type="button"
                   className="cancel-btn"
-                  onClick={resetForm}
+                  onClick={closeModal}
                 >
                   Cancel
                 </button>
