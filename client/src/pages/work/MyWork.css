@@ -1,5 +1,6 @@
+
 /* =========================================================
-   MY WORK PAGE - SIMPLE WORK TRACKING
+   MY WORK PAGE
 ========================================================= */
 
 .my-work-page {
@@ -46,6 +47,7 @@
   border: 1px solid #e5e7eb;
   border-radius: 16px;
   box-shadow: 0 6px 22px rgba(15, 23, 42, 0.04);
+  box-sizing: border-box;
 }
 
 .section-header {
@@ -106,7 +108,9 @@
   font: inherit;
   font-size: 14px;
   box-sizing: border-box;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .form-group input:focus,
@@ -119,12 +123,6 @@
 .form-group input::placeholder,
 .form-group textarea::placeholder {
   color: #9ca3af;
-}
-
-.form-group input[readonly] {
-  background: #f8fafc;
-  color: #4b5563;
-  cursor: not-allowed;
 }
 
 /* =========================================================
@@ -140,11 +138,16 @@
   font-size: 14px;
   font-weight: 650;
   cursor: pointer;
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .primary-btn {
@@ -247,9 +250,11 @@
   width: 46px;
   height: 46px;
   flex-shrink: 0;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   border-radius: 11px;
   background: #eef2ff;
   font-size: 21px;
@@ -283,7 +288,10 @@
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   background: #ffffff;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .work-log-card:hover {
@@ -377,10 +385,12 @@
 
 .my-work-loading {
   min-height: 220px;
+
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+
   color: #6b7280;
 }
 
@@ -393,13 +403,15 @@
   width: 34px;
   height: 34px;
   margin-bottom: 13px;
+
   border: 3px solid #e5e7eb;
   border-top-color: #2563eb;
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+
+  animation: my-work-spin 0.8s linear infinite;
 }
 
-@keyframes spin {
+@keyframes my-work-spin {
   to {
     transform: rotate(360deg);
   }
@@ -412,6 +424,11 @@
 @media (max-width: 768px) {
   .my-work-page {
     padding: 18px;
+  }
+
+  .my-work-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .my-work-header h1 {

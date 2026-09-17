@@ -1,180 +1,499 @@
+
+/* =========================================================
+   WORK MANAGEMENT PAGE
+========================================================= */
+
+.work-management-page {
+  min-height: 100vh;
+  padding: 28px;
+  background: #f7f8fc;
+  color: #111827;
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   COMMON SECTION
+========================================================= */
+
+.work-section {
+  margin-bottom: 24px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 6px 22px rgba(15, 23, 42, 0.04);
+  box-sizing: border-box;
+}
+
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: #111827;
+}
+
+.section-header p {
+  margin: 7px 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* =========================================================
+   TIMELINE SECTION
+========================================================= */
+
 .work-timeline-section {
-    overflow: hidden;
+  overflow: hidden;
 }
 
 .work-timeline-header {
-    gap: 18px;
-    align-items: flex-start;
+  gap: 18px;
+  align-items: flex-start;
 }
 
+/* =========================================================
+   TIMELINE CONTROLS
+========================================================= */
+
 .timeline-controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
 }
 
 .timeline-controls label {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #64748b;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
 }
 
 .timeline-controls input,
 .timeline-controls select {
-    min-height: 36px;
-    padding: 7px 9px;
-    border: 1px solid #dbe3ef;
-    border-radius: 8px;
-    background: #fff;
-    color: #1e293b;
+  min-height: 36px;
+  min-width: 110px;
+  padding: 7px 9px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1e293b;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+  box-sizing: border-box;
 }
 
+.timeline-controls input:focus,
+.timeline-controls select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* =========================================================
+   TIMELINE SCROLL
+========================================================= */
+
 .timeline-scroll-wrapper {
-    width: 100%;
-    overflow-x: auto;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid #e5eaf2;
+  border-radius: 12px;
 }
 
 .work-timeline {
-    width: 100%;
-    min-width: 900px;
+  width: 100%;
+  min-width: 900px;
+  background: #ffffff;
 }
 
+/* =========================================================
+   TIMELINE ROWS
+========================================================= */
+
 .timeline-row {
-    display: flex;
-    min-height: 76px;
-    border-top: 1px solid #edf1f7;
+  display: flex;
+  min-height: 76px;
+  border-top: 1px solid #edf1f7;
 }
 
 .timeline-heading-row {
-    min-height: 48px;
-    background: #f8fafc;
-    border-top: 0;
+  min-height: 48px;
+  background: #f8fafc;
+  border-top: 0;
 }
 
+/* =========================================================
+   EMPLOYEE COLUMN
+========================================================= */
+
 .timeline-employee-column {
-    width: 220px;
-    min-width: 220px;
-    padding: 12px 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border-right: 1px solid #e5eaf2;
+  width: 220px;
+  min-width: 220px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-right: 1px solid #e5eaf2;
+  box-sizing: border-box;
+}
+
+.timeline-heading-row .timeline-employee-column {
+  justify-content: flex-start;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
 }
 
 .timeline-employee {
-    background: #fff;
+  background: #ffffff;
 }
 
 .timeline-employee strong {
-    display: block;
-    color: #1e293b;
-    font-size: 13px;
+  display: block;
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .timeline-employee span {
-    display: block;
-    margin-top: 3px;
-    color: #94a3b8;
-    font-size: 11px;
+  display: block;
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 11px;
+  text-transform: capitalize;
 }
 
+/* =========================================================
+   TIMELINE HOURS
+========================================================= */
+
 .timeline-hours {
-    flex: 1;
-    display: flex;
-    position: relative;
+  flex: 1;
+  display: flex;
+  position: relative;
+  min-width: 0;
 }
 
 .timeline-hour {
-    flex: 1;
-    min-width: 0;
-    padding: 15px 6px;
-    text-align: center;
-    color: #64748b;
-    font-size: 11px;
-    font-weight: 700;
-    border-right: 1px solid #e5eaf2;
+  flex: 1;
+  min-width: 0;
+  padding: 15px 6px;
+  text-align: center;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  border-right: 1px solid #e5eaf2;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.timeline-hour:last-child {
+  border-right: none;
 }
 
 .timeline-work-area {
-    min-height: 76px;
-    overflow: hidden;
-    background: #fff;
+  min-height: 76px;
+  overflow: hidden;
+  background: #ffffff;
+  position: relative;
 }
+
+/* =========================================================
+   TIMELINE CELLS
+========================================================= */
 
 .timeline-cell {
-    flex: 1;
-    border-right: 1px dashed #e5eaf2;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border-right: 1px dashed #e5eaf2;
+  box-sizing: border-box;
 }
 
+.timeline-cell:last-child {
+  border-right: none;
+}
+
+/* =========================================================
+   WORK TASK BLOCK
+========================================================= */
+
 .timeline-task-block {
-    position: absolute;
-    top: 10px;
-    bottom: 10px;
-    z-index: 2;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start;
-    gap: 3px;
-    padding: 8px 10px;
-    border: 1px solid transparent;
-    border-radius: 8px;
-    text-align: left;
-    cursor: pointer;
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  z-index: 2;
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3px;
+
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.timeline-task-block:hover {
+  z-index: 5;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.12);
 }
 
 .timeline-task-block strong,
 .timeline-task-block span {
-    overflow: hidden;
-    width: 100%;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .timeline-task-block strong {
-    font-size: 12px;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .timeline-task-block span {
-    font-size: 10px;
-    opacity: .8;
+  font-size: 10px;
+  opacity: 0.8;
 }
 
+/* =========================================================
+   PRIORITY COLORS
+========================================================= */
+
 .timeline-task-block.low {
-    background: #ecfdf5;
-    border-color: #a7f3d0;
-    color: #047857;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #047857;
 }
 
 .timeline-task-block.medium {
-    background: #eff6ff;
-    border-color: #bfdbfe;
-    color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
 }
 
 .timeline-task-block.high {
-    background: #fff7ed;
-    border-color: #fed7aa;
-    color: #c2410c;
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #c2410c;
 }
 
 .timeline-task-block.urgent {
-    background: #fef2f2;
-    border-color: #fecaca;
-    color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+/* =========================================================
+   MESSAGES
+========================================================= */
+
+.form-message {
+  margin-bottom: 20px;
+  padding: 13px 15px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 550;
+  box-sizing: border-box;
+}
+
+.error-message {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.success-message {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.empty-work {
+  padding: 48px 20px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.empty-work h3 {
+  margin: 0 0 8px;
+  color: #374151;
+  font-size: 18px;
+}
+
+.empty-work p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* =========================================================
+   LOADING
+========================================================= */
+
+.my-work-loading {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+.my-work-loading p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.loading-spinner {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 13px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: work-spin 0.8s linear infinite;
+}
+
+@keyframes work-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================================
+   SCROLLBAR
+========================================================= */
+
+.timeline-scroll-wrapper::-webkit-scrollbar {
+  height: 8px;
+}
+
+.timeline-scroll-wrapper::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+.timeline-scroll-wrapper::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.timeline-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* =========================================================
+   RESPONSIVE DESIGN
+========================================================= */
+
+@media (max-width: 1024px) {
+  .work-management-page {
+    padding: 20px;
+  }
+
+  .work-section {
+    padding: 20px;
+  }
+
+  .work-timeline-header {
+    flex-direction: column;
+  }
+
+  .timeline-controls {
+    width: 100%;
+  }
 }
 
 @media (max-width: 768px) {
-    .work-timeline-header {
-        flex-direction: column;
-    }
+  .work-management-page {
+    padding: 16px;
+  }
 
-    .timeline-controls {
-        width: 100%;
-    }
+  .work-section {
+    padding: 18px;
+    border-radius: 12px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    margin-bottom: 18px;
+  }
+
+  .section-header h2 {
+    font-size: 20px;
+  }
+
+  .timeline-controls {
+    align-items: stretch;
+  }
+
+  .timeline-controls label {
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .timeline-controls input,
+  .timeline-controls select {
+    width: 100%;
+  }
+
+  .timeline-employee-column {
+    width: 180px;
+    min-width: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .work-management-page {
+    padding: 12px;
+  }
+
+  .work-section {
+    padding: 15px;
+  }
+
+  .timeline-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .timeline-controls label {
+    width: 100%;
+  }
+
+  .timeline-controls input,
+  .timeline-controls select {
+    width: 100%;
+  }
 }
