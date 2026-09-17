@@ -1,5 +1,4 @@
-
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const workLogSchema = new mongoose.Schema(
   {
@@ -54,4 +53,4 @@ const workLogSchema = new mongoose.Schema(
 
 const WorkLog = mongoose.model("WorkLog", workLogSchema);
 
-export default WorkLog;
+module.exports = WorkLog;
