@@ -1,45 +1,114 @@
 
 import { useEffect, useMemo, useState } from "react";
-import { createWorkLog, getMyWorkLogs } from "../../services/workLogService";
+import {
+  createWorkLog,
+  getMyWorkLogs,
+} from "../../services/workLogService";
 import "./MyWork.css";
+
+// ========================================
+// HELPERS
+// ========================================
 
 const getToday = () => {
   const today = new Date();
-  return today.toISOString().split("T")[0];
+
+  return `${today.getFullYear()}-${String(
+    today.getMonth() + 1
+  ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+};
+
+const formatDateInput = (date) => {
+  return `${date.getFullYear()}-${String(
+    date.getMonth() + 1
+  ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
 const calculateDuration = (startTime, endTime) => {
   if (!startTime || !endTime) return "";
 
-  const start = new Date(`1970-01-01T${startTime}`);
-  const end = new Date(`1970-01-01T${endTime}`);
+  const [startHours, startMinutes] = startTime
+    .split(":")
+    .map(Number);
 
-  const difference = end - start;
+  const [endHours, endMinutes] = endTime
+    .split(":")
+    .map(Number);
+
+  const startTotalMinutes =
+    startHours * 60 + startMinutes;
+
+  const endTotalMinutes =
+    endHours * 60 + endMinutes;
+
+  const difference =
+    endTotalMinutes - startTotalMinutes;
 
   if (difference <= 0) return "";
 
-  const totalMinutes = Math.floor(difference / (1000 * 60));
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
+  const hours = Math.floor(difference / 60);
+  const minutes = difference % 60;
 
-  if (hours > 0 && minutes > 0) {
-    return `${hours}h ${minutes}m`;
-  }
+  if (hours === 0) return `${minutes} min`;
+  if (minutes === 0) return `${hours} hr`;
 
-  if (hours > 0) {
-    return `${hours}h`;
-  }
-
-  return `${minutes}m`;
+  return `${hours} hr ${minutes} min`;
 };
 
-const formatTime = (time) => {
-  if (!time) return "-";
+const calculateDurationInHours = (
+  startTime,
+  endTime
+) => {
+  if (!startTime || !endTime) return 0;
 
-  const [hours, minutes] = time.split(":");
+  const [startHours, startMinutes] = startTime
+    .split(":")
+    .map(Number);
+
+  const [endHours, endMinutes] = endTime
+    .split(":")
+    .map(Number);
+
+  const startTotalMinutes =
+    startHours * 60 + startMinutes;
+
+  const endTotalMinutes =
+    endHours * 60 + endMinutes;
+
+  const difference =
+    endTotalMinutes - startTotalMinutes;
+
+  if (difference <= 0) return 0;
+
+  return difference / 60;
+};
+
+const formatDate = (dateValue) => {
+  if (!dateValue) return "-";
+
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateValue;
+  }
+
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatTime = (timeValue) => {
+  if (!timeValue) return "-";
+
+  const [hours, minutes] = timeValue
+    .split(":")
+    .map(Number);
+
   const date = new Date();
 
-  date.setHours(Number(hours), Number(minutes));
+  date.setHours(hours, minutes, 0, 0);
 
   return date.toLocaleTimeString("en-IN", {
     hour: "2-digit",
@@ -47,49 +116,149 @@ const formatTime = (time) => {
   });
 };
 
-const formatDate = (date) => {
-  if (!date) return "-";
+const getDurationLabel = (log) => {
+  if (typeof log.totalDuration === "number") {
+    return `${log.totalDuration} hr`;
+  }
 
-  return new Date(date).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return (
+    calculateDuration(
+      log.startTime,
+      log.endTime
+    ) || "-"
+  );
 };
 
+const getLogDate = (dateValue) => {
+  if (!dateValue) return "";
+
+  // Handles ISO date values without timezone shifting
+  return String(dateValue).substring(0, 10);
+};
+
+const getEmployeeName = (employee) => {
+  if (!employee) return "You";
+
+  if (typeof employee === "string") {
+    return employee;
+  }
+
+  return (
+    employee.fullName ||
+    employee.name ||
+    employee.email ||
+    "You"
+  );
+};
+
+const getWeekRange = () => {
+  const today = new Date();
+
+  const day = today.getDay();
+
+  // Monday = first day of week
+  const difference =
+    day === 0 ? -6 : 1 - day;
+
+  const startDate = new Date(today);
+  startDate.setDate(
+    today.getDate() + difference
+  );
+
+  const endDate = new Date(startDate);
+  endDate.setDate(
+    startDate.getDate() + 6
+  );
+
+  return {
+    startDate: formatDateInput(startDate),
+    endDate: formatDateInput(endDate),
+  };
+};
+
+const getMonthRange = () => {
+  const today = new Date();
+
+  const startDate = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    1
+  );
+
+  const endDate = new Date(
+    today.getFullYear(),
+    today.getMonth() + 1,
+    0
+  );
+
+  return {
+    startDate: formatDateInput(startDate),
+    endDate: formatDateInput(endDate),
+  };
+};
+
+const initialForm = {
+  workName: "",
+  date: getToday(),
+  startTime: "",
+  endTime: "",
+};
+
+// ========================================
+// COMPONENT
+// ========================================
+
 const MyWork = () => {
-  const [formData, setFormData] = useState({
-    workName: "",
-    date: getToday(),
-    startTime: "",
-    endTime: "",
-  });
+  const [formData, setFormData] =
+    useState(initialForm);
 
-  const [workLogs, setWorkLogs] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(getToday());
+  const [workLogs, setWorkLogs] =
+    useState([]);
 
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] =
+    useState(true);
 
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [saving, setSaving] =
+    useState(false);
 
-  const fetchMyWorkLogs = async () => {
+  const [error, setError] =
+    useState("");
+
+  const [success, setSuccess] =
+    useState("");
+
+  // History filter
+  const [historyFilter, setHistoryFilter] =
+    useState("today");
+
+  const [startDate, setStartDate] =
+    useState(getToday());
+
+  const [endDate, setEndDate] =
+    useState(getToday());
+
+  // ========================================
+  // LOAD WORK LOGS
+  // ========================================
+
+  const loadWorkLogs = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const response = await getMyWorkLogs();
+      const response =
+        await getMyWorkLogs();
 
-      const logs = Array.isArray(response)
-        ? response
-        : response?.data || response?.workLogs || [];
-
-      setWorkLogs(logs);
+      setWorkLogs(response?.logs || []);
     } catch (err) {
+      console.error(
+        "Get Work Logs Error:",
+        err
+      );
+
       setError(
-        err.response?.data?.message ||
-          "Unable to fetch your work history."
+        err?.response?.data?.message ||
+          "Unable to load your work details."
       );
     } finally {
       setLoading(false);
@@ -97,17 +266,181 @@ const MyWork = () => {
   };
 
   useEffect(() => {
-    fetchMyWorkLogs();
+    loadWorkLogs();
   }, []);
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
+  // ========================================
+  // FORM DURATION
+  // ========================================
 
-    setFormData((previous) => ({
-      ...previous,
+  const totalDuration = useMemo(() => {
+    return calculateDuration(
+      formData.startTime,
+      formData.endTime
+    );
+  }, [
+    formData.startTime,
+    formData.endTime,
+  ]);
+
+  // ========================================
+  // HISTORY FILTER
+  // ========================================
+
+  const handleHistoryFilterChange = (
+    event
+  ) => {
+    const value = event.target.value;
+
+    setHistoryFilter(value);
+
+    if (value === "today") {
+      const today = getToday();
+
+      setStartDate(today);
+      setEndDate(today);
+    }
+
+    if (value === "week") {
+      const range = getWeekRange();
+
+      setStartDate(range.startDate);
+      setEndDate(range.endDate);
+    }
+
+    if (value === "month") {
+      const range = getMonthRange();
+
+      setStartDate(range.startDate);
+      setEndDate(range.endDate);
+    }
+
+    if (value === "all") {
+      setStartDate("");
+      setEndDate("");
+    }
+  };
+
+  // ========================================
+  // FILTERED HISTORY
+  // ========================================
+
+  const filteredLogs = useMemo(() => {
+    return [...workLogs]
+      .filter((log) => {
+        const logDate = getLogDate(log.date);
+
+        if (!logDate) return false;
+
+        if (historyFilter === "all") {
+          return true;
+        }
+
+        if (!startDate && !endDate) {
+          return true;
+        }
+
+        if (
+          startDate &&
+          logDate < startDate
+        ) {
+          return false;
+        }
+
+        if (
+          endDate &&
+          logDate > endDate
+        ) {
+          return false;
+        }
+
+        return true;
+      })
+      .sort((first, second) => {
+        const firstDate =
+          getLogDate(first.date);
+
+        const secondDate =
+          getLogDate(second.date);
+
+        if (firstDate !== secondDate) {
+          return secondDate.localeCompare(
+            firstDate
+          );
+        }
+
+        return String(
+          first.startTime || ""
+        ).localeCompare(
+          String(second.startTime || "")
+        );
+      });
+  }, [
+    workLogs,
+    historyFilter,
+    startDate,
+    endDate,
+  ]);
+
+  // ========================================
+  // HISTORY SUMMARY
+  // ========================================
+
+  const totalHistoryHours = useMemo(() => {
+    return filteredLogs.reduce(
+      (total, log) => {
+        if (
+          typeof log.totalDuration ===
+          "number"
+        ) {
+          return total + log.totalDuration;
+        }
+
+        return (
+          total +
+          calculateDurationInHours(
+            log.startTime,
+            log.endTime
+          )
+        );
+      },
+      0
+    );
+  }, [filteredLogs]);
+
+  // ========================================
+  // FORM CHANGE
+  // ========================================
+
+  const handleChange = (event) => {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setFormData((current) => ({
+      ...current,
       [name]: value,
     }));
+
+    setError("");
+    setSuccess("");
   };
+
+  // ========================================
+  // RESET FORM
+  // ========================================
+
+  const resetForm = () => {
+    setFormData({
+      ...initialForm,
+      date: getToday(),
+    });
+  };
+
+  // ========================================
+  // SUBMIT WORK
+  // ========================================
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -115,91 +448,91 @@ const MyWork = () => {
     setError("");
     setSuccess("");
 
-    const { workName, date, startTime, endTime } = formData;
+    const workName =
+      formData.workName.trim();
 
-    if (!workName.trim() || !date || !startTime || !endTime) {
-      setError("Please fill in all fields.");
+    if (!workName) {
+      setError(
+        "Please enter the work name."
+      );
       return;
     }
 
-    if (endTime <= startTime) {
-      setError("End time must be later than start time.");
+    if (
+      !formData.date ||
+      !formData.startTime ||
+      !formData.endTime
+    ) {
+      setError(
+        "Please fill in all fields."
+      );
+      return;
+    }
+
+    const duration = calculateDuration(
+      formData.startTime,
+      formData.endTime
+    );
+
+    if (!duration) {
+      setError(
+        "End time must be after start time."
+      );
       return;
     }
 
     try {
-      setSubmitting(true);
+      setSaving(true);
 
       await createWorkLog({
-        workName: workName.trim(),
-        date,
-        startTime,
-        endTime,
+        workName,
+        date: formData.date,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
       });
 
-      setSuccess("Your work has been added successfully.");
+      setSuccess(
+        "Work details submitted successfully."
+      );
 
-      setFormData({
-        workName: "",
-        date: getToday(),
-        startTime: "",
-        endTime: "",
-      });
+      setHistoryFilter("custom");
+      setStartDate(formData.date);
+      setEndDate(formData.date);
 
-      setSelectedDate(date);
+      resetForm();
 
-      await fetchMyWorkLogs();
+      await loadWorkLogs();
     } catch (err) {
+      console.error(
+        "Create Work Log Error:",
+        err
+      );
+
       setError(
-        err.response?.data?.message ||
-          "Unable to submit your work."
+        err?.response?.data?.message ||
+          "Unable to submit work details."
       );
     } finally {
-      setSubmitting(false);
+      setSaving(false);
     }
   };
 
-  const filteredLogs = useMemo(() => {
-    return workLogs
-      .filter((log) => {
-        const logDate = log.date
-          ? new Date(log.date).toISOString().split("T")[0]
-          : "";
-
-        return logDate === selectedDate;
-      })
-      .sort((first, second) =>
-        (first.startTime || "").localeCompare(second.startTime || "")
-      );
-  }, [workLogs, selectedDate]);
-
-  const totalMinutes = filteredLogs.reduce((total, log) => {
-    if (!log.startTime || !log.endTime) return total;
-
-    const start = new Date(`1970-01-01T${log.startTime}`);
-    const end = new Date(`1970-01-01T${log.endTime}`);
-
-    const difference = end - start;
-
-    return difference > 0
-      ? total + Math.floor(difference / (1000 * 60))
-      : total;
-  }, 0);
-
-  const totalHours = Math.floor(totalMinutes / 60);
-  const remainingMinutes = totalMinutes % 60;
-
-  const totalDuration =
-    totalHours > 0
-      ? `${totalHours}h ${remainingMinutes > 0 ? `${remainingMinutes}m` : ""}`
-      : `${remainingMinutes}m`;
+  // ========================================
+  // RENDER
+  // ========================================
 
   return (
     <div className="my-work-page">
+      {/* HEADER */}
+
       <div className="my-work-header">
         <div>
           <h1>My Work</h1>
-          <p>Add your daily activities and view your work history.</p>
+
+          <p>
+            Add your daily work and view
+            your work history.
+          </p>
         </div>
       </div>
 
@@ -215,31 +548,43 @@ const MyWork = () => {
         </div>
       )}
 
+      {/* ADD WORK SECTION */}
+
       <section className="work-section">
         <div className="section-header">
           <div>
-            <h2>Add Daily Work</h2>
-            <p>Record the work you completed during the day.</p>
+            <h2>Add Work Details</h2>
+
+            <p>
+              Fill in your work name,
+              date and working time.
+            </p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="workName">
+              Work Name
+            </label>
+
+            <input
+              id="workName"
+              name="workName"
+              type="text"
+              placeholder="e.g. React training, client call"
+              value={formData.workName}
+              onChange={handleChange}
+              maxLength={200}
+              required
+            />
+          </div>
+
           <div className="form-grid">
             <div className="form-group">
-              <label htmlFor="workName">Work Activity</label>
-
-              <input
-                id="workName"
-                name="workName"
-                type="text"
-                placeholder="e.g. Training, Follow-up, Calling"
-                value={formData.workName}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="date">Date</label>
+              <label htmlFor="date">
+                Date
+              </label>
 
               <input
                 id="date"
@@ -247,11 +592,14 @@ const MyWork = () => {
                 type="date"
                 value={formData.date}
                 onChange={handleChange}
+                required
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="startTime">Start Time</label>
+              <label htmlFor="startTime">
+                Starting Time
+              </label>
 
               <input
                 id="startTime"
@@ -259,11 +607,14 @@ const MyWork = () => {
                 type="time"
                 value={formData.startTime}
                 onChange={handleChange}
+                required
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="endTime">End Time</label>
+              <label htmlFor="endTime">
+                Ending Time
+              </label>
 
               <input
                 id="endTime"
@@ -271,118 +622,275 @@ const MyWork = () => {
                 type="time"
                 value={formData.endTime}
                 onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="totalDuration">
+                Total Duration
+              </label>
+
+              <input
+                id="totalDuration"
+                type="text"
+                value={
+                  totalDuration ||
+                  "Calculated automatically"
+                }
+                readOnly
               />
             </div>
           </div>
 
-          {formData.startTime && formData.endTime && (
-            <p>
-              <strong>Duration: </strong>
-              {calculateDuration(
-                formData.startTime,
-                formData.endTime
-              ) || "Invalid time range"}
-            </p>
-          )}
-
           <div className="modal-actions">
+            <button
+              type="button"
+              className="cancel-btn"
+              onClick={resetForm}
+              disabled={saving}
+            >
+              Clear
+            </button>
+
             <button
               type="submit"
               className="primary-btn"
-              disabled={submitting}
+              disabled={saving}
             >
-              {submitting ? "Submitting..." : "Add Work"}
+              {saving
+                ? "Submitting..."
+                : "Submit Work"}
             </button>
           </div>
         </form>
       </section>
 
+      {/* HISTORY SECTION */}
+
       <section className="work-section">
         <div className="section-header">
           <div>
             <h2>My Work History</h2>
-            <p>View your submitted work for a selected date.</p>
+
+            <p>
+              View your daily, weekly and
+              monthly work details.
+            </p>
           </div>
         </div>
 
-        <div className="work-filters">
+        {/* FILTERS */}
+
+        <div className="history-filters">
           <div className="form-group">
-            <label htmlFor="selectedDate">Select Date</label>
+            <label htmlFor="historyFilter">
+              History Filter
+            </label>
 
-            <input
-              id="selectedDate"
-              type="date"
-              value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value)}
-            />
+            <select
+              id="historyFilter"
+              value={historyFilter}
+              onChange={
+                handleHistoryFilterChange
+              }
+            >
+              <option value="today">
+                Today
+              </option>
+
+              <option value="week">
+                Current Week
+              </option>
+
+              <option value="month">
+                Current Month
+              </option>
+
+              <option value="custom">
+                Custom Date Range
+              </option>
+
+              <option value="all">
+                All History
+              </option>
+            </select>
           </div>
+
+          {(historyFilter === "custom" ||
+            historyFilter === "all") && (
+            <>
+              <div className="form-group">
+                <label htmlFor="startDate">
+                  Start Date
+                </label>
+
+                <input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(event) => {
+                    setStartDate(
+                      event.target.value
+                    );
+                    setHistoryFilter(
+                      "custom"
+                    );
+                  }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="endDate">
+                  End Date
+                </label>
+
+                <input
+                  id="endDate"
+                  type="date"
+                  value={endDate}
+                  min={startDate}
+                  onChange={(event) => {
+                    setEndDate(
+                      event.target.value
+                    );
+                    setHistoryFilter(
+                      "custom"
+                    );
+                  }}
+                />
+              </div>
+            </>
+          )}
+
+          {historyFilter !== "all" &&
+            historyFilter !== "custom" && (
+              <div className="history-date-range">
+                <span>Selected Range</span>
+
+                <strong>
+                  {startDate || "-"} to{" "}
+                  {endDate || "-"}
+                </strong>
+              </div>
+            )}
         </div>
+
+        {/* SUMMARY */}
 
         <div className="work-summary-grid">
           <div className="work-summary-card">
-            <div className="summary-icon">📋</div>
+            <div className="summary-icon">
+              📝
+            </div>
 
             <div>
-              <span>Total Activities</span>
-              <strong>{filteredLogs.length}</strong>
+              <span>Total Work Entries</span>
+
+              <strong>
+                {filteredLogs.length}
+              </strong>
             </div>
           </div>
 
           <div className="work-summary-card">
-            <div className="summary-icon">⏱️</div>
+            <div className="summary-icon">
+              ⏱️
+            </div>
 
             <div>
-              <span>Total Duration</span>
-              <strong>{totalDuration}</strong>
+              <span>Total Hours</span>
+
+              <strong>
+                {totalHistoryHours.toFixed(2)}
+              </strong>
             </div>
           </div>
         </div>
 
+        {/* TABLE */}
+
         {loading ? (
           <div className="my-work-loading">
-            <div className="loading-spinner"></div>
-            <p>Loading your work history...</p>
+            <div className="loading-spinner" />
+
+            <p>
+              Loading work history...
+            </p>
           </div>
         ) : filteredLogs.length === 0 ? (
           <div className="empty-work">
-            <h3>No Work Found</h3>
-            <p>You have not added any work for this date.</p>
+            <h3>
+              No work history found
+            </h3>
+
+            <p>
+              No work entries are available
+              for the selected period.
+            </p>
           </div>
         ) : (
-          <div className="work-log-list">
-            {filteredLogs.map((log) => (
-              <div
-                className="work-log-card"
-                key={log._id || log.id}
-              >
-                <div className="work-log-header">
-                  <div>
-                    <h3>{log.workName || log.taskName}</h3>
+          <div className="work-table-wrapper">
+            <table className="work-history-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Date</th>
+                  <th>Work Name</th>
+                  <th>Starting Time</th>
+                  <th>Ending Time</th>
+                  <th>Total Duration</th>
+                </tr>
+              </thead>
 
-                    <span>{formatDate(log.date)}</span>
-                  </div>
+              <tbody>
+                {filteredLogs.map(
+                  (log, index) => (
+                    <tr
+                      key={
+                        log._id ||
+                        `${log.date}-${index}`
+                      }
+                    >
+                      <td>
+                        {index + 1}
+                      </td>
 
-                  <strong>
-                    {calculateDuration(
-                      log.startTime,
-                      log.endTime
-                    ) || "-"}
-                  </strong>
-                </div>
+                      <td>
+                        {formatDate(
+                          log.date
+                        )}
+                      </td>
 
-                <div className="work-log-details">
-                  <div>
-                    <span>Start Time</span>
-                    <p>{formatTime(log.startTime)}</p>
-                  </div>
+                      <td className="work-name-cell">
+                        {log.workName ||
+                          "Work Entry"}
+                      </td>
 
-                  <div>
-                    <span>End Time</span>
-                    <p>{formatTime(log.endTime)}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
+                      <td>
+                        {formatTime(
+                          log.startTime
+                        )}
+                      </td>
+
+                      <td>
+                        {formatTime(
+                          log.endTime
+                        )}
+                      </td>
+
+                      <td>
+                        <span className="duration-badge">
+                          {getDurationLabel(
+                            log
+                          )}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
