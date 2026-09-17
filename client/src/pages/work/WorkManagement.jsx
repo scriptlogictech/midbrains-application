@@ -14,8 +14,7 @@ import {
   getAllWorkLogs,
 } from "../../services/workLogService";
 
-import "./WorkManagement.css";
-import "./WorkTimeline.css";
+import "./WorkManagement.css";;
 
 
 const initialForm = {
