@@ -43,7 +43,12 @@ const getEmployeeRole = (log) => {
 };
 
 const getWorkName = (log) => {
-  return log.workName || log.taskName || log.description || "Work";
+  return (
+    log.workName ||
+    log.taskName ||
+    log.description ||
+    "Work"
+  );
 };
 
 const timeToMinutes = (time) => {
@@ -85,6 +90,7 @@ const WorkManagement = () => {
   const [workLogs, setWorkLogs] = useState([]);
   const [selectedDate, setSelectedDate] = useState(getToday());
 
+  // Timeline: 10 AM to 6 PM
   const [startHour, setStartHour] = useState(10);
   const [endHour, setEndHour] = useState(18);
 
@@ -122,10 +128,22 @@ const WorkManagement = () => {
     fetchAllWorkLogs();
   }, [selectedDate]);
 
+  /*
+    Include the ending hour in the timeline.
+
+    Example:
+    Start: 10 AM
+    End: 6 PM
+
+    Displayed columns:
+    10 AM, 11 AM, 12 PM, 1 PM, 2 PM,
+    3 PM, 4 PM, 5 PM, 6 PM
+  */
+
   const hours = useMemo(() => {
     const result = [];
 
-    for (let hour = startHour; hour < endHour; hour += 1) {
+    for (let hour = startHour; hour <= endHour; hour += 1) {
       result.push(hour);
     }
 
@@ -161,8 +179,16 @@ const WorkManagement = () => {
   }, [workLogs]);
 
   const getTaskPosition = (log) => {
+    /*
+      The ending hour is included as a complete timeline column.
+
+      For example:
+      10 AM to 6 PM = timeline from 10 AM to 7 PM.
+    */
+
     const timelineStart = startHour * 60;
-    const timelineEnd = endHour * 60;
+    const timelineEnd = (endHour + 1) * 60;
+
     const timelineDuration = timelineEnd - timelineStart;
 
     const workStart = timeToMinutes(log.startTime);
@@ -198,12 +224,31 @@ const WorkManagement = () => {
     });
   };
 
+  const handleStartHourChange = (event) => {
+    const newStartHour = Number(event.target.value);
+
+    setStartHour(newStartHour);
+
+    if (newStartHour >= endHour) {
+      setEndHour(newStartHour + 1);
+    }
+  };
+
+  const handleEndHourChange = (event) => {
+    const newEndHour = Number(event.target.value);
+
+    if (newEndHour > startHour) {
+      setEndHour(newEndHour);
+    }
+  };
+
   return (
     <div className="work-management-page">
       <div className="work-section work-timeline-section">
         <div className="section-header work-timeline-header">
           <div>
             <h2>Employee Work Timeline</h2>
+
             <p>
               View the daily work activities of all employees
               and interns.
@@ -213,6 +258,7 @@ const WorkManagement = () => {
           <div className="timeline-controls">
             <label>
               Date
+
               <input
                 type="date"
                 value={selectedDate}
@@ -224,41 +270,41 @@ const WorkManagement = () => {
 
             <label>
               Start Hour
+
               <select
                 value={startHour}
-                onChange={(event) =>
-                  setStartHour(Number(event.target.value))
-                }
+                onChange={handleStartHourChange}
               >
-                {Array.from({ length: 12 }, (_, index) => index + 6).map(
-                  (hour) => (
-                    <option key={hour} value={hour}>
-                      {formatHour(hour)}
-                    </option>
-                  )
-                )}
+                {Array.from(
+                  { length: 12 },
+                  (_, index) => index + 6
+                ).map((hour) => (
+                  <option key={hour} value={hour}>
+                    {formatHour(hour)}
+                  </option>
+                ))}
               </select>
             </label>
 
             <label>
               End Hour
+
               <select
                 value={endHour}
-                onChange={(event) =>
-                  setEndHour(Number(event.target.value))
-                }
+                onChange={handleEndHourChange}
               >
-                {Array.from({ length: 12 }, (_, index) => index + 12).map(
-                  (hour) => (
-                    <option
-                      key={hour}
-                      value={hour}
-                      disabled={hour <= startHour}
-                    >
-                      {formatHour(hour)}
-                    </option>
-                  )
-                )}
+                {Array.from(
+                  { length: 13 },
+                  (_, index) => index + 7
+                ).map((hour) => (
+                  <option
+                    key={hour}
+                    value={hour}
+                    disabled={hour <= startHour}
+                  >
+                    {formatHour(hour)}
+                  </option>
+                ))}
               </select>
             </label>
           </div>
@@ -273,11 +319,13 @@ const WorkManagement = () => {
         {loading ? (
           <div className="my-work-loading">
             <div className="loading-spinner"></div>
+
             <p>Loading employee work...</p>
           </div>
         ) : employees.length === 0 ? (
           <div className="empty-work">
             <h3>No Work Found</h3>
+
             <p>
               No employee or intern has added work for this date.
             </p>
@@ -292,7 +340,10 @@ const WorkManagement = () => {
 
                 <div className="timeline-hours">
                   {hours.map((hour) => (
-                    <div className="timeline-hour" key={hour}>
+                    <div
+                      className="timeline-hour"
+                      key={hour}
+                    >
                       {formatHour(hour)}
                     </div>
                   ))}
@@ -300,10 +351,14 @@ const WorkManagement = () => {
               </div>
 
               {employees.map((employee) => (
-                <div className="timeline-row" key={employee.id}>
+                <div
+                  className="timeline-row"
+                  key={employee.id}
+                >
                   <div className="timeline-employee-column timeline-employee">
                     <div>
                       <strong>{employee.name}</strong>
+
                       <span>{employee.role}</span>
                     </div>
                   </div>
@@ -322,6 +377,7 @@ const WorkManagement = () => {
                       if (!position) return null;
 
                       const workName = getWorkName(log);
+
                       const priorityClass =
                         getPriorityClass(workName);
 
