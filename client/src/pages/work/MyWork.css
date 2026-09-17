@@ -1,19 +1,20 @@
 
-/* =========================================================
+/* =====================================================
    MY WORK PAGE
-========================================================= */
+===================================================== */
 
 .my-work-page {
+  width: 100%;
   min-height: 100vh;
-  padding: 28px;
-  background: #f7f8fc;
-  color: #111827;
+  padding: 24px;
+  background: #f5f7fb;
+  color: #1f2937;
   box-sizing: border-box;
 }
 
-/* =========================================================
-   HEADER
-========================================================= */
+/* =====================================================
+   PAGE HEADER
+===================================================== */
 
 .my-work-header {
   display: flex;
@@ -25,73 +26,74 @@
 
 .my-work-header h1 {
   margin: 0;
+  color: #111827;
   font-size: 30px;
-  font-weight: 750;
-  letter-spacing: -0.6px;
+  font-weight: 700;
 }
 
 .my-work-header p {
   margin: 8px 0 0;
   color: #6b7280;
-  font-size: 14px;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
-/* =========================================================
-   SECTION
-========================================================= */
+/* =====================================================
+   SECTIONS
+===================================================== */
 
 .work-section {
+  width: 100%;
   margin-bottom: 24px;
   padding: 24px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 16px;
-  box-shadow: 0 6px 22px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
   box-sizing: border-box;
 }
 
 .section-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 
 .section-header h2 {
   margin: 0;
+  color: #111827;
   font-size: 21px;
   font-weight: 700;
-  letter-spacing: -0.3px;
 }
 
 .section-header p {
   margin: 7px 0 0;
   color: #6b7280;
   font-size: 14px;
+  line-height: 1.5;
 }
 
-/* =========================================================
+/* =====================================================
    FORM
-========================================================= */
+===================================================== */
 
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+.work-section form {
+  width: 100%;
 }
 
 .form-group {
-  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin-bottom: 18px;
 }
 
 .form-group label {
-  display: block;
-  margin-bottom: 8px;
   color: #374151;
-  font-size: 13px;
-  font-weight: 650;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .form-group input,
@@ -101,23 +103,17 @@
   min-height: 44px;
   padding: 11px 13px;
   border: 1px solid #d1d5db;
-  border-radius: 9px;
+  border-radius: 8px;
   outline: none;
   background: #ffffff;
   color: #111827;
-  font: inherit;
+  font-family: inherit;
   font-size: 14px;
   box-sizing: border-box;
   transition:
     border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
 
 .form-group input::placeholder,
@@ -125,25 +121,64 @@
   color: #9ca3af;
 }
 
-/* =========================================================
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.form-group input:read-only {
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.form-group input:disabled,
+.form-group select:disabled,
+.form-group textarea:disabled {
+  background: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* =====================================================
+   FORM GRID
+===================================================== */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 18px;
+}
+
+.form-grid .form-group {
+  min-width: 0;
+}
+
+/* =====================================================
    BUTTONS
-========================================================= */
+===================================================== */
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
 
 .primary-btn,
 .cancel-btn {
   min-height: 42px;
-  padding: 10px 18px;
+  padding: 10px 20px;
   border: none;
-  border-radius: 9px;
+  border-radius: 8px;
+  font-family: inherit;
   font-size: 14px;
-  font-weight: 650;
+  font-weight: 600;
   cursor: pointer;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-
   transition:
     background 0.2s ease,
     transform 0.2s ease,
@@ -151,19 +186,20 @@
 }
 
 .primary-btn {
-  background: #2563eb;
+  background: #4f46e5;
   color: #ffffff;
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.18);
 }
 
 .primary-btn:hover {
-  background: #1d4ed8;
+  background: #4338ca;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
   transform: translateY(-1px);
 }
 
 .cancel-btn {
   background: #f3f4f6;
   color: #374151;
+  border: 1px solid #e5e7eb;
 }
 
 .cancel-btn:hover {
@@ -175,63 +211,74 @@
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 10px;
-  margin-top: 8px;
-}
-
-/* =========================================================
-   MESSAGES
-========================================================= */
+/* =====================================================
+   ALERT MESSAGES
+===================================================== */
 
 .form-message {
+  width: 100%;
   margin-bottom: 20px;
-  padding: 13px 15px;
-  border-radius: 9px;
+  padding: 13px 16px;
+  border-radius: 8px;
   font-size: 14px;
-  font-weight: 550;
+  line-height: 1.5;
+  box-sizing: border-box;
 }
 
 .error-message {
-  border: 1px solid #fecaca;
   background: #fef2f2;
+  border: 1px solid #fecaca;
   color: #b91c1c;
 }
 
 .success-message {
-  border: 1px solid #bbf7d0;
   background: #f0fdf4;
+  border: 1px solid #bbf7d0;
   color: #15803d;
 }
 
-/* =========================================================
-   FILTERS
-========================================================= */
+/* =====================================================
+   HISTORY FILTERS
+===================================================== */
 
 .work-filters {
   display: flex;
   align-items: flex-end;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 16px;
   margin-bottom: 22px;
+  padding: 18px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-sizing: border-box;
 }
 
 .work-filters .form-group {
-  width: 240px;
+  flex: 1;
+  min-width: 180px;
   margin-bottom: 0;
 }
 
-/* =========================================================
+.work-filters .form-group label {
+  font-size: 13px;
+}
+
+.work-filters input,
+.work-filters select {
+  min-height: 42px;
+}
+
+/* =====================================================
    SUMMARY CARDS
-========================================================= */
+===================================================== */
 
 .work-summary-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -240,356 +287,93 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  min-width: 0;
   padding: 18px;
+  background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  background: #ffffff;
+  box-sizing: border-box;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.work-summary-card:hover {
+  box-shadow: 0 5px 16px rgba(15, 23, 42, 0.07);
+  transform: translateY(-2px);
 }
 
 .summary-icon {
-  width: 46px;
-  height: 46px;
-  flex-shrink: 0;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
-  border-radius: 11px;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 10px;
   background: #eef2ff;
-  font-size: 21px;
+  font-size: 22px;
 }
 
 .work-summary-card span {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   color: #6b7280;
   font-size: 13px;
+  line-height: 1.4;
 }
 
 .work-summary-card strong {
   display: block;
   color: #111827;
-  font-size: 24px;
-  font-weight: 750;
-}
-
-/* =========================================================
-   WORK LOGS
-========================================================= */
-
-.work-log-list {
-  display: grid;
-  gap: 14px;
-}
-
-.work-log-card {
-  padding: 19px;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  background: #ffffff;
-
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.work-log-card:hover {
-  border-color: #c7d2fe;
-  box-shadow: 0 5px 16px rgba(15, 23, 42, 0.05);
-}
-
-.work-log-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.work-log-header h3 {
-  margin: 0 0 6px;
-  color: #111827;
-  font-size: 16px;
+  font-size: 23px;
   font-weight: 700;
-  overflow-wrap: anywhere;
 }
 
-.work-log-header span {
-  color: #6b7280;
-  font-size: 13px;
-}
+/* =====================================================
+   DAILY HISTORY TABLE
+===================================================== */
 
-.work-log-header strong {
-  flex-shrink: 0;
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: #eff6ff;
-  color: #1d4ed8;
-  font-size: 14px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.work-log-details {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 16px;
-}
-
-.work-log-details > div {
-  min-width: 0;
-  padding: 12px;
-  border-radius: 9px;
-  background: #f8fafc;
-}
-
-.work-log-details span {
-  display: block;
-  margin-bottom: 5px;
-  color: #6b7280;
-  font-size: 12px;
-  font-weight: 550;
-}
-
-.work-log-details p {
-  margin: 0;
-  color: #374151;
-  font-size: 14px;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-/* =========================================================
-   EMPTY STATE AND LOADING
-========================================================= */
-
-.empty-work {
-  padding: 48px 20px;
-  text-align: center;
-  color: #6b7280;
-}
-
-.empty-work h3 {
-  margin: 0 0 8px;
-  color: #374151;
-  font-size: 18px;
-}
-
-.empty-work p {
-  margin: 0;
-  font-size: 14px;
-}
-
-.my-work-loading {
-  min-height: 220px;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-
-  color: #6b7280;
-}
-
-.my-work-loading p {
-  margin: 0;
-  font-size: 14px;
-}
-
-.loading-spinner {
-  width: 34px;
-  height: 34px;
-  margin-bottom: 13px;
-
-  border: 3px solid #e5e7eb;
-  border-top-color: #2563eb;
-  border-radius: 50%;
-
-  animation: my-work-spin 0.8s linear infinite;
-}
-
-@keyframes my-work-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* =========================================================
-   RESPONSIVE DESIGN
-========================================================= */
-
-@media (max-width: 768px) {
-  .my-work-page {
-    padding: 18px;
-  }
-
-  .my-work-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .my-work-header h1 {
-    font-size: 26px;
-  }
-
-  .work-section {
-    padding: 18px;
-    border-radius: 12px;
-  }
-
-  .section-header {
-    flex-direction: column;
-    margin-bottom: 18px;
-  }
-
-  .form-grid,
-  .work-log-details {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-
-  .work-summary-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .work-filters .form-group {
-    width: 100%;
-  }
-
-  .modal-actions {
-    flex-direction: column-reverse;
-  }
-
-  .modal-actions .primary-btn,
-  .modal-actions .cancel-btn {
-    width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .my-work-page {
-    padding: 12px;
-  }
-
-  .work-section {
-    padding: 15px;
-  }
-
-  .work-log-header {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .work-log-header strong {
-    align-self: flex-start;
-  }
-
-  .work-summary-card {
-    padding: 15px;
-  }
-}
-
-
-
-
-/* ========================================
-   HISTORY FILTERS
-======================================== */
-
-.history-filters {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.history-filters .form-group {
-  min-width: 180px;
-  margin-bottom: 0;
-}
-
-.history-filters select,
-.history-filters input {
+.work-history-table-wrapper {
   width: 100%;
-  padding: 11px 12px;
-  border: 1px solid #d9dee8;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #1f2937;
-  font-size: 14px;
-  outline: none;
-}
-
-.history-filters select:focus,
-.history-filters input:focus {
-  border-color: #6366f1;
-}
-
-.history-date-range {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: #f3f4f6;
-}
-
-.history-date-range span {
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.history-date-range strong {
-  color: #111827;
-  font-size: 13px;
-}
-
-/* ========================================
-   TABLE WRAPPER
-======================================== */
-
-.work-table-wrapper {
-  width: 100%;
+  margin-top: 20px;
   overflow-x: auto;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   background: #ffffff;
+  -webkit-overflow-scrolling: touch;
 }
-
-/* ========================================
-   WORK HISTORY TABLE
-======================================== */
 
 .work-history-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 850px;
   border-collapse: collapse;
-  text-align: left;
+  background: #ffffff;
 }
 
 .work-history-table thead {
   background: #f8fafc;
 }
 
-.work-history-table th {
+.work-history-table th,
+.work-history-table td {
   padding: 15px 16px;
+  text-align: left;
+  vertical-align: top;
   border-bottom: 1px solid #e5e7eb;
-  color: #475569;
+}
+
+.work-history-table th {
+  color: #374151;
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
 }
 
 .work-history-table td {
-  padding: 15px 16px;
-  border-bottom: 1px solid #eef0f4;
-  color: #374151;
+  color: #4b5563;
   font-size: 14px;
-  vertical-align: middle;
+  line-height: 1.6;
 }
 
 .work-history-table tbody tr {
@@ -604,48 +388,339 @@
   border-bottom: none;
 }
 
-.work-name-cell {
-  max-width: 300px;
-  color: #111827 !important;
+.work-history-table td:first-child {
+  width: 45px;
+  color: #6b7280;
   font-weight: 600;
 }
 
-.duration-badge {
-  display: inline-flex;
+.work-history-table td strong {
+  color: #111827;
+  font-weight: 600;
+}
+
+/* =====================================================
+   DAILY WORK LIST
+===================================================== */
+
+.daily-work-list {
+  max-width: 360px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.daily-work-list li {
+  margin-bottom: 7px;
+  color: #374151;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.daily-work-list li:last-child {
+  margin-bottom: 0;
+}
+
+/* =====================================================
+   LOADING STATE
+===================================================== */
+
+.my-work-loading {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  padding: 6px 10px;
+  justify-content: center;
+  min-height: 220px;
+  padding: 30px;
+  color: #6b7280;
+  text-align: center;
+}
+
+.my-work-loading p {
+  margin: 14px 0 0;
+  font-size: 14px;
+}
+
+.loading-spinner {
+  width: 34px;
+  height: 34px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  animation: my-work-spin 0.8s linear infinite;
+}
+
+@keyframes my-work-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =====================================================
+   EMPTY STATE
+===================================================== */
+
+.empty-work {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 30px 20px;
+  border: 1px dashed #d1d5db;
+  border-radius: 12px;
+  background: #f9fafb;
+  text-align: center;
+}
+
+.empty-work h3 {
+  margin: 0 0 8px;
+  color: #374151;
+  font-size: 18px;
+}
+
+.empty-work p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* =====================================================
+   OLD WORK LOG CARD SUPPORT
+===================================================== */
+
+.work-log-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.work-log-card {
+  padding: 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.work-log-card:hover {
+  box-shadow: 0 5px 16px rgba(15, 23, 42, 0.07);
+  transform: translateY(-2px);
+}
+
+.work-log-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.work-log-header h3 {
+  margin: 0 0 5px;
+  color: #111827;
+  font-size: 16px;
+}
+
+.work-log-header span {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.work-log-header strong {
+  flex-shrink: 0;
+  padding: 5px 9px;
   border-radius: 6px;
   background: #eef2ff;
-  color: #4f46e5;
+  color: #4338ca;
   font-size: 12px;
-  font-weight: 700;
   white-space: nowrap;
 }
 
-/* ========================================
-   RESPONSIVE
-======================================== */
+.work-log-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.work-log-details span {
+  display: block;
+  margin-bottom: 5px;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.work-log-details p {
+  margin: 0;
+  color: #374151;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+/* =====================================================
+   RESPONSIVE DESIGN - TABLET
+===================================================== */
+
+@media (max-width: 992px) {
+  .my-work-page {
+    padding: 20px;
+  }
+
+  .work-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .work-log-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =====================================================
+   RESPONSIVE DESIGN - MOBILE
+===================================================== */
 
 @media (max-width: 768px) {
-  .history-filters {
+  .my-work-page {
+    padding: 15px;
+  }
+
+  .my-work-header {
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+
+  .my-work-header h1 {
+    font-size: 25px;
+  }
+
+  .my-work-header p {
+    font-size: 13px;
+  }
+
+  .work-section {
+    padding: 18px;
+    border-radius: 12px;
+  }
+
+  .section-header {
+    margin-bottom: 20px;
+  }
+
+  .section-header h2 {
+    font-size: 19px;
+  }
+
+  .section-header p {
+    font-size: 13px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .work-filters {
     flex-direction: column;
     align-items: stretch;
+    gap: 0;
+    padding: 15px;
   }
 
-  .history-filters .form-group {
+  .work-filters .form-group {
+    width: 100%;
+    min-width: 0;
+    margin-bottom: 16px;
+  }
+
+  .work-filters .form-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .work-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .work-summary-card {
+    padding: 15px;
+  }
+
+  .modal-actions {
+    justify-content: stretch;
+  }
+
+  .modal-actions button {
+    flex: 1;
+  }
+
+  .work-history-table {
+    min-width: 800px;
+  }
+
+  .work-log-details {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =====================================================
+   SMALL MOBILE DEVICES
+===================================================== */
+
+@media (max-width: 480px) {
+  .my-work-page {
+    padding: 10px;
+  }
+
+  .work-section {
+    padding: 14px;
+  }
+
+  .my-work-header h1 {
+    font-size: 23px;
+  }
+
+  .section-header h2 {
+    font-size: 18px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    min-height: 42px;
+    font-size: 13px;
+  }
+
+  .primary-btn,
+  .cancel-btn {
+    width: 100%;
+    padding: 11px 15px;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
     width: 100%;
   }
 
-  .history-date-range {
+  .modal-actions button {
     width: 100%;
   }
 
-  .work-table-wrapper {
-    border-radius: 8px;
+  .work-log-header {
+    flex-direction: column;
   }
 
-  .work-history-table th,
-  .work-history-table td {
-    padding: 12px;
+  .work-log-header strong {
+    align-self: flex-start;
+  }
+
+  .work-summary-card strong {
+    font-size: 21px;
   }
 }
