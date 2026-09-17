@@ -1,4 +1,5 @@
 
+const mongoose = require("mongoose");
 const WorkLog = require("../models/WorkLog");
 
 // ============================================================
@@ -22,8 +23,10 @@ const getUserCompanyId = (req) => {
 // ============================================================
 
 const isValidTime = (time) => {
-  return typeof time === "string" &&
-    /^([01]\d|2[0-3]):([0-5]\d)$/.test(time);
+  return (
+    typeof time === "string" &&
+    /^([01]\d|2[0-3]):([0-5]\d)$/.test(time)
+  );
 };
 
 // ============================================================
@@ -46,9 +49,18 @@ const calculateDuration = (startTime, endTime) => {
     return null;
   }
 
-  const durationMinutes = endTotalMinutes - startTotalMinutes;
+  const durationMinutes =
+    endTotalMinutes - startTotalMinutes;
 
   return Number((durationMinutes / 60).toFixed(2));
+};
+
+// ============================================================
+// HELPER: VALIDATE WORK LOG ID
+// ============================================================
+
+const isValidObjectId = (id) => {
+  return mongoose.Types.ObjectId.isValid(id);
 };
 
 // ============================================================
@@ -69,12 +81,16 @@ exports.createWorkLog = async (req, res) => {
     if (!workName || !date || !startTime || !endTime) {
       return res.status(400).json({
         success: false,
-        message: "Work name, date, start time and end time are required",
+        message:
+          "Work name, date, start time and end time are required",
       });
     }
 
     // Validate time format
-    if (!isValidTime(startTime) || !isValidTime(endTime)) {
+    if (
+      !isValidTime(startTime) ||
+      !isValidTime(endTime)
+    ) {
       return res.status(400).json({
         success: false,
         message: "Time must be in HH:mm format",
@@ -82,7 +98,10 @@ exports.createWorkLog = async (req, res) => {
     }
 
     // Calculate duration
-    const totalDuration = calculateDuration(startTime, endTime);
+    const totalDuration = calculateDuration(
+      startTime,
+      endTime
+    );
 
     if (totalDuration === null) {
       return res.status(400).json({
@@ -92,7 +111,7 @@ exports.createWorkLog = async (req, res) => {
     }
 
     // Validate date
-    const workDate = new Date(date);
+    const workDate = new Date(`${date}T00:00:00`);
 
     if (Number.isNaN(workDate.getTime())) {
       return res.status(400).json({
@@ -213,7 +232,7 @@ exports.getAllWorkLogs = async (req, res) => {
       filter.date = {};
 
       if (startDate) {
-        const start = new Date(startDate);
+        const start = new Date(`${startDate}T00:00:00`);
 
         if (Number.isNaN(start.getTime())) {
           return res.status(400).json({
@@ -223,11 +242,12 @@ exports.getAllWorkLogs = async (req, res) => {
         }
 
         start.setHours(0, 0, 0, 0);
+
         filter.date.$gte = start;
       }
 
       if (endDate) {
-        const end = new Date(endDate);
+        const end = new Date(`${endDate}T23:59:59.999`);
 
         if (Number.isNaN(end.getTime())) {
           return res.status(400).json({
@@ -237,6 +257,7 @@ exports.getAllWorkLogs = async (req, res) => {
         }
 
         end.setHours(23, 59, 59, 999);
+
         filter.date.$lte = end;
       }
     }
@@ -257,6 +278,181 @@ exports.getAllWorkLogs = async (req, res) => {
     });
   } catch (error) {
     console.error("Get All Work Logs Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// ============================================================
+// UPDATE WORK LOG
+// Employee / Intern
+// ============================================================
+
+exports.updateWorkLog = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate ID
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid work log ID",
+      });
+    }
+
+    const {
+      workName,
+      date,
+      startTime,
+      endTime,
+    } = req.body;
+
+    // Validate required fields
+    if (!workName || !date || !startTime || !endTime) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Work name, date, start time and end time are required",
+      });
+    }
+
+    // Validate time format
+    if (
+      !isValidTime(startTime) ||
+      !isValidTime(endTime)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Time must be in HH:mm format",
+      });
+    }
+
+    // Calculate duration
+    const totalDuration = calculateDuration(
+      startTime,
+      endTime
+    );
+
+    if (totalDuration === null) {
+      return res.status(400).json({
+        success: false,
+        message: "End time must be after start time",
+      });
+    }
+
+    // Validate date
+    const workDate = new Date(`${date}T00:00:00`);
+
+    if (Number.isNaN(workDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid date",
+      });
+    }
+
+    // Get company ID
+    const companyId = getUserCompanyId(req);
+
+    if (!companyId) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not assigned to a company",
+      });
+    }
+
+    // Find employee's own work log
+    const workLog = await WorkLog.findOne({
+      _id: id,
+      employee: req.user._id,
+      company: companyId,
+    });
+
+    if (!workLog) {
+      return res.status(404).json({
+        success: false,
+        message: "Work log not found or access denied",
+      });
+    }
+
+    // Update work log
+    workLog.workName = workName.trim();
+    workLog.date = workDate;
+    workLog.startTime = startTime;
+    workLog.endTime = endTime;
+    workLog.totalDuration = totalDuration;
+
+    await workLog.save();
+
+    // Populate updated work log
+    const updatedLog = await WorkLog.findById(workLog._id)
+      .populate("employee", "fullName email role")
+      .populate("company", "companyName companyCode");
+
+    return res.status(200).json({
+      success: true,
+      message: "Work log updated successfully",
+      workLog: updatedLog,
+    });
+  } catch (error) {
+    console.error("Update Work Log Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// ============================================================
+// DELETE WORK LOG
+// Employee / Intern
+// ============================================================
+
+exports.deleteWorkLog = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate ID
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid work log ID",
+      });
+    }
+
+    // Get company ID
+    const companyId = getUserCompanyId(req);
+
+    if (!companyId) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not assigned to a company",
+      });
+    }
+
+    // Delete only employee's own work log
+    const workLog = await WorkLog.findOneAndDelete({
+      _id: id,
+      employee: req.user._id,
+      company: companyId,
+    });
+
+    if (!workLog) {
+      return res.status(404).json({
+        success: false,
+        message: "Work log not found or access denied",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Work log deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete Work Log Error:", error);
 
     return res.status(500).json({
       success: false,

@@ -1,4 +1,3 @@
-
 const express = require("express");
 
 const router = express.Router();
@@ -7,6 +6,8 @@ const {
   createWorkLog,
   getMyWorkLogs,
   getAllWorkLogs,
+  updateWorkLog,
+  deleteWorkLog,
 } = require("../controllers/workLogController");
 
 const {
@@ -32,6 +33,22 @@ router.get(
   protect,
   authorizeRoles("employee", "intern"),
   getMyWorkLogs
+);
+
+// Update own work log
+router.put(
+  "/:id",
+  protect,
+  authorizeRoles("employee", "intern"),
+  updateWorkLog
+);
+
+// Delete own work log
+router.delete(
+  "/:id",
+  protect,
+  authorizeRoles("employee", "intern"),
+  deleteWorkLog
 );
 
 // ============================================================
