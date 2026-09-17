@@ -1,6 +1,5 @@
 
 import { useEffect, useMemo, useState } from "react";
-
 import {
   createWorkLog,
   getMyWorkLogs,
@@ -10,212 +9,43 @@ import {
 
 import "./MyWork.css";
 
-/* ================================
-   HELPER FUNCTIONS
-================================ */
-
-const getToday = () => {
-  const today = new Date();
-
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-};
-
-const getDateKey = (dateValue) => {
-  if (!dateValue) return "";
-
-  if (typeof dateValue === "string") {
-    const datePart = dateValue.substring(0, 10);
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
-      return datePart;
-    }
-  }
-
-  const date = new Date(dateValue);
-
-  if (Number.isNaN(date.getTime())) return "";
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-};
-
-const formatDate = (dateValue) => {
-  if (!dateValue) return "-";
-
-  const date = new Date(`${dateValue}T00:00:00`);
-
-  if (Number.isNaN(date.getTime())) {
-    return dateValue;
-  }
-
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-};
-
-const formatTime = (timeValue) => {
-  if (!timeValue) return "-";
-
-  const [hours, minutes] = timeValue.split(":").map(Number);
-
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
-    return timeValue;
-  }
-
-  const date = new Date();
-
-  date.setHours(hours, minutes, 0, 0);
-
-  return date.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
-const calculateDuration = (startTime, endTime) => {
-  if (!startTime || !endTime) return "";
-
-  const [startHours, startMinutes] = startTime.split(":").map(Number);
-  const [endHours, endMinutes] = endTime.split(":").map(Number);
-
-  const startTotalMinutes = startHours * 60 + startMinutes;
-  const endTotalMinutes = endHours * 60 + endMinutes;
-
-  const difference = endTotalMinutes - startTotalMinutes;
-
-  if (difference <= 0) return "";
-
-  const hours = Math.floor(difference / 60);
-  const minutes = difference % 60;
-
-  if (hours === 0) return `${minutes} min`;
-
-  if (minutes === 0) return `${hours} hr`;
-
-  return `${hours} hr ${minutes} min`;
-};
-
-const calculateDurationInHours = (startTime, endTime) => {
-  if (!startTime || !endTime) return 0;
-
-  const [startHours, startMinutes] = startTime.split(":").map(Number);
-  const [endHours, endMinutes] = endTime.split(":").map(Number);
-
-  const startTotalMinutes = startHours * 60 + startMinutes;
-  const endTotalMinutes = endHours * 60 + endMinutes;
-
-  const difference = endTotalMinutes - startTotalMinutes;
-
-  if (difference <= 0) return 0;
-
-  return Number((difference / 60).toFixed(2));
-};
-
-const getLogDurationInHours = (log) => {
-  if (typeof log.totalDuration === "number") {
-    return log.totalDuration;
-  }
-
-  if (typeof log.totalDuration === "string") {
-    const duration = Number(log.totalDuration);
-
-    if (!Number.isNaN(duration)) {
-      return duration;
-    }
-  }
-
-  return calculateDurationInHours(
-    log.startTime,
-    log.endTime
-  );
-};
-
-const getEarliestTime = (logs, field) => {
-  const times = logs
-    .map((log) => log[field])
-    .filter(Boolean)
-    .sort();
-
-  return times[0] || "";
-};
-
-const getLatestTime = (logs, field) => {
-  const times = logs
-    .map((log) => log[field])
-    .filter(Boolean)
-    .sort();
-
-  return times[times.length - 1] || "";
-};
-
-/* ================================
-   INITIAL FORM
-================================ */
-
-const initialForm = {
-  workName: "",
-  date: getToday(),
-  startTime: "",
-  endTime: "",
-};
-
-/* ================================
-   COMPONENT
-================================ */
-
 const MyWork = () => {
-  const [formData, setFormData] = useState(initialForm);
-
-  const [workLogs, setWorkLogs] = useState([]);
-
+  const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
-
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const [historyFilter, setHistoryFilter] = useState("today");
+  const [filter, setFilter] = useState("all");
+  const [customDate, setCustomDate] = useState("");
 
-  const [startDate, setStartDate] = useState(getToday());
-  const [endDate, setEndDate] = useState(getToday());
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingLog, setEditingLog] = useState(null);
 
-  const [editingWork, setEditingWork] = useState(null);
-
-  const [editForm, setEditForm] = useState({
-    workName: "",
-    date: "",
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split("T")[0],
+    work: "",
     startTime: "",
     endTime: "",
   });
 
-  /* ================================
-     LOAD WORK LOGS
-  ================================ */
+  // ============================================================
+  // FETCH LOGS
+  // ============================================================
 
-  const loadWorkLogs = async () => {
+  const fetchLogs = async () => {
     try {
       setLoading(true);
       setError("");
 
       const response = await getMyWorkLogs();
 
-      setWorkLogs(response?.logs || []);
+      setLogs(response?.logs || []);
     } catch (err) {
-      console.error("Get Work Logs Error:", err);
+      console.error("Fetch logs error:", err);
 
       setError(
-        err?.response?.data?.message ||
-          "Unable to load your work details."
+        err.response?.data?.message || "Failed to fetch work logs."
       );
     } finally {
       setLoading(false);
@@ -223,842 +53,479 @@ const MyWork = () => {
   };
 
   useEffect(() => {
-    loadWorkLogs();
+    fetchLogs();
   }, []);
 
-  /* ================================
-     FORM HANDLERS
-  ================================ */
+  // ============================================================
+  // FORM HANDLERS
+  // ============================================================
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
+  const handleChange = (e) => {
+    const { name, value } = e.target;
 
-    setFormData((current) => ({
-      ...current,
+    setFormData((previous) => ({
+      ...previous,
       [name]: value,
     }));
-
-    setError("");
-    setSuccess("");
   };
 
   const resetForm = () => {
     setFormData({
-      ...initialForm,
-      date: getToday(),
-    });
-  };
-
-  const totalDuration = useMemo(() => {
-    return calculateDuration(
-      formData.startTime,
-      formData.endTime
-    );
-  }, [formData.startTime, formData.endTime]);
-
-  /* ================================
-     CREATE WORK
-  ================================ */
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    setError("");
-    setSuccess("");
-
-    const workName = formData.workName.trim();
-
-    if (!workName) {
-      setError("Please enter the work name.");
-      return;
-    }
-
-    if (
-      !formData.date ||
-      !formData.startTime ||
-      !formData.endTime
-    ) {
-      setError("Please fill in all fields.");
-      return;
-    }
-
-    const duration = calculateDuration(
-      formData.startTime,
-      formData.endTime
-    );
-
-    if (!duration) {
-      setError("End time must be after start time.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      await createWorkLog({
-        workName,
-        date: formData.date,
-        startTime: formData.startTime,
-        endTime: formData.endTime,
-      });
-
-      setSuccess("Work details submitted successfully.");
-
-      setHistoryFilter("today");
-      setStartDate(formData.date);
-      setEndDate(formData.date);
-
-      resetForm();
-
-      await loadWorkLogs();
-    } catch (err) {
-      console.error("Create Work Log Error:", err);
-
-      setError(
-        err?.response?.data?.message ||
-          "Unable to submit work details."
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  /* ================================
-     FILTER HISTORY
-  ================================ */
-
-  const filteredLogs = useMemo(() => {
-    const today = getToday();
-
-    const todayDate = new Date(`${today}T00:00:00`);
-
-    let rangeStart = "";
-    let rangeEnd = "";
-
-    if (historyFilter === "today") {
-      rangeStart = today;
-      rangeEnd = today;
-    }
-
-    if (historyFilter === "week") {
-      const day = todayDate.getDay();
-
-      const mondayOffset = day === 0 ? 6 : day - 1;
-
-      const weekStart = new Date(todayDate);
-      weekStart.setDate(todayDate.getDate() - mondayOffset);
-
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-
-      rangeStart = getDateKey(weekStart);
-      rangeEnd = getDateKey(weekEnd);
-    }
-
-    if (historyFilter === "month") {
-      const monthStart = new Date(
-        todayDate.getFullYear(),
-        todayDate.getMonth(),
-        1
-      );
-
-      const monthEnd = new Date(
-        todayDate.getFullYear(),
-        todayDate.getMonth() + 1,
-        0
-      );
-
-      rangeStart = getDateKey(monthStart);
-      rangeEnd = getDateKey(monthEnd);
-    }
-
-    if (historyFilter === "custom") {
-      rangeStart = startDate;
-      rangeEnd = endDate;
-    }
-
-    return [...workLogs]
-      .filter((log) => {
-        const logDate = getDateKey(log.date);
-
-        if (!logDate) return false;
-
-        if (historyFilter === "all") {
-          return true;
-        }
-
-        if (!rangeStart || !rangeEnd) {
-          return true;
-        }
-
-        return logDate >= rangeStart && logDate <= rangeEnd;
-      })
-      .sort((first, second) => {
-        const firstDate = getDateKey(first.date);
-        const secondDate = getDateKey(second.date);
-
-        if (firstDate !== secondDate) {
-          return secondDate.localeCompare(firstDate);
-        }
-
-        return String(first.startTime || "").localeCompare(
-          String(second.startTime || "")
-        );
-      });
-  }, [
-    workLogs,
-    historyFilter,
-    startDate,
-    endDate,
-  ]);
-
-  /* ================================
-     GROUP WORK BY DATE
-  ================================ */
-
-  const groupedHistory = useMemo(() => {
-    const grouped = {};
-
-    filteredLogs.forEach((log) => {
-      const dateKey = getDateKey(log.date);
-
-      if (!dateKey) return;
-
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-      }
-
-      grouped[dateKey].push(log);
-    });
-
-    return Object.entries(grouped)
-      .map(([date, logs]) => {
-        const sortedLogs = [...logs].sort((first, second) => {
-          return String(first.startTime || "").localeCompare(
-            String(second.startTime || "")
-          );
-        });
-
-        const totalHours = sortedLogs.reduce((total, log) => {
-          return total + getLogDurationInHours(log);
-        }, 0);
-
-        const works = sortedLogs.map((log, index) => ({
-          id: log._id || log.id || `${date}-${index}`,
-          name: log.workName || "Work",
-          startTime: formatTime(log.startTime),
-          endTime: formatTime(log.endTime),
-          originalLog: log,
-        }));
-
-        return {
-          date,
-          works,
-          startTime: formatTime(
-            getEarliestTime(sortedLogs, "startTime")
-          ),
-          endTime: formatTime(
-            getLatestTime(sortedLogs, "endTime")
-          ),
-          totalHours: Number(totalHours.toFixed(2)),
-        };
-      })
-      .sort((first, second) => {
-        return second.date.localeCompare(first.date);
-      });
-  }, [filteredLogs]);
-
-  const totalHours = useMemo(() => {
-    return filteredLogs.reduce((total, log) => {
-      return total + getLogDurationInHours(log);
-    }, 0);
-  }, [filteredLogs]);
-
-  /* ================================
-     EDIT WORK
-  ================================ */
-
-  const handleEditWork = (log) => {
-    setError("");
-    setSuccess("");
-
-    setEditingWork(log);
-
-    setEditForm({
-      workName: log.workName || "",
-      date: getDateKey(log.date),
-      startTime: log.startTime || "",
-      endTime: log.endTime || "",
-    });
-  };
-
-  const handleEditChange = (event) => {
-    const { name, value } = event.target;
-
-    setEditForm((current) => ({
-      ...current,
-      [name]: value,
-    }));
-  };
-
-  const closeEditModal = () => {
-    setEditingWork(null);
-
-    setEditForm({
-      workName: "",
-      date: "",
+      date: new Date().toISOString().split("T")[0],
+      work: "",
       startTime: "",
       endTime: "",
     });
+
+    setEditingLog(null);
+    setIsModalOpen(false);
   };
 
-  const handleUpdateWork = async (event) => {
-    event.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
     setError("");
     setSuccess("");
 
-    const workName = editForm.workName.trim();
-
-    if (!workName) {
-      setError("Please enter the work name.");
+    if (!formData.date || !formData.work.trim()) {
+      setError("Date and work description are required.");
       return;
     }
 
     if (
-      !editForm.date ||
-      !editForm.startTime ||
-      !editForm.endTime
+      formData.startTime &&
+      formData.endTime &&
+      formData.endTime <= formData.startTime
     ) {
-      setError("Please fill in all edit fields.");
-      return;
-    }
-
-    const duration = calculateDuration(
-      editForm.startTime,
-      editForm.endTime
-    );
-
-    if (!duration) {
-      setError("End time must be after start time.");
-      return;
-    }
-
-    const workId = editingWork?._id || editingWork?.id;
-
-    if (!workId) {
-      setError("Work ID is missing.");
+      setError("End time must be later than start time.");
       return;
     }
 
     try {
-      setSaving(true);
+      setSubmitting(true);
 
-      await updateWorkLog(workId, {
-        workName,
-        date: editForm.date,
-        startTime: editForm.startTime,
-        endTime: editForm.endTime,
-      });
+      if (editingLog) {
+        await updateWorkLog(editingLog._id || editingLog.id, formData);
+        setSuccess("Work log updated successfully.");
+      } else {
+        await createWorkLog(formData);
+        setSuccess("Work log added successfully.");
+      }
 
-      const updatedDate = editForm.date;
-
-      closeEditModal();
-
-      setSuccess("Work details updated successfully.");
-
-      setHistoryFilter("custom");
-      setStartDate(updatedDate);
-      setEndDate(updatedDate);
-
-      await loadWorkLogs();
+      resetForm();
+      await fetchLogs();
     } catch (err) {
-      console.error("Update Work Log Error:", err);
+      console.error("Save work log error:", err);
 
       setError(
-        err?.response?.data?.message ||
-          "Unable to update work details."
+        err.response?.data?.message || "Failed to save work log."
       );
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   };
 
-  /* ================================
-     DELETE WORK
-  ================================ */
+  // ============================================================
+  // EDIT LOG
+  // ============================================================
 
-  const handleDeleteWork = async (id) => {
-    if (!id) {
-      setError("Work ID is missing.");
-      return;
-    }
+  const handleEdit = (log) => {
+    setEditingLog(log);
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this work?"
+    setFormData({
+      date: log.date
+        ? new Date(log.date).toISOString().split("T")[0]
+        : "",
+      work: log.work || log.description || log.task || "",
+      startTime: log.startTime || "",
+      endTime: log.endTime || "",
+    });
+
+    setError("");
+    setSuccess("");
+    setIsModalOpen(true);
+  };
+
+  // ============================================================
+  // DELETE LOG
+  // ============================================================
+
+  const handleDelete = async (id) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this work log?"
     );
 
-    if (!confirmed) return;
+    if (!confirmDelete) return;
 
     try {
-      setDeletingId(id);
       setError("");
       setSuccess("");
 
       await deleteWorkLog(id);
 
-      setSuccess("Work details deleted successfully.");
+      setSuccess("Work log deleted successfully.");
 
-      await loadWorkLogs();
+      setLogs((previousLogs) =>
+        previousLogs.filter(
+          (log) => (log._id || log.id) !== id
+        )
+      );
     } catch (err) {
-      console.error("Delete Work Log Error:", err);
+      console.error("Delete work log error:", err);
 
       setError(
-        err?.response?.data?.message ||
-          "Unable to delete work details."
+        err.response?.data?.message || "Failed to delete work log."
       );
-    } finally {
-      setDeletingId(null);
     }
   };
 
-  /* ================================
-     RENDER
-  ================================ */
+  // ============================================================
+  // DATE HELPERS
+  // ============================================================
+
+  const getDateString = (dateValue) => {
+    if (!dateValue) return "";
+
+    const date = new Date(dateValue);
+
+    if (Number.isNaN(date.getTime())) return "";
+
+    return date.toISOString().split("T")[0];
+  };
+
+  const getTodayString = () => {
+    return new Date().toISOString().split("T")[0];
+  };
+
+  const getWeekStart = () => {
+    const date = new Date();
+    const day = date.getDay();
+
+    const difference = day === 0 ? -6 : 1 - day;
+
+    date.setDate(date.getDate() + difference);
+
+    return date.toISOString().split("T")[0];
+  };
+
+  const getMonthStart = () => {
+    const date = new Date();
+
+    return new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      1
+    )
+      .toISOString()
+      .split("T")[0];
+  };
+
+  // ============================================================
+  // FILTER LOGS
+  // ============================================================
+
+  const filteredLogs = useMemo(() => {
+    return logs.filter((log) => {
+      const logDate = getDateString(log.date);
+
+      if (filter === "today") {
+        return logDate === getTodayString();
+      }
+
+      if (filter === "week") {
+        return logDate >= getWeekStart() && logDate <= getTodayString();
+      }
+
+      if (filter === "month") {
+        return logDate >= getMonthStart() && logDate <= getTodayString();
+      }
+
+      if (filter === "custom") {
+        return logDate === customDate;
+      }
+
+      return true;
+    });
+  }, [logs, filter, customDate]);
+
+  // ============================================================
+  // GROUP LOGS BY DATE
+  // ============================================================
+
+  const groupedLogs = useMemo(() => {
+    const groups = {};
+
+    filteredLogs.forEach((log) => {
+      const date = getDateString(log.date);
+
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+
+      groups[date].push(log);
+    });
+
+    return Object.entries(groups).sort(
+      ([dateA], [dateB]) => new Date(dateB) - new Date(dateA)
+    );
+  }, [filteredLogs]);
+
+  // ============================================================
+  // FORMAT DATE
+  // ============================================================
+
+  const formatDate = (date) => {
+    if (!date) return "N/A";
+
+    return new Date(date).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  // ============================================================
+  // RENDER
+  // ============================================================
 
   return (
-    <div className="my-work-page">
-      {/* PAGE HEADER */}
-
+    <div className="my-work-container">
       <div className="my-work-header">
-        <h1>My Work</h1>
+        <div>
+          <h2>My Work</h2>
+          <p>Track your daily work activities.</p>
+        </div>
 
-        <p>
-          Enter your daily work details and view your work history.
-        </p>
+        <button
+          type="button"
+          className="add-work-btn"
+          onClick={() => {
+            setEditingLog(null);
+
+            setFormData({
+              date: getTodayString(),
+              work: "",
+              startTime: "",
+              endTime: "",
+            });
+
+            setError("");
+            setSuccess("");
+            setIsModalOpen(true);
+          }}
+        >
+          + Add Work
+        </button>
       </div>
 
-      {/* MESSAGES */}
-
-      {error && (
-        <div className="form-message error-message">
-          {error}
-        </div>
-      )}
+      {error && <div className="error-message">{error}</div>}
 
       {success && (
-        <div className="form-message success-message">
-          {success}
+        <div className="success-message">{success}</div>
+      )}
+
+      {/* FILTERS */}
+
+      <div className="work-filters">
+        <button
+          type="button"
+          className={filter === "today" ? "active-filter" : ""}
+          onClick={() => setFilter("today")}
+        >
+          Today
+        </button>
+
+        <button
+          type="button"
+          className={filter === "week" ? "active-filter" : ""}
+          onClick={() => setFilter("week")}
+        >
+          This Week
+        </button>
+
+        <button
+          type="button"
+          className={filter === "month" ? "active-filter" : ""}
+          onClick={() => setFilter("month")}
+        >
+          This Month
+        </button>
+
+        <button
+          type="button"
+          className={filter === "all" ? "active-filter" : ""}
+          onClick={() => setFilter("all")}
+        >
+          All
+        </button>
+
+        <button
+          type="button"
+          className={filter === "custom" ? "active-filter" : ""}
+          onClick={() => setFilter("custom")}
+        >
+          Custom Date
+        </button>
+
+        {filter === "custom" && (
+          <input
+            type="date"
+            value={customDate}
+            onChange={(e) => setCustomDate(e.target.value)}
+          />
+        )}
+      </div>
+
+      {/* WORK TABLE */}
+
+      {loading ? (
+        <p className="loading-text">Loading work logs...</p>
+      ) : groupedLogs.length === 0 ? (
+        <div className="empty-work">
+          <p>No work logs found.</p>
+        </div>
+      ) : (
+        <div className="work-table-wrapper">
+          <table className="work-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Work Activity</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Duration</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {groupedLogs.map(([date, dailyLogs]) =>
+                dailyLogs.map((log, index) => {
+                  const id = log._id || log.id;
+
+                  return (
+                    <tr key={id}>
+                      {index === 0 ? (
+                        <td rowSpan={dailyLogs.length}>
+                          <strong>{formatDate(date)}</strong>
+                        </td>
+                      ) : null}
+
+                      <td>
+                        {log.work ||
+                          log.description ||
+                          log.task ||
+                          "N/A"}
+                      </td>
+
+                      <td>{log.startTime || "-"}</td>
+
+                      <td>{log.endTime || "-"}</td>
+
+                      <td>
+                        {log.duration !== undefined &&
+                        log.duration !== null
+                          ? `${log.duration} minutes`
+                          : "-"}
+                      </td>
+
+                      <td>
+                        <div className="work-actions">
+                          <button
+                            type="button"
+                            className="edit-btn"
+                            onClick={() => handleEdit(log)}
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            className="delete-btn"
+                            onClick={() => handleDelete(id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* ADD WORK */}
+      {/* ADD / EDIT MODAL */}
 
-      <section className="work-section">
-        <div className="section-header">
-          <div>
-            <h2>Add Work Details</h2>
-
-            <p>
-              Fill in the work name, time and date.
-            </p>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="workName">
-              Work Name
-            </label>
-
-            <input
-              id="workName"
-              name="workName"
-              type="text"
-              placeholder="e.g. React training, client call"
-              value={formData.workName}
-              onChange={handleChange}
-              maxLength={200}
-              required
-            />
-          </div>
-
-          <div className="form-grid">
-            <div className="form-group">
-              <label htmlFor="date">
-                Date
-              </label>
-
-              <input
-                id="date"
-                name="date"
-                type="date"
-                value={formData.date}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="startTime">
-                Starting Time
-              </label>
-
-              <input
-                id="startTime"
-                name="startTime"
-                type="time"
-                value={formData.startTime}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="endTime">
-                Ending Time
-              </label>
-
-              <input
-                id="endTime"
-                name="endTime"
-                type="time"
-                value={formData.endTime}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="totalDuration">
-                Total Duration
-              </label>
-
-              <input
-                id="totalDuration"
-                type="text"
-                value={
-                  totalDuration ||
-                  "Calculated automatically"
-                }
-                readOnly
-              />
-            </div>
-          </div>
-
-          <div className="modal-actions">
-            <button
-              type="button"
-              className="cancel-btn"
-              onClick={resetForm}
-              disabled={saving}
-            >
-              Clear
-            </button>
-
-            <button
-              type="submit"
-              className="primary-btn"
-              disabled={saving}
-            >
-              {saving ? "Submitting..." : "Submit Work"}
-            </button>
-          </div>
-        </form>
-      </section>
-
-      {/* WORK HISTORY */}
-
-      <section className="work-section">
-        <div className="section-header">
-          <div>
-            <h2>My Daily Work History</h2>
-
-            <p>
-              All work entries from the same day are combined into one row.
-            </p>
-          </div>
-        </div>
-
-        {/* FILTER */}
-
-        <div className="work-filters">
-          <div className="form-group">
-            <label htmlFor="historyFilter">
-              Filter History
-            </label>
-
-            <select
-              id="historyFilter"
-              value={historyFilter}
-              onChange={(event) =>
-                setHistoryFilter(event.target.value)
-              }
-            >
-              <option value="today">Today</option>
-              <option value="week">Current Week</option>
-              <option value="month">Current Month</option>
-              <option value="custom">Custom Range</option>
-              <option value="all">All History</option>
-            </select>
-          </div>
-
-          {historyFilter === "custom" && (
-            <>
-              <div className="form-group">
-                <label htmlFor="startDate">
-                  Start Date
-                </label>
-
-                <input
-                  id="startDate"
-                  type="date"
-                  value={startDate}
-                  onChange={(event) =>
-                    setStartDate(event.target.value)
-                  }
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="endDate">
-                  End Date
-                </label>
-
-                <input
-                  id="endDate"
-                  type="date"
-                  value={endDate}
-                  min={startDate}
-                  onChange={(event) =>
-                    setEndDate(event.target.value)
-                  }
-                />
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* SUMMARY */}
-
-        <div className="work-summary-grid">
-          <div className="work-summary-card">
-            <div className="summary-icon">📅</div>
-
-            <div>
-              <h3>Total Working Days</h3>
-
-              <strong>{groupedHistory.length}</strong>
-            </div>
-          </div>
-
-          <div className="work-summary-card">
-            <div className="summary-icon">📝</div>
-
-            <div>
-              <h3>Total Work Entries</h3>
-
-              <strong>{filteredLogs.length}</strong>
-            </div>
-          </div>
-
-          <div className="work-summary-card">
-            <div className="summary-icon">⏱️</div>
-
-            <div>
-              <h3>Total Hours</h3>
-
-              <strong>{totalHours.toFixed(2)}</strong>
-            </div>
-          </div>
-        </div>
-
-        {/* HISTORY TABLE */}
-
-        {loading ? (
-          <div className="my-work-loading">
-            <div className="loading-spinner" />
-
-            <p>Loading work details...</p>
-          </div>
-        ) : groupedHistory.length === 0 ? (
-          <div className="empty-work">
-            <h3>No work details found</h3>
-
-            <p>
-              No work entries found for the selected filter.
-            </p>
-          </div>
-        ) : (
-          <div className="work-history-table-wrapper">
-            <table className="work-history-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Date</th>
-                  <th>Work Details</th>
-                  <th>Starting Time</th>
-                  <th>Ending Time</th>
-                  <th>Total Hours</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {groupedHistory.map((day, index) => (
-                  <tr key={day.date}>
-                    <td>{index + 1}</td>
-
-                    <td>
-                      <strong>{formatDate(day.date)}</strong>
-                    </td>
-
-                    <td>
-                      <div className="daily-work-details">
-                        {day.works.map((work, workIndex) => (
-                          <div
-                            className="daily-work-item"
-                            key={work.id || workIndex}
-                          >
-                            <div className="daily-work-name">
-                              <span className="work-bullet">
-                                •
-                              </span>
-
-                              <span>{work.name}</span>
-                            </div>
-
-                            <div className="daily-work-time">
-                              {work.startTime} - {work.endTime}
-                            </div>
-
-                            <div className="work-actions">
-                              <button
-                                type="button"
-                                className="edit-btn"
-                                onClick={() =>
-                                  handleEditWork(
-                                    work.originalLog
-                                  )
-                                }
-                              >
-                                Edit
-                              </button>
-
-                              <button
-                                type="button"
-                                className="delete-btn"
-                                disabled={
-                                  deletingId === work.id
-                                }
-                                onClick={() =>
-                                  handleDeleteWork(work.id)
-                                }
-                              >
-                                {deletingId === work.id
-                                  ? "Deleting..."
-                                  : "Delete"}
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-
-                    <td>{day.startTime}</td>
-
-                    <td>{day.endTime}</td>
-
-                    <td>
-                      <strong>
-                        {day.totalHours.toFixed(2)} hr
-                      </strong>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      {/* EDIT MODAL */}
-
-      {editingWork && (
-        <div className="edit-modal-overlay">
-          <div className="edit-modal">
-            <div className="edit-modal-header">
-              <h2>Edit Work</h2>
+      {isModalOpen && (
+        <div className="modal-overlay">
+          <div className="work-modal">
+            <div className="modal-header">
+              <h3>
+                {editingLog ? "Edit Work Log" : "Add Work Log"}
+              </h3>
 
               <button
                 type="button"
                 className="close-modal-btn"
-                onClick={closeEditModal}
-                disabled={saving}
+                onClick={resetForm}
               >
                 ×
               </button>
             </div>
 
-            <form onSubmit={handleUpdateWork}>
+            <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label htmlFor="editWorkName">
-                  Work Name
-                </label>
+                <label htmlFor="date">Date</label>
 
                 <input
-                  id="editWorkName"
-                  name="workName"
-                  type="text"
-                  value={editForm.workName}
-                  onChange={handleEditChange}
-                  maxLength={200}
+                  id="date"
+                  type="date"
+                  name="date"
+                  value={formData.date}
+                  onChange={handleChange}
                   required
                 />
               </div>
 
-              <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="work">Work Description</label>
+
+                <textarea
+                  id="work"
+                  name="work"
+                  value={formData.work}
+                  onChange={handleChange}
+                  placeholder="Enter your work activity"
+                  rows="4"
+                  required
+                />
+              </div>
+
+              <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="editDate">
-                    Date
-                  </label>
+                  <label htmlFor="startTime">Start Time</label>
 
                   <input
-                    id="editDate"
-                    name="date"
-                    type="date"
-                    value={editForm.date}
-                    onChange={handleEditChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="editStartTime">
-                    Starting Time
-                  </label>
-
-                  <input
-                    id="editStartTime"
+                    id="startTime"
+                    type="time"
                     name="startTime"
-                    type="time"
-                    value={editForm.startTime}
-                    onChange={handleEditChange}
-                    required
+                    value={formData.startTime}
+                    onChange={handleChange}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="editEndTime">
-                    Ending Time
-                  </label>
+                  <label htmlFor="endTime">End Time</label>
 
                   <input
-                    id="editEndTime"
-                    name="endTime"
+                    id="endTime"
                     type="time"
-                    value={editForm.endTime}
-                    onChange={handleEditChange}
-                    required
+                    name="endTime"
+                    value={formData.endTime}
+                    onChange={handleChange}
                   />
                 </div>
               </div>
@@ -1067,18 +534,21 @@ const MyWork = () => {
                 <button
                   type="button"
                   className="cancel-btn"
-                  onClick={closeEditModal}
-                  disabled={saving}
+                  onClick={resetForm}
                 >
                   Cancel
                 </button>
 
                 <button
                   type="submit"
-                  className="primary-btn"
-                  disabled={saving}
+                  className="save-btn"
+                  disabled={submitting}
                 >
-                  {saving ? "Updating..." : "Update Work"}
+                  {submitting
+                    ? "Saving..."
+                    : editingLog
+                    ? "Update Work"
+                    : "Save Work"}
                 </button>
               </div>
             </form>
