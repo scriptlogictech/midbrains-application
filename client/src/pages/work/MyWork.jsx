@@ -24,6 +24,63 @@ const getToday = () => {
   return `${year}-${month}-${day}`;
 };
 
+const getDateKey = (dateValue) => {
+  if (!dateValue) return "";
+
+  if (typeof dateValue === "string") {
+    const datePart = dateValue.substring(0, 10);
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+      return datePart;
+    }
+  }
+
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+const formatDate = (dateValue) => {
+  if (!dateValue) return "-";
+
+  const date = new Date(`${dateValue}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateValue;
+  }
+
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatTime = (timeValue) => {
+  if (!timeValue) return "-";
+
+  const [hours, minutes] = timeValue.split(":").map(Number);
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return timeValue;
+  }
+
+  const date = new Date();
+
+  date.setHours(hours, minutes, 0, 0);
+
+  return date.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 const calculateDuration = (startTime, endTime) => {
   if (!startTime || !endTime) return "";
 
@@ -63,89 +120,16 @@ const calculateDurationInHours = (startTime, endTime) => {
   return Number((difference / 60).toFixed(2));
 };
 
-const formatDate = (dateValue) => {
-  if (!dateValue) return "-";
-
-  const date = new Date(dateValue);
-
-  if (Number.isNaN(date.getTime())) {
-    return dateValue;
-  }
-
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-};
-
-const formatTime = (timeValue) => {
-  if (!timeValue) return "-";
-
-  const [hours, minutes] = timeValue.split(":").map(Number);
-
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
-    return timeValue;
-  }
-
-  const date = new Date();
-
-  date.setHours(hours, minutes, 0, 0);
-
-  return date.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
-const getDateKey = (dateValue) => {
-  if (!dateValue) return "";
-
-  // Handles YYYY-MM-DD without timezone conversion
-  if (typeof dateValue === "string") {
-    const datePart = dateValue.slice(0, 10);
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
-      return datePart;
-    }
-  }
-
-  const date = new Date(dateValue);
-
-  if (Number.isNaN(date.getTime())) return "";
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-};
-
-const getLogEmployeeName = (employee) => {
-  if (!employee) return "You";
-
-  if (typeof employee === "string") {
-    return employee;
-  }
-
-  return (
-    employee.fullName ||
-    employee.name ||
-    employee.email ||
-    "You"
-  );
-};
-
 const getLogDurationInHours = (log) => {
   if (typeof log.totalDuration === "number") {
     return log.totalDuration;
   }
 
   if (typeof log.totalDuration === "string") {
-    const parsedDuration = Number(log.totalDuration);
+    const duration = Number(log.totalDuration);
 
-    if (!Number.isNaN(parsedDuration)) {
-      return parsedDuration;
+    if (!Number.isNaN(duration)) {
+      return duration;
     }
   }
 
@@ -155,39 +139,22 @@ const getLogDurationInHours = (log) => {
   );
 };
 
-const getDurationLabel = (log) => {
-  if (
-    typeof log.totalDuration === "number" ||
-    typeof log.totalDuration === "string"
-  ) {
-    const duration = Number(log.totalDuration);
-
-    if (!Number.isNaN(duration)) {
-      return `${duration} hr`;
-    }
-  }
-
-  return (
-    calculateDuration(log.startTime, log.endTime) || "-"
-  );
-};
-
 const getEarliestTime = (logs, field) => {
-  const validTimes = logs
+  const times = logs
     .map((log) => log[field])
     .filter(Boolean)
     .sort();
 
-  return validTimes[0] || "";
+  return times[0] || "";
 };
 
 const getLatestTime = (logs, field) => {
-  const validTimes = logs
+  const times = logs
     .map((log) => log[field])
     .filter(Boolean)
     .sort();
 
-  return validTimes[validTimes.length - 1] || "";
+  return times[times.length - 1] || "";
 };
 
 /* ================================
@@ -217,7 +184,10 @@ const MyWork = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const [filterDate, setFilterDate] = useState(getToday());
+  const [historyFilter, setHistoryFilter] = useState("today");
+
+  const [startDate, setStartDate] = useState(getToday());
+  const [endDate, setEndDate] = useState(getToday());
 
   const [editingWork, setEditingWork] = useState(null);
 
@@ -287,7 +257,7 @@ const MyWork = () => {
   }, [formData.startTime, formData.endTime]);
 
   /* ================================
-     SUBMIT NEW WORK
+     CREATE WORK
   ================================ */
 
   const handleSubmit = async (event) => {
@@ -334,7 +304,9 @@ const MyWork = () => {
 
       setSuccess("Work details submitted successfully.");
 
-      setFilterDate(formData.date);
+      setHistoryFilter("today");
+      setStartDate(formData.date);
+      setEndDate(formData.date);
 
       resetForm();
 
@@ -352,25 +324,96 @@ const MyWork = () => {
   };
 
   /* ================================
-     FILTER WORK LOGS
+     FILTER HISTORY
   ================================ */
 
   const filteredLogs = useMemo(() => {
+    const today = getToday();
+
+    const todayDate = new Date(`${today}T00:00:00`);
+
+    let rangeStart = "";
+    let rangeEnd = "";
+
+    if (historyFilter === "today") {
+      rangeStart = today;
+      rangeEnd = today;
+    }
+
+    if (historyFilter === "week") {
+      const day = todayDate.getDay();
+
+      const mondayOffset = day === 0 ? 6 : day - 1;
+
+      const weekStart = new Date(todayDate);
+      weekStart.setDate(todayDate.getDate() - mondayOffset);
+
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+
+      rangeStart = getDateKey(weekStart);
+      rangeEnd = getDateKey(weekEnd);
+    }
+
+    if (historyFilter === "month") {
+      const monthStart = new Date(
+        todayDate.getFullYear(),
+        todayDate.getMonth(),
+        1
+      );
+
+      const monthEnd = new Date(
+        todayDate.getFullYear(),
+        todayDate.getMonth() + 1,
+        0
+      );
+
+      rangeStart = getDateKey(monthStart);
+      rangeEnd = getDateKey(monthEnd);
+    }
+
+    if (historyFilter === "custom") {
+      rangeStart = startDate;
+      rangeEnd = endDate;
+    }
+
     return [...workLogs]
       .filter((log) => {
-        if (!filterDate) return true;
+        const logDate = getDateKey(log.date);
 
-        return getDateKey(log.date) === filterDate;
+        if (!logDate) return false;
+
+        if (historyFilter === "all") {
+          return true;
+        }
+
+        if (!rangeStart || !rangeEnd) {
+          return true;
+        }
+
+        return logDate >= rangeStart && logDate <= rangeEnd;
       })
       .sort((first, second) => {
+        const firstDate = getDateKey(first.date);
+        const secondDate = getDateKey(second.date);
+
+        if (firstDate !== secondDate) {
+          return secondDate.localeCompare(firstDate);
+        }
+
         return String(first.startTime || "").localeCompare(
           String(second.startTime || "")
         );
       });
-  }, [workLogs, filterDate]);
+  }, [
+    workLogs,
+    historyFilter,
+    startDate,
+    endDate,
+  ]);
 
   /* ================================
-     GROUP LOGS BY DATE
+     GROUP WORK BY DATE
   ================================ */
 
   const groupedHistory = useMemo(() => {
@@ -400,8 +443,8 @@ const MyWork = () => {
           return total + getLogDurationInHours(log);
         }, 0);
 
-        const works = sortedLogs.map((log) => ({
-          id: log._id || log.id,
+        const works = sortedLogs.map((log, index) => ({
+          id: log._id || log.id || `${date}-${index}`,
           name: log.workName || "Work",
           startTime: formatTime(log.startTime),
           endTime: formatTime(log.endTime),
@@ -410,7 +453,6 @@ const MyWork = () => {
 
         return {
           date,
-          logs: sortedLogs,
           works,
           startTime: formatTime(
             getEarliestTime(sortedLogs, "startTime")
@@ -426,7 +468,7 @@ const MyWork = () => {
       });
   }, [filteredLogs]);
 
-  const selectedDateTotal = useMemo(() => {
+  const totalHours = useMemo(() => {
     return filteredLogs.reduce((total, log) => {
       return total + getLogDurationInHours(log);
     }, 0);
@@ -502,12 +544,12 @@ const MyWork = () => {
       return;
     }
 
-    if (!editingWork?._id && !editingWork?.id) {
+    const workId = editingWork?._id || editingWork?.id;
+
+    if (!workId) {
       setError("Work ID is missing.");
       return;
     }
-
-    const workId = editingWork._id || editingWork.id;
 
     try {
       setSaving(true);
@@ -519,11 +561,15 @@ const MyWork = () => {
         endTime: editForm.endTime,
       });
 
+      const updatedDate = editForm.date;
+
       closeEditModal();
 
       setSuccess("Work details updated successfully.");
 
-      setFilterDate(editForm.date);
+      setHistoryFilter("custom");
+      setStartDate(updatedDate);
+      setEndDate(updatedDate);
 
       await loadWorkLogs();
     } catch (err) {
@@ -585,16 +631,14 @@ const MyWork = () => {
       {/* PAGE HEADER */}
 
       <div className="my-work-header">
-        <div>
-          <h1>My Work</h1>
+        <h1>My Work</h1>
 
-          <p>
-            Enter and manage your daily work details.
-          </p>
-        </div>
+        <p>
+          Enter your daily work details and view your work history.
+        </p>
       </div>
 
-      {/* GLOBAL MESSAGES */}
+      {/* MESSAGES */}
 
       {error && (
         <div className="form-message error-message">
@@ -608,7 +652,7 @@ const MyWork = () => {
         </div>
       )}
 
-      {/* ADD WORK SECTION */}
+      {/* ADD WORK */}
 
       <section className="work-section">
         <div className="section-header">
@@ -616,7 +660,7 @@ const MyWork = () => {
             <h2>Add Work Details</h2>
 
             <p>
-              Fill in the work name, date and working time.
+              Fill in the work name, time and date.
             </p>
           </div>
         </div>
@@ -723,48 +767,93 @@ const MyWork = () => {
         </form>
       </section>
 
-      {/* WORK HISTORY SECTION */}
+      {/* WORK HISTORY */}
 
       <section className="work-section">
         <div className="section-header">
           <div>
-            <h2>My Work History</h2>
+            <h2>My Daily Work History</h2>
 
             <p>
-              View, edit and delete your submitted work.
+              All work entries from the same day are combined into one row.
             </p>
           </div>
         </div>
 
-        {/* DATE FILTER */}
+        {/* FILTER */}
 
         <div className="work-filters">
-          <div
-            className="form-group"
-            style={{ marginBottom: 0 }}
-          >
-            <label htmlFor="filterDate">
-              Select Date
+          <div className="form-group">
+            <label htmlFor="historyFilter">
+              Filter History
             </label>
 
-            <input
-              id="filterDate"
-              type="date"
-              value={filterDate}
+            <select
+              id="historyFilter"
+              value={historyFilter}
               onChange={(event) =>
-                setFilterDate(event.target.value)
+                setHistoryFilter(event.target.value)
               }
-            />
+            >
+              <option value="today">Today</option>
+              <option value="week">Current Week</option>
+              <option value="month">Current Month</option>
+              <option value="custom">Custom Range</option>
+              <option value="all">All History</option>
+            </select>
           </div>
+
+          {historyFilter === "custom" && (
+            <>
+              <div className="form-group">
+                <label htmlFor="startDate">
+                  Start Date
+                </label>
+
+                <input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(event) =>
+                    setStartDate(event.target.value)
+                  }
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="endDate">
+                  End Date
+                </label>
+
+                <input
+                  id="endDate"
+                  type="date"
+                  value={endDate}
+                  min={startDate}
+                  onChange={(event) =>
+                    setEndDate(event.target.value)
+                  }
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* SUMMARY */}
 
         <div className="work-summary-grid">
           <div className="work-summary-card">
-            <div className="summary-icon">
-              📝
+            <div className="summary-icon">📅</div>
+
+            <div>
+              <h3>Total Working Days</h3>
+
+              <strong>{groupedHistory.length}</strong>
             </div>
+          </div>
+
+          <div className="work-summary-card">
+            <div className="summary-icon">📝</div>
 
             <div>
               <h3>Total Work Entries</h3>
@@ -774,33 +863,17 @@ const MyWork = () => {
           </div>
 
           <div className="work-summary-card">
-            <div className="summary-icon">
-              ⏱️
-            </div>
+            <div className="summary-icon">⏱️</div>
 
             <div>
               <h3>Total Hours</h3>
 
-              <strong>
-                {selectedDateTotal.toFixed(2)}
-              </strong>
-            </div>
-          </div>
-
-          <div className="work-summary-card">
-            <div className="summary-icon">
-              📅
-            </div>
-
-            <div>
-              <h3>Working Days</h3>
-
-              <strong>{groupedHistory.length}</strong>
+              <strong>{totalHours.toFixed(2)}</strong>
             </div>
           </div>
         </div>
 
-        {/* LOADING */}
+        {/* HISTORY TABLE */}
 
         {loading ? (
           <div className="my-work-loading">
@@ -813,12 +886,10 @@ const MyWork = () => {
             <h3>No work details found</h3>
 
             <p>
-              Submit your first work entry for this date.
+              No work entries found for the selected filter.
             </p>
           </div>
         ) : (
-          /* DAILY GROUPED TABLE */
-
           <div className="work-history-table-wrapper">
             <table className="work-history-table">
               <thead>
@@ -838,27 +909,26 @@ const MyWork = () => {
                     <td>{index + 1}</td>
 
                     <td>
-                      {formatDate(day.date)}
+                      <strong>{formatDate(day.date)}</strong>
                     </td>
 
                     <td>
                       <div className="daily-work-details">
-                        {day.works.map((work) => (
+                        {day.works.map((work, workIndex) => (
                           <div
                             className="daily-work-item"
-                            key={work.id}
+                            key={work.id || workIndex}
                           >
                             <div className="daily-work-name">
-                              <span>•</span>
-
-                              <span>
-                                {work.name}
+                              <span className="work-bullet">
+                                •
                               </span>
+
+                              <span>{work.name}</span>
                             </div>
 
                             <div className="daily-work-time">
-                              {work.startTime} -{" "}
-                              {work.endTime}
+                              {work.startTime} - {work.endTime}
                             </div>
 
                             <div className="work-actions">
@@ -1008,9 +1078,7 @@ const MyWork = () => {
                   className="primary-btn"
                   disabled={saving}
                 >
-                  {saving
-                    ? "Updating..."
-                    : "Update Work"}
+                  {saving ? "Updating..." : "Update Work"}
                 </button>
               </div>
             </form>
