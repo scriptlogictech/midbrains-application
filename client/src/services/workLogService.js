@@ -1,3 +1,4 @@
+
 import api from "./api";
 
 // ========================================
@@ -15,25 +16,12 @@ export const createWorkLog = async (logData) => {
 
 
 // ========================================
-// EMPLOYEE / INTERN - GET MY LOGS
+// EMPLOYEE / INTERN - GET MY WORK LOGS
 // ========================================
 
 export const getMyWorkLogs = async () => {
   const response = await api.get(
     "/work-logs/my-logs"
-  );
-
-  return response.data;
-};
-
-
-// ========================================
-// GET LOGS FOR SPECIFIC TASK
-// ========================================
-
-export const getTaskWorkLogs = async (taskId) => {
-  const response = await api.get(
-    `/work-logs/task/${taskId}`
   );
 
   return response.data;

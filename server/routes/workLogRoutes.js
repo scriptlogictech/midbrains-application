@@ -1,20 +1,24 @@
+
 const express = require("express");
+
 const router = express.Router();
 
 const {
   createWorkLog,
   getMyWorkLogs,
-  getTaskWorkLogs,
   getAllWorkLogs,
 } = require("../controllers/workLogController");
 
-const { protect } = require("../middlewares/authMiddleware");
-const { authorizeRoles } = require("../middlewares/roleMiddleware");
+const {
+  protect,
+  authorizeRoles,
+} = require("../middleware/authMiddleware");
 
-// ========================================
-// EMPLOYEE / INTERN - CREATE DAILY LOG
-// ========================================
+// ============================================================
+// EMPLOYEE / INTERN
+// ============================================================
 
+// Submit personal work
 router.post(
   "/",
   protect,
@@ -22,10 +26,7 @@ router.post(
   createWorkLog
 );
 
-// ========================================
-// EMPLOYEE / INTERN - MY WORK LOGS
-// ========================================
-
+// View own work logs
 router.get(
   "/my-logs",
   protect,
@@ -33,22 +34,11 @@ router.get(
   getMyWorkLogs
 );
 
-// ========================================
-// SUPER ADMIN / EMPLOYEE / INTERN
-// GET LOGS FOR SPECIFIC TASK
-// ========================================
+// ============================================================
+// SUPER ADMIN
+// ============================================================
 
-router.get(
-  "/task/:taskId",
-  protect,
-  authorizeRoles("super_admin", "employee", "intern"),
-  getTaskWorkLogs
-);
-
-// ========================================
-// SUPER ADMIN - ALL WORK LOGS
-// ========================================
-
+// View all employees' and interns' work logs
 router.get(
   "/",
   protect,
