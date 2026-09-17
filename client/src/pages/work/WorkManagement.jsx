@@ -15,6 +15,7 @@ import {
 } from "../../services/workLogService";
 
 import "./WorkManagement.css";
+import "./WorkTimeline.css";
 
 
 const initialForm = {
@@ -98,6 +99,17 @@ const WorkManagement = () => {
 
   const [priorityFilter, setPriorityFilter] =
     useState("");
+
+  // ========================================
+  // TIMELINE STATES
+  // ========================================
+
+  const [timelineDate, setTimelineDate] = useState(
+    new Date().toISOString().substring(0, 10)
+  );
+
+  const [timelineStartHour, setTimelineStartHour] = useState(10);
+  const [timelineEndHour, setTimelineEndHour] = useState(18);
 
 
   // ========================================
@@ -889,6 +901,75 @@ const WorkManagement = () => {
   };
 
 
+  // ========================================
+  // TIMELINE DATA
+  // ========================================
+
+  const timelineHours = useMemo(() => {
+    const hours = [];
+
+    for (let hour = timelineStartHour; hour < timelineEndHour; hour += 1) {
+      hours.push(hour);
+    }
+
+    return hours;
+  }, [timelineStartHour, timelineEndHour]);
+
+  const formatHour = (hour) => {
+    const suffix = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour % 12 || 12;
+    return `${displayHour} ${suffix}`;
+  };
+
+  const timelineEmployees = useMemo(() => {
+    const employeeMap = new Map();
+
+    [...employees, ...filteredTasks.map((task) => task.assignedTo).filter(Boolean)].forEach((employee) => {
+      const employeeId = employee?._id || employee?.id;
+
+      if (employeeId && !employeeMap.has(employeeId)) {
+        employeeMap.set(employeeId, employee);
+      }
+    });
+
+    return Array.from(employeeMap.values());
+  }, [employees, filteredTasks]);
+
+  const getTimelineTasks = (employeeId) => {
+    const employeeTasks = filteredTasks
+      .filter((task) => {
+        const taskEmployeeId = task.assignedTo?._id || task.assignedTo;
+        const taskStartDate = task.startDate?.substring(0, 10);
+        const taskDeadline = task.deadline?.substring(0, 10);
+
+        const isEmployeeMatch = String(taskEmployeeId) === String(employeeId);
+        const isDateMatch =
+          (taskStartDate && taskStartDate <= timelineDate) &&
+          (!taskDeadline || taskDeadline >= timelineDate);
+
+        return isEmployeeMatch && isDateMatch;
+      })
+      .sort((a, b) => new Date(a.startDate || 0) - new Date(b.startDate || 0));
+
+    let nextHour = timelineStartHour;
+
+    return employeeTasks.map((task) => {
+      const duration = Math.max(1, Math.ceil(Number(task.estimatedHours) || 1));
+      const startHour = nextHour;
+      const endHour = Math.min(startHour + duration, timelineEndHour);
+
+      nextHour = Math.min(endHour, timelineEndHour);
+
+      return {
+        ...task,
+        timelineStartHour: startHour,
+        timelineDuration: Math.max(1, endHour - startHour),
+        timelineWidth: `${Math.max(1, endHour - startHour) * 100}%`,
+      };
+    });
+  };
+
+
   return (
 
     <div className="work-management-page">
@@ -1196,6 +1277,137 @@ const WorkManagement = () => {
 
         </select>
 
+      </div>
+
+
+      {/* ======================================
+          DAILY WORK TIMELINE
+      ====================================== */}
+
+      <div className="work-table-card work-timeline-section">
+        <div className="work-table-header work-timeline-header">
+          <div>
+            <h3>Daily Work Timeline</h3>
+            <span>View employee work by time slots</span>
+          </div>
+
+          <div className="timeline-controls">
+            <label>
+              Date
+              <input
+                type="date"
+                value={timelineDate}
+                onChange={(event) => setTimelineDate(event.target.value)}
+              />
+            </label>
+
+            <label>
+              From
+              <select
+                value={timelineStartHour}
+                onChange={(event) => {
+                  const nextStartHour = Number(event.target.value);
+                  setTimelineStartHour(nextStartHour);
+                  if (nextStartHour >= timelineEndHour) {
+                    setTimelineEndHour(nextStartHour + 1);
+                  }
+                }}
+              >
+                {Array.from({ length: 12 }, (_, index) => index + 8).map((hour) => (
+                  <option key={hour} value={hour}>
+                    {formatHour(hour)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              To
+              <select
+                value={timelineEndHour}
+                onChange={(event) => {
+                  const nextEndHour = Number(event.target.value);
+                  if (nextEndHour > timelineStartHour) {
+                    setTimelineEndHour(nextEndHour);
+                  }
+                }}
+              >
+                {Array.from({ length: 12 }, (_, index) => index + 9).map((hour) => (
+                  <option key={hour} value={hour}>
+                    {formatHour(hour)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div>
+
+        {timelineEmployees.length === 0 ? (
+          <div className="work-empty">
+            <i className="bi bi-calendar-x"></i>
+            <h4>No timeline data</h4>
+            <p>Assign work to an employee or intern to see the daily schedule.</p>
+          </div>
+        ) : (
+          <div className="timeline-scroll-wrapper">
+            <div className="work-timeline" style={{ minWidth: `${220 + timelineHours.length * 135}px` }}>
+              <div className="timeline-row timeline-heading-row">
+                <div className="timeline-employee-column">Employee</div>
+                <div className="timeline-hours">
+                  {timelineHours.map((hour) => (
+                    <div className="timeline-hour" key={hour}>
+                      {formatHour(hour)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {timelineEmployees.map((employee) => {
+                const employeeId = employee._id || employee.id;
+                const employeeTasks = getTimelineTasks(employeeId);
+
+                return (
+                  <div className="timeline-row" key={employeeId}>
+                    <div className="timeline-employee-column timeline-employee">
+                      <div className="employee-avatar">
+                        {employee.fullName?.charAt(0)?.toUpperCase() || "U"}
+                      </div>
+                      <div>
+                        <strong>{employee.fullName || "Unknown"}</strong>
+                        <span>{getRoleLabel(employee.role)}</span>
+                      </div>
+                    </div>
+
+                    <div className="timeline-hours timeline-work-area">
+                      {timelineHours.map((hour) => (
+                        <div className="timeline-cell" key={`${employeeId}-${hour}`}></div>
+                      ))}
+
+                      {employeeTasks.map((task) => {
+                        const left = Math.max(0, task.timelineStartHour - timelineStartHour) * (100 / timelineHours.length);
+                        const width = task.timelineDuration * (100 / timelineHours.length);
+
+                        return (
+                          <button
+                            type="button"
+                            className={`timeline-task-block ${task.priority || "medium"}`}
+                            key={task._id}
+                            style={{ left: `${left}%`, width: `${width}%` }}
+                            title={`${task.title} | ${getStatusLabel(task.status)}`}
+                            onClick={() => handleEdit(task)}
+                          >
+                            <strong>{task.title}</strong>
+                            <span>{task.timelineDuration} hr{task.timelineDuration > 1 ? "s" : ""}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
 
