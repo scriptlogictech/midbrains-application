@@ -12,7 +12,7 @@ const {
 const {
   protect,
   authorizeRoles,
-} = require("../middleware/authMiddleware");
+} = require("../middlewares/authMiddleware");
 
 // ============================================================
 // EMPLOYEE / INTERN
