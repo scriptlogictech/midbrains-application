@@ -1,12 +1,18 @@
 
 import { useEffect, useMemo, useState } from "react";
+
 import {
   createWorkLog,
   getMyWorkLogs,
+  updateWorkLog,
+  deleteWorkLog,
 } from "../../services/workLogService";
+
 import "./MyWork.css";
 
-// -------------------- HELPERS --------------------
+/* ================================
+   HELPER FUNCTIONS
+================================ */
 
 const getToday = () => {
   const today = new Date();
@@ -35,6 +41,7 @@ const calculateDuration = (startTime, endTime) => {
   const minutes = difference % 60;
 
   if (hours === 0) return `${minutes} min`;
+
   if (minutes === 0) return `${hours} hr`;
 
   return `${hours} hr ${minutes} min`;
@@ -61,7 +68,9 @@ const formatDate = (dateValue) => {
 
   const date = new Date(dateValue);
 
-  if (Number.isNaN(date.getTime())) return dateValue;
+  if (Number.isNaN(date.getTime())) {
+    return dateValue;
+  }
 
   return date.toLocaleDateString("en-IN", {
     day: "2-digit",
@@ -75,7 +84,12 @@ const formatTime = (timeValue) => {
 
   const [hours, minutes] = timeValue.split(":").map(Number);
 
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return timeValue;
+  }
+
   const date = new Date();
+
   date.setHours(hours, minutes, 0, 0);
 
   return date.toLocaleTimeString("en-IN", {
@@ -84,8 +98,17 @@ const formatTime = (timeValue) => {
   });
 };
 
-const getLogDate = (dateValue) => {
+const getDateKey = (dateValue) => {
   if (!dateValue) return "";
+
+  // Handles YYYY-MM-DD without timezone conversion
+  if (typeof dateValue === "string") {
+    const datePart = dateValue.slice(0, 10);
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+      return datePart;
+    }
+  }
 
   const date = new Date(dateValue);
 
@@ -113,9 +136,35 @@ const getLogEmployeeName = (employee) => {
   );
 };
 
-const getDurationLabel = (log) => {
+const getLogDurationInHours = (log) => {
   if (typeof log.totalDuration === "number") {
-    return `${log.totalDuration} hr`;
+    return log.totalDuration;
+  }
+
+  if (typeof log.totalDuration === "string") {
+    const parsedDuration = Number(log.totalDuration);
+
+    if (!Number.isNaN(parsedDuration)) {
+      return parsedDuration;
+    }
+  }
+
+  return calculateDurationInHours(
+    log.startTime,
+    log.endTime
+  );
+};
+
+const getDurationLabel = (log) => {
+  if (
+    typeof log.totalDuration === "number" ||
+    typeof log.totalDuration === "string"
+  ) {
+    const duration = Number(log.totalDuration);
+
+    if (!Number.isNaN(duration)) {
+      return `${duration} hr`;
+    }
   }
 
   return (
@@ -123,54 +172,27 @@ const getDurationLabel = (log) => {
   );
 };
 
-const getWeekRange = () => {
-  const today = new Date();
+const getEarliestTime = (logs, field) => {
+  const validTimes = logs
+    .map((log) => log[field])
+    .filter(Boolean)
+    .sort();
 
-  const day = today.getDay();
-  const differenceToMonday = day === 0 ? -6 : 1 - day;
-
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + differenceToMonday);
-
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-
-  const format = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const dayValue = String(date.getDate()).padStart(2, "0");
-
-    return `${year}-${month}-${dayValue}`;
-  };
-
-  return {
-    start: format(monday),
-    end: format(sunday),
-  };
+  return validTimes[0] || "";
 };
 
-const getMonthRange = () => {
-  const today = new Date();
+const getLatestTime = (logs, field) => {
+  const validTimes = logs
+    .map((log) => log[field])
+    .filter(Boolean)
+    .sort();
 
-  const year = today.getFullYear();
-  const month = today.getMonth();
-
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-
-  const format = (date) => {
-    const currentYear = date.getFullYear();
-    const currentMonth = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-
-    return `${currentYear}-${currentMonth}-${day}`;
-  };
-
-  return {
-    start: format(firstDay),
-    end: format(lastDay),
-  };
+  return validTimes[validTimes.length - 1] || "";
 };
+
+/* ================================
+   INITIAL FORM
+================================ */
 
 const initialForm = {
   workName: "",
@@ -179,7 +201,9 @@ const initialForm = {
   endTime: "",
 };
 
-// -------------------- COMPONENT --------------------
+/* ================================
+   COMPONENT
+================================ */
 
 const MyWork = () => {
   const [formData, setFormData] = useState(initialForm);
@@ -188,16 +212,25 @@ const MyWork = () => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const [historyFilter, setHistoryFilter] = useState("today");
+  const [filterDate, setFilterDate] = useState(getToday());
 
-  const [startDate, setStartDate] = useState(getToday());
-  const [endDate, setEndDate] = useState(getToday());
+  const [editingWork, setEditingWork] = useState(null);
 
-  // -------------------- LOAD WORK LOGS --------------------
+  const [editForm, setEditForm] = useState({
+    workName: "",
+    date: "",
+    startTime: "",
+    endTime: "",
+  });
+
+  /* ================================
+     LOAD WORK LOGS
+  ================================ */
 
   const loadWorkLogs = async () => {
     try {
@@ -223,171 +256,9 @@ const MyWork = () => {
     loadWorkLogs();
   }, []);
 
-  // -------------------- FORM DURATION --------------------
-
-  const totalDuration = useMemo(() => {
-    return calculateDuration(
-      formData.startTime,
-      formData.endTime
-    );
-  }, [formData.startTime, formData.endTime]);
-
-  // -------------------- FILTER WORK LOGS --------------------
-
-  const filteredLogs = useMemo(() => {
-    let filterStartDate = "";
-    let filterEndDate = "";
-
-    if (historyFilter === "today") {
-      filterStartDate = getToday();
-      filterEndDate = getToday();
-    }
-
-    if (historyFilter === "week") {
-      const weekRange = getWeekRange();
-
-      filterStartDate = weekRange.start;
-      filterEndDate = weekRange.end;
-    }
-
-    if (historyFilter === "month") {
-      const monthRange = getMonthRange();
-
-      filterStartDate = monthRange.start;
-      filterEndDate = monthRange.end;
-    }
-
-    if (historyFilter === "custom") {
-      filterStartDate = startDate;
-      filterEndDate = endDate;
-    }
-
-    return [...workLogs]
-      .filter((log) => {
-        const logDate = getLogDate(log.date);
-
-        if (!logDate) return false;
-
-        if (historyFilter === "all") {
-          return true;
-        }
-
-        if (!filterStartDate || !filterEndDate) {
-          return true;
-        }
-
-        return (
-          logDate >= filterStartDate &&
-          logDate <= filterEndDate
-        );
-      })
-      .sort((first, second) => {
-        const firstDate = getLogDate(first.date);
-        const secondDate = getLogDate(second.date);
-
-        if (firstDate !== secondDate) {
-          return secondDate.localeCompare(firstDate);
-        }
-
-        return String(first.startTime || "").localeCompare(
-          String(second.startTime || "")
-        );
-      });
-  }, [
-    workLogs,
-    historyFilter,
-    startDate,
-    endDate,
-  ]);
-
-  // -------------------- GROUP BY DATE --------------------
-
-  const groupedHistory = useMemo(() => {
-    const groupedData = {};
-
-    filteredLogs.forEach((log) => {
-      const dateKey = getLogDate(log.date);
-
-      if (!dateKey) return;
-
-      if (!groupedData[dateKey]) {
-        groupedData[dateKey] = {
-          date: log.date,
-          workNames: [],
-          startTimes: [],
-          endTimes: [],
-          totalHours: 0,
-          employees: [],
-        };
-      }
-
-      const currentDay = groupedData[dateKey];
-
-      if (log.workName) {
-        currentDay.workNames.push(log.workName);
-      }
-
-      if (log.startTime) {
-        currentDay.startTimes.push(log.startTime);
-      }
-
-      if (log.endTime) {
-        currentDay.endTimes.push(log.endTime);
-      }
-
-      const duration =
-        typeof log.totalDuration === "number"
-          ? log.totalDuration
-          : calculateDurationInHours(
-              log.startTime,
-              log.endTime
-            );
-
-      currentDay.totalHours += duration;
-
-      const employeeName = getLogEmployeeName(log.employee);
-
-      if (!currentDay.employees.includes(employeeName)) {
-        currentDay.employees.push(employeeName);
-      }
-    });
-
-    return Object.values(groupedData)
-      .map((day) => {
-        const sortedStartTimes = [...day.startTimes].sort();
-        const sortedEndTimes = [...day.endTimes].sort();
-
-        return {
-          ...day,
-          earliestStart:
-            sortedStartTimes.length > 0
-              ? sortedStartTimes[0]
-              : "",
-
-          latestEnd:
-            sortedEndTimes.length > 0
-              ? sortedEndTimes[sortedEndTimes.length - 1]
-              : "",
-
-          totalHours: Number(day.totalHours.toFixed(2)),
-        };
-      })
-      .sort((first, second) => {
-        return getLogDate(second.date).localeCompare(
-          getLogDate(first.date)
-        );
-      });
-  }, [filteredLogs]);
-
-  // -------------------- SUMMARY --------------------
-
-  const totalHistoryHours = useMemo(() => {
-    return groupedHistory.reduce((total, day) => {
-      return total + day.totalHours;
-    }, 0);
-  }, [groupedHistory]);
-
-  // -------------------- FORM HANDLERS --------------------
+  /* ================================
+     FORM HANDLERS
+  ================================ */
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -406,10 +277,18 @@ const MyWork = () => {
       ...initialForm,
       date: getToday(),
     });
-
-    setError("");
-    setSuccess("");
   };
+
+  const totalDuration = useMemo(() => {
+    return calculateDuration(
+      formData.startTime,
+      formData.endTime
+    );
+  }, [formData.startTime, formData.endTime]);
+
+  /* ================================
+     SUBMIT NEW WORK
+  ================================ */
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -455,9 +334,7 @@ const MyWork = () => {
 
       setSuccess("Work details submitted successfully.");
 
-      setHistoryFilter("custom");
-      setStartDate(formData.date);
-      setEndDate(formData.date);
+      setFilterDate(formData.date);
 
       resetForm();
 
@@ -474,18 +351,250 @@ const MyWork = () => {
     }
   };
 
-  // -------------------- UI --------------------
+  /* ================================
+     FILTER WORK LOGS
+  ================================ */
+
+  const filteredLogs = useMemo(() => {
+    return [...workLogs]
+      .filter((log) => {
+        if (!filterDate) return true;
+
+        return getDateKey(log.date) === filterDate;
+      })
+      .sort((first, second) => {
+        return String(first.startTime || "").localeCompare(
+          String(second.startTime || "")
+        );
+      });
+  }, [workLogs, filterDate]);
+
+  /* ================================
+     GROUP LOGS BY DATE
+  ================================ */
+
+  const groupedHistory = useMemo(() => {
+    const grouped = {};
+
+    filteredLogs.forEach((log) => {
+      const dateKey = getDateKey(log.date);
+
+      if (!dateKey) return;
+
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+      }
+
+      grouped[dateKey].push(log);
+    });
+
+    return Object.entries(grouped)
+      .map(([date, logs]) => {
+        const sortedLogs = [...logs].sort((first, second) => {
+          return String(first.startTime || "").localeCompare(
+            String(second.startTime || "")
+          );
+        });
+
+        const totalHours = sortedLogs.reduce((total, log) => {
+          return total + getLogDurationInHours(log);
+        }, 0);
+
+        const works = sortedLogs.map((log) => ({
+          id: log._id || log.id,
+          name: log.workName || "Work",
+          startTime: formatTime(log.startTime),
+          endTime: formatTime(log.endTime),
+          originalLog: log,
+        }));
+
+        return {
+          date,
+          logs: sortedLogs,
+          works,
+          startTime: formatTime(
+            getEarliestTime(sortedLogs, "startTime")
+          ),
+          endTime: formatTime(
+            getLatestTime(sortedLogs, "endTime")
+          ),
+          totalHours: Number(totalHours.toFixed(2)),
+        };
+      })
+      .sort((first, second) => {
+        return second.date.localeCompare(first.date);
+      });
+  }, [filteredLogs]);
+
+  const selectedDateTotal = useMemo(() => {
+    return filteredLogs.reduce((total, log) => {
+      return total + getLogDurationInHours(log);
+    }, 0);
+  }, [filteredLogs]);
+
+  /* ================================
+     EDIT WORK
+  ================================ */
+
+  const handleEditWork = (log) => {
+    setError("");
+    setSuccess("");
+
+    setEditingWork(log);
+
+    setEditForm({
+      workName: log.workName || "",
+      date: getDateKey(log.date),
+      startTime: log.startTime || "",
+      endTime: log.endTime || "",
+    });
+  };
+
+  const handleEditChange = (event) => {
+    const { name, value } = event.target;
+
+    setEditForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  };
+
+  const closeEditModal = () => {
+    setEditingWork(null);
+
+    setEditForm({
+      workName: "",
+      date: "",
+      startTime: "",
+      endTime: "",
+    });
+  };
+
+  const handleUpdateWork = async (event) => {
+    event.preventDefault();
+
+    setError("");
+    setSuccess("");
+
+    const workName = editForm.workName.trim();
+
+    if (!workName) {
+      setError("Please enter the work name.");
+      return;
+    }
+
+    if (
+      !editForm.date ||
+      !editForm.startTime ||
+      !editForm.endTime
+    ) {
+      setError("Please fill in all edit fields.");
+      return;
+    }
+
+    const duration = calculateDuration(
+      editForm.startTime,
+      editForm.endTime
+    );
+
+    if (!duration) {
+      setError("End time must be after start time.");
+      return;
+    }
+
+    if (!editingWork?._id && !editingWork?.id) {
+      setError("Work ID is missing.");
+      return;
+    }
+
+    const workId = editingWork._id || editingWork.id;
+
+    try {
+      setSaving(true);
+
+      await updateWorkLog(workId, {
+        workName,
+        date: editForm.date,
+        startTime: editForm.startTime,
+        endTime: editForm.endTime,
+      });
+
+      closeEditModal();
+
+      setSuccess("Work details updated successfully.");
+
+      setFilterDate(editForm.date);
+
+      await loadWorkLogs();
+    } catch (err) {
+      console.error("Update Work Log Error:", err);
+
+      setError(
+        err?.response?.data?.message ||
+          "Unable to update work details."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ================================
+     DELETE WORK
+  ================================ */
+
+  const handleDeleteWork = async (id) => {
+    if (!id) {
+      setError("Work ID is missing.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this work?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingId(id);
+      setError("");
+      setSuccess("");
+
+      await deleteWorkLog(id);
+
+      setSuccess("Work details deleted successfully.");
+
+      await loadWorkLogs();
+    } catch (err) {
+      console.error("Delete Work Log Error:", err);
+
+      setError(
+        err?.response?.data?.message ||
+          "Unable to delete work details."
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  /* ================================
+     RENDER
+  ================================ */
 
   return (
     <div className="my-work-page">
+      {/* PAGE HEADER */}
+
       <div className="my-work-header">
         <div>
           <h1>My Work</h1>
+
           <p>
-            Enter your daily work details and view your work history.
+            Enter and manage your daily work details.
           </p>
         </div>
       </div>
+
+      {/* GLOBAL MESSAGES */}
 
       {error && (
         <div className="form-message error-message">
@@ -499,25 +608,30 @@ const MyWork = () => {
         </div>
       )}
 
-      {/* -------------------- ADD WORK FORM -------------------- */}
+      {/* ADD WORK SECTION */}
 
       <section className="work-section">
         <div className="section-header">
           <div>
             <h2>Add Work Details</h2>
-            <p>Fill in the work name, time and date.</p>
+
+            <p>
+              Fill in the work name, date and working time.
+            </p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="workName">Work Name</label>
+            <label htmlFor="workName">
+              Work Name
+            </label>
 
             <input
               id="workName"
               name="workName"
               type="text"
-              placeholder="e.g. React training, data entry, client call"
+              placeholder="e.g. React training, client call"
               value={formData.workName}
               onChange={handleChange}
               maxLength={200}
@@ -527,7 +641,9 @@ const MyWork = () => {
 
           <div className="form-grid">
             <div className="form-group">
-              <label htmlFor="date">Date</label>
+              <label htmlFor="date">
+                Date
+              </label>
 
               <input
                 id="date"
@@ -578,7 +694,8 @@ const MyWork = () => {
                 id="totalDuration"
                 type="text"
                 value={
-                  totalDuration || "Calculated automatically"
+                  totalDuration ||
+                  "Calculated automatically"
                 }
                 readOnly
               />
@@ -606,125 +723,102 @@ const MyWork = () => {
         </form>
       </section>
 
-      {/* -------------------- WORK HISTORY -------------------- */}
+      {/* WORK HISTORY SECTION */}
 
       <section className="work-section">
         <div className="section-header">
           <div>
-            <h2>My Daily Work History</h2>
+            <h2>My Work History</h2>
+
             <p>
-              All work entries from the same day are combined into one row.
+              View, edit and delete your submitted work.
             </p>
           </div>
         </div>
 
-        {/* -------------------- FILTERS -------------------- */}
+        {/* DATE FILTER */}
 
         <div className="work-filters">
-          <div className="form-group">
-            <label htmlFor="historyFilter">
-              Filter History
+          <div
+            className="form-group"
+            style={{ marginBottom: 0 }}
+          >
+            <label htmlFor="filterDate">
+              Select Date
             </label>
 
-            <select
-              id="historyFilter"
-              value={historyFilter}
+            <input
+              id="filterDate"
+              type="date"
+              value={filterDate}
               onChange={(event) =>
-                setHistoryFilter(event.target.value)
+                setFilterDate(event.target.value)
               }
-            >
-              <option value="today">Today</option>
-              <option value="week">Current Week</option>
-              <option value="month">Current Month</option>
-              <option value="custom">Custom Range</option>
-              <option value="all">All History</option>
-            </select>
+            />
           </div>
-
-          {historyFilter === "custom" && (
-            <>
-              <div className="form-group">
-                <label htmlFor="startDate">
-                  Start Date
-                </label>
-
-                <input
-                  id="startDate"
-                  type="date"
-                  value={startDate}
-                  onChange={(event) =>
-                    setStartDate(event.target.value)
-                  }
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="endDate">
-                  End Date
-                </label>
-
-                <input
-                  id="endDate"
-                  type="date"
-                  value={endDate}
-                  min={startDate}
-                  onChange={(event) =>
-                    setEndDate(event.target.value)
-                  }
-                />
-              </div>
-            </>
-          )}
         </div>
 
-        {/* -------------------- SUMMARY -------------------- */}
+        {/* SUMMARY */}
 
         <div className="work-summary-grid">
           <div className="work-summary-card">
-            <div className="summary-icon">📅</div>
-
-            <div>
-              <span>Total Working Days</span>
-              <strong>{groupedHistory.length}</strong>
+            <div className="summary-icon">
+              📝
             </div>
-          </div>
-
-          <div className="work-summary-card">
-            <div className="summary-icon">📝</div>
 
             <div>
-              <span>Total Work Entries</span>
+              <h3>Total Work Entries</h3>
+
               <strong>{filteredLogs.length}</strong>
             </div>
           </div>
 
           <div className="work-summary-card">
-            <div className="summary-icon">⏱️</div>
+            <div className="summary-icon">
+              ⏱️
+            </div>
 
             <div>
-              <span>Total Hours</span>
+              <h3>Total Hours</h3>
+
               <strong>
-                {totalHistoryHours.toFixed(2)}
+                {selectedDateTotal.toFixed(2)}
               </strong>
+            </div>
+          </div>
+
+          <div className="work-summary-card">
+            <div className="summary-icon">
+              📅
+            </div>
+
+            <div>
+              <h3>Working Days</h3>
+
+              <strong>{groupedHistory.length}</strong>
             </div>
           </div>
         </div>
 
-        {/* -------------------- TABLE -------------------- */}
+        {/* LOADING */}
 
         {loading ? (
           <div className="my-work-loading">
             <div className="loading-spinner" />
+
             <p>Loading work details...</p>
           </div>
         ) : groupedHistory.length === 0 ? (
           <div className="empty-work">
             <h3>No work details found</h3>
+
             <p>
-              Submit your work details to see your history here.
+              Submit your first work entry for this date.
             </p>
           </div>
         ) : (
+          /* DAILY GROUPED TABLE */
+
           <div className="work-history-table-wrapper">
             <table className="work-history-table">
               <thead>
@@ -740,36 +834,69 @@ const MyWork = () => {
 
               <tbody>
                 {groupedHistory.map((day, index) => (
-                  <tr key={getLogDate(day.date)}>
+                  <tr key={day.date}>
                     <td>{index + 1}</td>
 
                     <td>
-                      <strong>
-                        {formatDate(day.date)}
-                      </strong>
+                      {formatDate(day.date)}
                     </td>
 
                     <td>
-                      {day.workNames.length > 0 ? (
-                        <ul className="daily-work-list">
-                          {day.workNames.map((workName, workIndex) => (
-                            <li key={`${workName}-${workIndex}`}>
-                              {workName}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        "-"
-                      )}
+                      <div className="daily-work-details">
+                        {day.works.map((work) => (
+                          <div
+                            className="daily-work-item"
+                            key={work.id}
+                          >
+                            <div className="daily-work-name">
+                              <span>•</span>
+
+                              <span>
+                                {work.name}
+                              </span>
+                            </div>
+
+                            <div className="daily-work-time">
+                              {work.startTime} -{" "}
+                              {work.endTime}
+                            </div>
+
+                            <div className="work-actions">
+                              <button
+                                type="button"
+                                className="edit-btn"
+                                onClick={() =>
+                                  handleEditWork(
+                                    work.originalLog
+                                  )
+                                }
+                              >
+                                Edit
+                              </button>
+
+                              <button
+                                type="button"
+                                className="delete-btn"
+                                disabled={
+                                  deletingId === work.id
+                                }
+                                onClick={() =>
+                                  handleDeleteWork(work.id)
+                                }
+                              >
+                                {deletingId === work.id
+                                  ? "Deleting..."
+                                  : "Delete"}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </td>
 
-                    <td>
-                      {formatTime(day.earliestStart)}
-                    </td>
+                    <td>{day.startTime}</td>
 
-                    <td>
-                      {formatTime(day.latestEnd)}
-                    </td>
+                    <td>{day.endTime}</td>
 
                     <td>
                       <strong>
@@ -783,6 +910,113 @@ const MyWork = () => {
           </div>
         )}
       </section>
+
+      {/* EDIT MODAL */}
+
+      {editingWork && (
+        <div className="edit-modal-overlay">
+          <div className="edit-modal">
+            <div className="edit-modal-header">
+              <h2>Edit Work</h2>
+
+              <button
+                type="button"
+                className="close-modal-btn"
+                onClick={closeEditModal}
+                disabled={saving}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateWork}>
+              <div className="form-group">
+                <label htmlFor="editWorkName">
+                  Work Name
+                </label>
+
+                <input
+                  id="editWorkName"
+                  name="workName"
+                  type="text"
+                  value={editForm.workName}
+                  onChange={handleEditChange}
+                  maxLength={200}
+                  required
+                />
+              </div>
+
+              <div className="form-grid">
+                <div className="form-group">
+                  <label htmlFor="editDate">
+                    Date
+                  </label>
+
+                  <input
+                    id="editDate"
+                    name="date"
+                    type="date"
+                    value={editForm.date}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="editStartTime">
+                    Starting Time
+                  </label>
+
+                  <input
+                    id="editStartTime"
+                    name="startTime"
+                    type="time"
+                    value={editForm.startTime}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="editEndTime">
+                    Ending Time
+                  </label>
+
+                  <input
+                    id="editEndTime"
+                    name="endTime"
+                    type="time"
+                    value={editForm.endTime}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="cancel-btn"
+                  onClick={closeEditModal}
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="primary-btn"
+                  disabled={saving}
+                >
+                  {saving
+                    ? "Updating..."
+                    : "Update Work"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

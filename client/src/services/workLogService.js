@@ -1,44 +1,23 @@
-
 import api from "./api";
 
-// ========================================
-// EMPLOYEE / INTERN - CREATE WORK LOG
-// ========================================
-
-export const createWorkLog = async (logData) => {
-  const response = await api.post(
-    "/work-logs",
-    logData
-  );
-
+export const createWorkLog = async (data) => {
+  const response = await api.post("/work-logs", data);
   return response.data;
 };
-
-
-// ========================================
-// EMPLOYEE / INTERN - GET MY WORK LOGS
-// ========================================
 
 export const getMyWorkLogs = async () => {
-  const response = await api.get(
-    "/work-logs/my-logs"
-  );
-
+  const response = await api.get("/work-logs/my-logs");
   return response.data;
 };
 
+// Update work log
+export const updateWorkLog = async (id, data) => {
+  const response = await api.put(`/work-logs/${id}`, data);
+  return response.data;
+};
 
-// ========================================
-// SUPER ADMIN - GET ALL WORK LOGS
-// ========================================
-
-export const getAllWorkLogs = async (params = {}) => {
-  const response = await api.get(
-    "/work-logs",
-    {
-      params,
-    }
-  );
-
+// Delete work log
+export const deleteWorkLog = async (id) => {
+  const response = await api.delete(`/work-logs/${id}`);
   return response.data;
 };
