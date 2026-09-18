@@ -16,7 +16,7 @@ const {
 const {
     protect,
     authorizeRoles,
-} = require("../middleware/authMiddleware");
+} = require("../middlewares/authMiddleware");
 
 // Allowed roles
 const allowedRoles = authorizeRoles(
