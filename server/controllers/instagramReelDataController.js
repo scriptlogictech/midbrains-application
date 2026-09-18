@@ -5,11 +5,15 @@ const User = require("../models/User");
 
 // Get logged-in user's company ID
 const getUserCompanyId = (req) => {
-    const company = req.user?.company;
+    if (!req.user || !req.user.company) {
+        return null;
+    }
 
-    if (!company) return null;
+    if (typeof req.user.company === "object") {
+        return req.user.company._id;
+    }
 
-    return company._id || company;
+    return req.user.company;
 };
 
 // Create Instagram Reel Data
