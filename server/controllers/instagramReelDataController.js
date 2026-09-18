@@ -5,15 +5,27 @@ const User = require("../models/User");
 
 // Get logged-in user's company ID
 const getUserCompanyId = (req) => {
-    if (!req.user || !req.user.company) {
+    const company = req.user?.company;
+
+    if (!company) {
+        console.log("❌ Company missing from logged-in user");
+        console.log("User ID:", req.user?._id);
+        console.log("User Email:", req.user?.email);
+
         return null;
     }
 
-    if (typeof req.user.company === "object") {
-        return req.user.company._id;
+    // If company is populated as an object
+    if (typeof company === "object" && company._id) {
+        console.log("✅ Company ID:", company._id.toString());
+
+        return company._id.toString();
     }
 
-    return req.user.company;
+    // If company is only an ObjectId
+    console.log("✅ Company ID:", company.toString());
+
+    return company.toString();
 };
 
 // Create Instagram Reel Data
