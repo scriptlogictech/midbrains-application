@@ -17,6 +17,7 @@ const projectRoutes = require("./routes/projectRoutes");
 const placementRoutes = require("./routes/placementRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 // const uploadRoutes = require("./routes/uploadRoutes");
+const instagramReelDataRoutes = require("./routes/instagramReelDataRoutes");
 const userRoutes = require("./routes/userRoutes");
 const workTaskRoutes = require("./routes/workTaskRoutes");
 const workLogRoutes = require("./routes/workLogRoutes");
@@ -55,6 +56,11 @@ app.use("/api/users", userRoutes);
 app.use("/api/work-tasks", workTaskRoutes);
 
 app.use("/api/work-logs", workLogRoutes);
+
+app.use(
+    "/api/instagram-reel-data",
+    instagramReelDataRoutes
+);
 
 // Uploaded Files
 // app.use("/uploads", express.static("uploads"));

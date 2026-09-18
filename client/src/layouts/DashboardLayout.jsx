@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -23,133 +24,64 @@ const DashboardLayout = ({ children }) => {
       label: "Dashboard",
       icon: "bi-grid-1x2-fill",
       path: `/dashboard/${companyId}`,
-      roles: [
-        "super_admin",
-        "employee",
-        "intern",
-      ],
+      roles: ["super_admin", "employee", "intern"],
     },
-
-    // ==========================================
-    // Lead Management
-    // Employee + Intern can manage leads
-    // ==========================================
 
     {
       label: "Leads",
       icon: "bi-people-fill",
       path: `/dashboard/${companyId}/leads`,
-      roles: [
-        "super_admin",
-        "employee",
-        "intern",
-      ],
+      roles: ["super_admin", "employee", "intern"],
     },
-
-    // ==========================================
-    // Follow-up Management
-    // Employee + Intern can manage follow-ups
-    // ==========================================
 
     {
       label: "Follow-ups",
       icon: "bi-calendar-check",
       path: `/dashboard/${companyId}/followups`,
-      roles: [
-        "super_admin",
-        "employee",
-        "intern",
-      ],
+      roles: ["super_admin", "employee", "intern"],
     },
-
-    // ==========================================
-    // Admissions
-    // ==========================================
 
     {
       label: "Admissions",
       icon: "bi-person-check-fill",
       path: `/dashboard/${companyId}/admissions`,
-      roles: [
-        "super_admin",
-        "employee",
-      ],
+      roles: ["super_admin", "employee"],
     },
-
-    // ==========================================
-    // Internships
-    // ==========================================
 
     {
       label: "Internships",
       icon: "bi-mortarboard-fill",
       path: `/dashboard/${companyId}/internships`,
-      roles: [
-        "super_admin",
-        "employee",
-      ],
+      roles: ["super_admin", "employee"],
     },
-
-    // ==========================================
-    // Corporate Training
-    // ==========================================
 
     {
       label: "Corporate Training",
       icon: "bi-building-fill",
       path: `/dashboard/${companyId}/corporate-training`,
-      roles: [
-        "super_admin",
-        "employee",
-      ],
+      roles: ["super_admin", "employee"],
     },
-
-    // ==========================================
-    // Projects
-    // ==========================================
 
     {
       label: "Projects",
       icon: "bi-kanban-fill",
       path: `/dashboard/${companyId}/projects`,
-      roles: [
-        "super_admin",
-        "employee",
-      ],
+      roles: ["super_admin", "employee"],
     },
-
-    // ==========================================
-    // Placements
-    // ==========================================
 
     {
       label: "Placements",
       icon: "bi-briefcase-fill",
       path: `/dashboard/${companyId}/placements`,
-      roles: [
-        "super_admin",
-        "employee",
-      ],
+      roles: ["super_admin", "employee"],
     },
-
-    // ==========================================
-    // Reports
-    // ==========================================
 
     {
       label: "Reports",
       icon: "bi-bar-chart-fill",
       path: `/dashboard/${companyId}/reports`,
-      roles: [
-        "super_admin",
-        "employee",
-      ],
+      roles: ["super_admin", "employee"],
     },
-
-    // ==========================================
-    // User Management
-    // Super Admin only
-    // ==========================================
 
     {
       label: "User Management",
@@ -158,31 +90,30 @@ const DashboardLayout = ({ children }) => {
       roles: ["super_admin"],
     },
 
-    // ==========================================
-    // Work Management
-    // Super Admin only
-    // ==========================================
-
     {
       label: "Work Management",
       icon: "bi-clipboard-check",
       path: `/dashboard/${companyId}/work`,
-      roles: ["super_admin"],
+      roles: ["super_admin" , "employee"],
     },
 
     // ==========================================
-    // My Work
-    // Employee + Intern
+    // Instagram Reel Data
+    // Super Admin Only
     // ==========================================
+
+    {
+      label: "Instagram Reel Data",
+      icon: "bi-instagram",
+      path: `/dashboard/${companyId}/instagram-reel-data`,
+      roles: ["super_admin"],
+    },
 
     {
       label: "My Work",
       icon: "bi-clipboard-check",
       path: `/dashboard/${companyId}/my-work`,
-      roles: [
-        "employee",
-        "intern",
-      ],
+      roles: ["employee", "intern"],
     },
   ];
 
@@ -190,36 +121,27 @@ const DashboardLayout = ({ children }) => {
   // Filter Menu According To User Role
   // ==========================================
 
-  const visibleMenuItems = menuItems.filter(
-    (item) =>
-      item.roles.includes(user?.role)
+  const visibleMenuItems = menuItems.filter((item) =>
+    item.roles.includes(user?.role)
   );
 
   return (
     <div className="dashboard-wrapper">
 
-      {/* ==========================================
-          Mobile Overlay
-      ========================================== */}
+      {/* Mobile Overlay */}
 
       {sidebarOpen && (
         <div
           className="sidebar-overlay"
-          onClick={() =>
-            setSidebarOpen(false)
-          }
+          onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* ==========================================
-          Sidebar
-      ========================================== */}
+      {/* Sidebar */}
 
       <aside
         className={`dashboard-sidebar ${
-          sidebarOpen
-            ? "sidebar-open"
-            : ""
+          sidebarOpen ? "sidebar-open" : ""
         }`}
       >
 
@@ -233,6 +155,7 @@ const DashboardLayout = ({ children }) => {
 
           <div>
             <h5>Follow-up CRM</h5>
+
             <small>
               Management System
             </small>
@@ -248,68 +171,62 @@ const DashboardLayout = ({ children }) => {
             MAIN MENU
           </div>
 
-          {visibleMenuItems.map(
-            (item) => (
-              <button
-                key={item.label}
-                className="sidebar-menu-item"
-                onClick={() => {
-                  navigate(item.path);
-                  setSidebarOpen(false);
-                }}
-              >
+          {visibleMenuItems.map((item) => (
+            <button
+              key={item.label}
+              className="sidebar-menu-item"
+              onClick={() => {
+                navigate(item.path);
+                setSidebarOpen(false);
+              }}
+            >
 
-                <i
-                  className={`bi ${item.icon}`}
-                ></i>
+              <i className={`bi ${item.icon}`}></i>
 
-                <span>
-                  {item.label}
-                </span>
+              <span>
+                {item.label}
+              </span>
 
-              </button>
-            )
-          )}
+            </button>
+          ))}
 
         </div>
 
-        {/* ==========================================
-            Sidebar Bottom
-        ========================================== */}
+        {/* Sidebar Bottom */}
 
         <div className="sidebar-bottom">
 
           <button
             className="sidebar-menu-item"
-            onClick={() =>
-              navigate("/companies")
-            }
+            onClick={() => navigate("/companies")}
           >
+
             <i className="bi bi-arrow-left-circle"></i>
 
             <span>
               Change Company
             </span>
+
           </button>
 
           <button
             className="sidebar-menu-item logout-item"
             onClick={handleLogout}
           >
+
             <i className="bi bi-box-arrow-right"></i>
 
             <span>
               Logout
             </span>
+
           </button>
 
         </div>
 
       </aside>
 
-      {/* ==========================================
-          Main Area
-      ========================================== */}
+      {/* Main Area */}
 
       <div className="dashboard-main">
 
@@ -319,11 +236,11 @@ const DashboardLayout = ({ children }) => {
 
           <button
             className="mobile-menu-btn"
-            onClick={() =>
-              setSidebarOpen(true)
-            }
+            onClick={() => setSidebarOpen(true)}
           >
+
             <i className="bi bi-list"></i>
+
           </button>
 
           <div className="topbar-user">
@@ -341,14 +258,11 @@ const DashboardLayout = ({ children }) => {
               </strong>
 
               <small>
-                {user?.role ===
-                "super_admin"
+                {user?.role === "super_admin"
                   ? "Super Admin"
-                  : user?.role ===
-                    "employee"
+                  : user?.role === "employee"
                   ? "Employee"
-                  : user?.role ===
-                    "intern"
+                  : user?.role === "intern"
                   ? "Intern"
                   : user?.role}
               </small>

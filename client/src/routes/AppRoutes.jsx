@@ -29,6 +29,8 @@ import Reports from "../pages/reports/Reports";
 
 import Users from "../pages/users/Users";
 
+import InstagramReelData from "../pages/instagramReelData/InstagramReelData";
+
 // Work Management
 import WorkManagement from "../pages/work/WorkManagement";
 import MyWork from "../pages/work/MyWork";
@@ -378,6 +380,28 @@ const AppRoutes = () => {
                         >
                             <DashboardLayout>
                                 <Users />
+                            </DashboardLayout>
+                        </RoleRoute>
+                    }
+                />
+
+
+                {/* =================================================
+    INSTAGRAM REEL DATA
+    SUPER ADMIN + EMPLOYEE
+================================================= */}
+
+                <Route
+                    path="/dashboard/:companyId/instagram-reel-data"
+                    element={
+                        <RoleRoute
+                            allowedRoles={[
+                                "super_admin",
+                                "employee",
+                            ]}
+                        >
+                            <DashboardLayout>
+                                <InstagramReelData />
                             </DashboardLayout>
                         </RoleRoute>
                     }
