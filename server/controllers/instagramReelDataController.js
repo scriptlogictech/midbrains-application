@@ -2,39 +2,72 @@
 const mongoose = require("mongoose");
 const InstagramReelData = require("../models/InstagramReelData");
 const User = require("../models/User");
+const Company = require("../models/Company");
+
+// Check Super Admin
+const isSuperAdmin = (req) => {
+    return req.user?.role === "super_admin";
+};
 
 // Get logged-in user's company ID
 const getUserCompanyId = (req) => {
     const company = req.user?.company;
 
     if (!company) {
-        console.log("❌ Company missing from logged-in user");
-        console.log("User ID:", req.user?._id);
-        console.log("User Email:", req.user?.email);
-
         return null;
     }
 
-    // If company is populated as an object
     if (typeof company === "object" && company._id) {
-        console.log("✅ Company ID:", company._id.toString());
-
         return company._id.toString();
     }
 
-    // If company is only an ObjectId
-    console.log("✅ Company ID:", company.toString());
-
     return company.toString();
+};
+
+// Get company filter based on user role
+const getCompanyFilter = (req) => {
+    if (isSuperAdmin(req)) {
+        return {};
+    }
+
+    const companyId = getUserCompanyId(req);
+
+    if (!companyId) {
+        return null;
+    }
+
+    return { company: companyId };
 };
 
 // Create Instagram Reel Data
 exports.createInstagramReelData = async (req, res) => {
     try {
-        const companyId = getUserCompanyId(req);
+        let companyId;
+
+        if (isSuperAdmin(req)) {
+            companyId = req.body.company;
+        } else {
+            companyId = getUserCompanyId(req);
+        }
 
         if (!companyId) {
             return res.status(400).json({
+                success: false,
+                message: "Company is required",
+            });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(companyId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid company ID",
+            });
+        }
+
+        const company = await Company.findById(companyId);
+
+        if (!company) {
+            return res.status(404).json({
                 success: false,
                 message: "Company not found",
             });
@@ -68,6 +101,7 @@ exports.createInstagramReelData = async (req, res) => {
         const populatedRecord = await InstagramReelData.findById(
             newRecord._id
         )
+            .populate("company", "companyName companyCode")
             .populate("createdBy", "fullName email role")
             .populate(
                 "followUps.assignedEmployee",
@@ -94,18 +128,17 @@ exports.createInstagramReelData = async (req, res) => {
 // Get all Instagram Reel Data
 exports.getInstagramReelData = async (req, res) => {
     try {
-        const companyId = getUserCompanyId(req);
+        const companyFilter = getCompanyFilter(req);
 
-        if (!companyId) {
+        if (companyFilter === null) {
             return res.status(400).json({
                 success: false,
                 message: "Company not found",
             });
         }
 
-        const records = await InstagramReelData.find({
-            company: companyId,
-        })
+        const records = await InstagramReelData.find(companyFilter)
+            .populate("company", "companyName companyCode")
             .populate("createdBy", "fullName email role")
             .populate(
                 "followUps.assignedEmployee",
@@ -133,7 +166,6 @@ exports.getInstagramReelData = async (req, res) => {
 // Get single Instagram Reel Data record
 exports.getSingleInstagramReelData = async (req, res) => {
     try {
-        const companyId = getUserCompanyId(req);
         const { id } = req.params;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -143,10 +175,20 @@ exports.getSingleInstagramReelData = async (req, res) => {
             });
         }
 
+        const companyFilter = getCompanyFilter(req);
+
+        if (companyFilter === null) {
+            return res.status(400).json({
+                success: false,
+                message: "Company not found",
+            });
+        }
+
         const record = await InstagramReelData.findOne({
             _id: id,
-            company: companyId,
+            ...companyFilter,
         })
+            .populate("company", "companyName companyCode")
             .populate("createdBy", "fullName email role")
             .populate(
                 "followUps.assignedEmployee",
@@ -179,13 +221,21 @@ exports.getSingleInstagramReelData = async (req, res) => {
 // Update Instagram Reel Data
 exports.updateInstagramReelData = async (req, res) => {
     try {
-        const companyId = getUserCompanyId(req);
         const { id } = req.params;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid record ID",
+            });
+        }
+
+        const companyFilter = getCompanyFilter(req);
+
+        if (companyFilter === null) {
+            return res.status(400).json({
+                success: false,
+                message: "Company not found",
             });
         }
 
@@ -205,23 +255,25 @@ exports.updateInstagramReelData = async (req, res) => {
             }
         });
 
-        const updatedRecord = await InstagramReelData.findOneAndUpdate(
-            {
-                _id: id,
-                company: companyId,
-            },
-            updateData,
-            {
-                new: true,
-                runValidators: true,
-            }
-        )
-            .populate("createdBy", "fullName email role")
-            .populate(
-                "followUps.assignedEmployee",
-                "fullName email role"
+        const updatedRecord =
+            await InstagramReelData.findOneAndUpdate(
+                {
+                    _id: id,
+                    ...companyFilter,
+                },
+                updateData,
+                {
+                    new: true,
+                    runValidators: true,
+                }
             )
-            .populate("followUps.createdBy", "fullName email role");
+                .populate("company", "companyName companyCode")
+                .populate("createdBy", "fullName email role")
+                .populate(
+                    "followUps.assignedEmployee",
+                    "fullName email role"
+                )
+                .populate("followUps.createdBy", "fullName email role");
 
         if (!updatedRecord) {
             return res.status(404).json({
@@ -249,7 +301,6 @@ exports.updateInstagramReelData = async (req, res) => {
 // Delete Instagram Reel Data
 exports.deleteInstagramReelData = async (req, res) => {
     try {
-        const companyId = getUserCompanyId(req);
         const { id } = req.params;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -259,10 +310,20 @@ exports.deleteInstagramReelData = async (req, res) => {
             });
         }
 
-        const deletedRecord = await InstagramReelData.findOneAndDelete({
-            _id: id,
-            company: companyId,
-        });
+        const companyFilter = getCompanyFilter(req);
+
+        if (companyFilter === null) {
+            return res.status(400).json({
+                success: false,
+                message: "Company not found",
+            });
+        }
+
+        const deletedRecord =
+            await InstagramReelData.findOneAndDelete({
+                _id: id,
+                ...companyFilter,
+            });
 
         if (!deletedRecord) {
             return res.status(404).json({
@@ -286,26 +347,32 @@ exports.deleteInstagramReelData = async (req, res) => {
     }
 };
 
-// Get company employees
+// Get employees
 exports.getCompanyEmployees = async (req, res) => {
     try {
-        const companyId = getUserCompanyId(req);
-
-        if (!companyId) {
-            return res.status(400).json({
-                success: false,
-                message: "Company not found",
-            });
-        }
-
-        const employees = await User.find({
-            company: companyId,
+        let employeeFilter = {
             role: {
                 $in: ["employee", "intern"],
             },
             isActive: true,
-        })
-            .select("_id fullName email role")
+        };
+
+        if (!isSuperAdmin(req)) {
+            const companyId = getUserCompanyId(req);
+
+            if (!companyId) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Company not found",
+                });
+            }
+
+            employeeFilter.company = companyId;
+        }
+
+        const employees = await User.find(employeeFilter)
+            .select("_id fullName email role company")
+            .populate("company", "companyName companyCode")
             .sort({ fullName: 1 });
 
         return res.status(200).json({
@@ -326,7 +393,6 @@ exports.getCompanyEmployees = async (req, res) => {
 // Add follow-up
 exports.addFollowUp = async (req, res) => {
     try {
-        const companyId = getUserCompanyId(req);
         const { id } = req.params;
 
         const {
@@ -367,9 +433,32 @@ exports.addFollowUp = async (req, res) => {
             });
         }
 
+        const companyFilter = getCompanyFilter(req);
+
+        if (companyFilter === null) {
+            return res.status(400).json({
+                success: false,
+                message: "Company not found",
+            });
+        }
+
+        // Super Admin can access records from all companies
+        const record = await InstagramReelData.findOne({
+            _id: id,
+            ...companyFilter,
+        });
+
+        if (!record) {
+            return res.status(404).json({
+                success: false,
+                message: "Record not found",
+            });
+        }
+
+        // Employee must belong to the record's company
         const employee = await User.findOne({
             _id: assignedEmployee,
-            company: companyId,
+            company: record.company,
             role: {
                 $in: ["employee", "intern"],
             },
@@ -380,18 +469,6 @@ exports.addFollowUp = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: "Employee not found in this company",
-            });
-        }
-
-        const record = await InstagramReelData.findOne({
-            _id: id,
-            company: companyId,
-        });
-
-        if (!record) {
-            return res.status(404).json({
-                success: false,
-                message: "Record not found",
             });
         }
 
@@ -415,6 +492,7 @@ exports.addFollowUp = async (req, res) => {
         const populatedRecord = await InstagramReelData.findById(
             record._id
         )
+            .populate("company", "companyName companyCode")
             .populate("createdBy", "fullName email role")
             .populate(
                 "followUps.assignedEmployee",
