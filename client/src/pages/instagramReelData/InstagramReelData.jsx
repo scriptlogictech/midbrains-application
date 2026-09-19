@@ -20,6 +20,25 @@ const emptyFollowUp = {
     communicationNotes: "",
 };
 
+const normalizeLookingFor = (value) => {
+    const normalized = String(value || "Job")
+        .trim()
+        .toLowerCase()
+        .replace(/[–—-]/g, " ")
+        .replace(/\s+/g, " ");
+
+    if (normalized.includes("internship")) {
+        return "Internship";
+    }
+
+    if (normalized.includes("job") || normalized.includes("placement")) {
+        return "Job";
+    }
+
+    // The backend currently accepts Job and Internship.
+    return "Job";
+};
+
 const InstagramReelData = () => {
     const fileInputRef = useRef(null);
 
@@ -360,12 +379,15 @@ const InstagramReelData = () => {
                         "emailid",
                         "mail",
                     ]) || "").trim(),
-                    lookingFor: String(getSheetValue(row, [
-                        "lookingfor",
-                        "lookingfor",
-                        "requirement",
-                        "interestedin",
-                    ]) || "Job").trim(),
+                    lookingFor: normalizeLookingFor(
+                        getSheetValue(row, [
+                            "lookingfor",
+                            "requirement",
+                            "interestedin",
+                            "course",
+                            "purpose",
+                        ])
+                    ),
                     resumeLink: String(getSheetValue(row, [
                         "resumelink",
                         "resume",
