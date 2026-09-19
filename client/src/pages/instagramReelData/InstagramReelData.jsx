@@ -134,6 +134,7 @@ const InstagramReelData = () => {
             email: record.email || "",
             lookingFor: record.lookingFor || "Job",
             resumeLink: record.resumeLink || "",
+            company: record.company?._id || record.company || "",
         });
 
         setEditingId(record._id);
@@ -146,6 +147,11 @@ const InstagramReelData = () => {
 
         if (!form.name.trim() || !form.contactNumber.trim()) {
             alert("Name and contact number are required");
+            return;
+        }
+
+        if (!editingId && !form.company) {
+            alert("Please select a company");
             return;
         }
 
@@ -721,6 +727,25 @@ const InstagramReelData = () => {
                                     value={form.email}
                                     onChange={handleChange}
                                 />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Company *</label>
+
+                                <select
+                                    name="company"
+                                    value={form.company}
+                                    onChange={handleChange}
+                                    required={!editingId}
+                                    disabled={Boolean(editingId)}
+                                >
+                                    <option value="">Select Company</option>
+                                    {companies.map((company) => (
+                                        <option key={company._id} value={company._id}>
+                                            {company.name || company.companyName || company.code}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
                             <div className="form-group">
