@@ -5,12 +5,12 @@ import api from "../../services/api";
 import "./InstagramReelData.css";
 
 const emptyForm = {
+    company: "",
     name: "",
     contactNumber: "",
     email: "",
     lookingFor: "Job",
     resumeLink: "",
-    company: "",
 };
 
 const emptyFollowUp = {
@@ -26,6 +26,8 @@ const InstagramReelData = () => {
     const [records, setRecords] = useState([]);
     const [employees, setEmployees] = useState([]);
     const [companies, setCompanies] = useState([]);
+    const [uploadCompany, setUploadCompany] = useState("");
+    const [showUploadCompanyModal, setShowUploadCompanyModal] = useState(false);
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -44,10 +46,7 @@ const InstagramReelData = () => {
     const [followUpForm, setFollowUpForm] =
         useState(emptyFollowUp);
 
-    // =========================
-    // FETCH RECORDS
-    // =========================
-
+    // Fetch records
     const fetchRecords = async () => {
         try {
             setLoading(true);
@@ -59,7 +58,6 @@ const InstagramReelData = () => {
             setRecords(response.data?.data || []);
         } catch (error) {
             console.error("Fetch records error:", error);
-
             alert(
                 error.response?.data?.message ||
                 "Failed to fetch records"
@@ -69,10 +67,7 @@ const InstagramReelData = () => {
         }
     };
 
-    // =========================
-    // FETCH EMPLOYEES
-    // =========================
-
+    // Fetch employees
     const fetchEmployees = async () => {
         try {
             const response = await api.get(
@@ -85,26 +80,16 @@ const InstagramReelData = () => {
         }
     };
 
-    // =========================
-    // FETCH COMPANIES
-    // =========================
-
+    // Fetch companies for Super Admin Excel upload
     const fetchCompanies = async () => {
         try {
             const response = await api.get("/companies");
-
-            const companyData = Array.isArray(response.data)
+            const companyList = Array.isArray(response.data)
                 ? response.data
                 : response.data?.data || [];
-
-            setCompanies(companyData);
+            setCompanies(companyList);
         } catch (error) {
             console.error("Fetch companies error:", error);
-
-            alert(
-                error.response?.data?.message ||
-                "Failed to fetch companies"
-            );
         }
     };
 
@@ -114,10 +99,7 @@ const InstagramReelData = () => {
         fetchCompanies();
     }, []);
 
-    // =========================
-    // INPUT CHANGE
-    // =========================
-
+    // Input change
     const handleChange = (event) => {
         const { name, value } = event.target;
 
@@ -127,10 +109,7 @@ const InstagramReelData = () => {
         }));
     };
 
-    // =========================
-    // FOLLOW-UP INPUT CHANGE
-    // =========================
-
+    // Follow-up input change
     const handleFollowUpChange = (event) => {
         const { name, value } = event.target;
 
@@ -140,60 +119,33 @@ const InstagramReelData = () => {
         }));
     };
 
-    // =========================
-    // OPEN ADD FORM
-    // =========================
-
+    // Open add form
     const openAddForm = () => {
-        setForm({
-            ...emptyForm,
-            company: "",
-        });
-
+        setForm(emptyForm);
         setEditingId(null);
         setShowForm(true);
     };
 
-    // =========================
-    // OPEN EDIT FORM
-    // =========================
-
+    // Open edit form
     const openEditForm = (record) => {
-        const companyId =
-            typeof record.company === "object"
-                ? record.company?._id
-                : record.company || "";
-
         setForm({
             name: record.name || "",
             contactNumber: record.contactNumber || "",
             email: record.email || "",
             lookingFor: record.lookingFor || "Job",
             resumeLink: record.resumeLink || "",
-            company: companyId,
         });
 
         setEditingId(record._id);
         setShowForm(true);
     };
 
-    // =========================
-    // SAVE RECORD
-    // =========================
-
+    // Save record
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        if (
-            !form.name.trim() ||
-            !form.contactNumber.trim()
-        ) {
+        if (!form.name.trim() || !form.contactNumber.trim()) {
             alert("Name and contact number are required");
-            return;
-        }
-
-        if (!editingId && !form.company) {
-            alert("Please select a company");
             return;
         }
 
@@ -203,13 +155,7 @@ const InstagramReelData = () => {
             if (editingId) {
                 await api.put(
                     `/instagram-reel-data/${editingId}`,
-                    {
-                        name: form.name,
-                        contactNumber: form.contactNumber,
-                        email: form.email,
-                        lookingFor: form.lookingFor,
-                        resumeLink: form.resumeLink,
-                    }
+                    form
                 );
 
                 alert("Record updated successfully");
@@ -239,10 +185,7 @@ const InstagramReelData = () => {
         }
     };
 
-    // =========================
-    // DELETE RECORD
-    // =========================
-
+    // Delete record
     const handleDelete = async (id) => {
         const confirmed = window.confirm(
             "Are you sure you want to delete this record?"
@@ -256,9 +199,7 @@ const InstagramReelData = () => {
             );
 
             setRecords((previous) =>
-                previous.filter(
-                    (record) => record._id !== id
-                )
+                previous.filter((record) => record._id !== id)
             );
 
             alert("Record deleted successfully");
@@ -272,53 +213,14 @@ const InstagramReelData = () => {
         }
     };
 
-    // =========================
-    // OPEN FOLLOW-UP
-    // =========================
-
+    // Open follow-up popup
     const openFollowUp = (record) => {
         setSelectedRecord(record);
         setFollowUpForm(emptyFollowUp);
         setShowFollowUp(true);
     };
 
-    // =========================
-    // GET EMPLOYEES FOR COMPANY
-    // =========================
-
-    const getRecordCompanyId = (record) => {
-        if (!record?.company) return "";
-
-        return typeof record.company === "object"
-            ? record.company?._id
-            : record.company;
-    };
-
-    const selectedRecordCompanyId =
-        getRecordCompanyId(selectedRecord);
-
-    const availableEmployees = employees.filter(
-        (employee) => {
-            const employeeCompanyId =
-                typeof employee.company === "object"
-                    ? employee.company?._id
-                    : employee.company;
-
-            if (!selectedRecordCompanyId) {
-                return true;
-            }
-
-            return (
-                String(employeeCompanyId) ===
-                String(selectedRecordCompanyId)
-            );
-        }
-    );
-
-    // =========================
-    // ADD FOLLOW-UP
-    // =========================
-
+    // Add follow-up
     const handleFollowUpSubmit = async (event) => {
         event.preventDefault();
 
@@ -360,89 +262,50 @@ const InstagramReelData = () => {
         }
     };
 
-    // =========================
-    // COMMUNICATION HISTORY
-    // =========================
-
+    // Show communication history
     const openHistory = (record) => {
         setSelectedRecord(record);
         setShowHistory(true);
     };
 
-    // =========================
-    // EXCEL HELPERS
-    // =========================
-
+    // Normalize Excel headers
     const normalizeHeader = (value) => {
         return String(value || "")
             .toLowerCase()
             .replace(/[^a-z0-9]/g, "");
     };
 
+    // Get Excel value
     const getSheetValue = (row, possibleHeaders) => {
         const rowKeys = Object.keys(row);
 
         const matchingKey = rowKeys.find((key) =>
-            possibleHeaders.includes(
-                normalizeHeader(key)
-            )
+            possibleHeaders.includes(normalizeHeader(key))
         );
 
         return matchingKey ? row[matchingKey] : "";
     };
 
-    const getCompanyFromSheet = (row) => {
-        const companyValue = String(
-            getSheetValue(row, [
-                "company",
-                "companyname",
-                "companycode",
-            ]) || ""
-        )
-            .trim()
-            .toLowerCase();
-
-        if (!companyValue) {
-            return companies[0]?._id || "";
+    // Open company selection before Excel upload
+    const openUploadCompanyModal = () => {
+        if (!companies.length) {
+            alert("Companies are still loading. Please try again.");
+            fetchCompanies();
+            return;
         }
 
-        const matchingCompany = companies.find(
-            (company) => {
-                const name =
-                    String(
-                        company.companyName || ""
-                    ).toLowerCase();
-
-                const code =
-                    String(
-                        company.companyCode || ""
-                    ).toLowerCase();
-
-                return (
-                    name === companyValue ||
-                    code === companyValue ||
-                    String(company._id) === companyValue
-                );
-            }
-        );
-
-        return matchingCompany?._id || "";
+        setUploadCompany(companies[0]?._id || "");
+        setShowUploadCompanyModal(true);
     };
 
-    // =========================
-    // UPLOAD EXCEL OR CSV
-    // =========================
-
+    // Upload Excel or CSV
     const handleFileUpload = async (event) => {
         const file = event.target.files?.[0];
 
         if (!file) return;
 
-        if (!companies.length) {
-            alert(
-                "Companies are not loaded. Please try again."
-            );
-
+        if (!uploadCompany) {
+            alert("Please select a company before uploading.");
             return;
         }
 
@@ -450,18 +313,9 @@ const InstagramReelData = () => {
             setSaving(true);
 
             const buffer = await file.arrayBuffer();
-
-            const workbook = XLSX.read(buffer, {
-                type: "array",
-            });
-
-            const worksheet =
-                workbook.Sheets[
-                    workbook.SheetNames[0]
-                ];
-
-            const rows =
-                XLSX.utils.sheet_to_json(worksheet);
+            const workbook = XLSX.read(buffer, { type: "array" });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
             if (!rows.length) {
                 alert("The uploaded file is empty");
@@ -469,154 +323,102 @@ const InstagramReelData = () => {
             }
 
             let successCount = 0;
+            let skippedCount = 0;
+            let failedCount = 0;
+            const errors = [];
 
-            for (const row of rows) {
+            for (const [index, row] of rows.entries()) {
                 const record = {
-                    name: String(
-                        getSheetValue(row, [
-                            "name",
-                            "fullname",
-                            "studentname",
-                            "candidatename",
-                        ]) || ""
-                    ).trim(),
-
-                    contactNumber: String(
-                        getSheetValue(row, [
-                            "contactnumber",
-                            "mobilenumber",
-                            "phone",
-                            "mobile",
-                            "contact",
-                        ]) || ""
-                    ).trim(),
-
-                    email: String(
-                        getSheetValue(row, [
-                            "email",
-                            "emailid",
-                            "mail",
-                        ]) || ""
-                    ).trim(),
-
-                    lookingFor:
-                        getSheetValue(row, [
-                            "lookingfor",
-                            "requirement",
-                            "interestedin",
-                        ]) || "Job",
-
-                    resumeLink: String(
-                        getSheetValue(row, [
-                            "resumelink",
-                            "resume",
-                            "cv",
-                        ]) || ""
-                    ).trim(),
-
-                    company: getCompanyFromSheet(row),
+                    company: uploadCompany,
+                    name: String(getSheetValue(row, [
+                        "name",
+                        "fullname",
+                        "studentname",
+                        "candidatename",
+                        "candidate",
+                    ]) || "").trim(),
+                    contactNumber: String(getSheetValue(row, [
+                        "contactnumber",
+                        "contactno",
+                        "mobilenumber",
+                        "mobileno",
+                        "phonenumber",
+                        "phoneno",
+                        "whatsappnumber",
+                        "phone",
+                        "mobile",
+                        "contact",
+                    ]) || "").trim(),
+                    email: String(getSheetValue(row, [
+                        "email",
+                        "emailid",
+                        "mail",
+                    ]) || "").trim(),
+                    lookingFor: String(getSheetValue(row, [
+                        "lookingfor",
+                        "lookingfor",
+                        "requirement",
+                        "interestedin",
+                    ]) || "Job").trim(),
+                    resumeLink: String(getSheetValue(row, [
+                        "resumelink",
+                        "resume",
+                        "cv",
+                    ]) || "").trim(),
                 };
 
-                if (
-                    !record.name ||
-                    !record.contactNumber
-                ) {
-                    continue;
-                }
-
-                if (!record.company) {
-                    console.error(
-                        "Company not found for row:",
-                        row
-                    );
-
+                if (!record.name || !record.contactNumber) {
+                    skippedCount++;
                     continue;
                 }
 
                 try {
-                    await api.post(
-                        "/instagram-reel-data",
-                        record
-                    );
-
+                    await api.post("/instagram-reel-data", record);
                     successCount++;
                 } catch (error) {
-                    console.error(
-                        "Failed to upload row:",
-                        error
-                    );
+                    failedCount++;
+                    const message =
+                        error.response?.data?.message ||
+                        error.response?.data?.error ||
+                        error.message ||
+                        "Unknown error";
+
+                    errors.push(`Row ${index + 2}: ${message}`);
+                    console.error(`Failed to upload row ${index + 2}:`, error.response?.data || error);
                 }
             }
 
+            const errorPreview = errors.slice(0, 5).join("\n");
             alert(
-                `${successCount} records uploaded successfully`
+                `Upload completed\n\nSuccessful: ${successCount}\nFailed: ${failedCount}\nSkipped: ${skippedCount}` +
+                (errorPreview ? `\n\nErrors:\n${errorPreview}` : "")
             );
 
             await fetchRecords();
         } catch (error) {
-            console.error(
-                "File upload error:",
-                error
+            console.error("File upload error:", error);
+            alert(
+                error.response?.data?.message ||
+                "Failed to read uploaded file"
             );
-
-            alert("Failed to read uploaded file");
         } finally {
             setSaving(false);
-
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
             }
         }
     };
 
-    // =========================
-    // COMPANY NAME HELPER
-    // =========================
-
-    const getCompanyName = (record) => {
-        if (!record?.company) return "-";
-
-        if (typeof record.company === "object") {
-            return (
-                record.company.companyName ||
-                record.company.companyCode ||
-                "-"
-            );
-        }
-
-        const company = companies.find(
-            (item) =>
-                String(item._id) ===
-                String(record.company)
-        );
-
-        return (
-            company?.companyName ||
-            company?.companyCode ||
-            "-"
-        );
-    };
-
-    // =========================
-    // FILTER RECORDS
-    // =========================
-
+    // Filter records
     const filteredRecords = records.filter((record) => {
         const searchText = search.toLowerCase();
 
         const matchesSearch =
-            record.name
-                ?.toLowerCase()
-                .includes(searchText) ||
+            record.name?.toLowerCase().includes(searchText) ||
             record.contactNumber
                 ?.toLowerCase()
                 .includes(searchText) ||
-            record.email
-                ?.toLowerCase()
-                .includes(searchText) ||
-            getCompanyName(record)
-                ?.toLowerCase()
-                .includes(searchText);
+            record.email?.toLowerCase().includes(searchText);
 
         const matchesFilter =
             filter === "All" ||
@@ -632,17 +434,14 @@ const InstagramReelData = () => {
                     <h2>Instagram Reel Data</h2>
 
                     <p>
-                        Manage Instagram candidates and
-                        follow-ups
+                        Manage Instagram candidates and follow-ups
                     </p>
                 </div>
 
                 <div className="instagram-reel-actions">
                     <button
                         className="btn btn-secondary"
-                        onClick={() =>
-                            fileInputRef.current?.click()
-                        }
+                        onClick={openUploadCompanyModal}
                         disabled={saving}
                     >
                         <i className="bi bi-upload"></i>
@@ -670,7 +469,7 @@ const InstagramReelData = () => {
             <div className="instagram-reel-toolbar">
                 <input
                     type="text"
-                    placeholder="Search by name, phone, email or company..."
+                    placeholder="Search by name, phone or email..."
                     value={search}
                     onChange={(event) =>
                         setSearch(event.target.value)
@@ -683,21 +482,15 @@ const InstagramReelData = () => {
                         setFilter(event.target.value)
                     }
                 >
-                    <option value="All">
-                        All Status
-                    </option>
+                    <option value="All">All Status</option>
                     <option value="Not Started">
                         Not Started
                     </option>
-                    <option value="Pending">
-                        Pending
-                    </option>
+                    <option value="Pending">Pending</option>
                     <option value="In Progress">
                         In Progress
                     </option>
-                    <option value="Completed">
-                        Completed
-                    </option>
+                    <option value="Completed">Completed</option>
                     <option value="Not Interested">
                         Not Interested
                     </option>
@@ -718,7 +511,6 @@ const InstagramReelData = () => {
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>Company</th>
                                 <th>Name</th>
                                 <th>Contact</th>
                                 <th>Email</th>
@@ -734,12 +526,6 @@ const InstagramReelData = () => {
                                 (record, index) => (
                                     <tr key={record._id}>
                                         <td>{index + 1}</td>
-
-                                        <td>
-                                            {getCompanyName(
-                                                record
-                                            )}
-                                        </td>
 
                                         <td>
                                             <strong>
@@ -769,8 +555,8 @@ const InstagramReelData = () => {
                                         <td>
                                             {record.nextFollowUpDate
                                                 ? new Date(
-                                                      record.nextFollowUpDate
-                                                  ).toLocaleDateString()
+                                                    record.nextFollowUpDate
+                                                ).toLocaleDateString()
                                                 : "-"}
                                         </td>
 
@@ -829,7 +615,63 @@ const InstagramReelData = () => {
                 )}
             </div>
 
-            {/* ADD / EDIT MODAL */}
+            {/* Excel upload company modal */}
+            {showUploadCompanyModal && (
+                <div className="modal-overlay">
+                    <div className="modal-box">
+                        <div className="modal-header">
+                            <h3>Select Company for Upload</h3>
+                            <button
+                                type="button"
+                                onClick={() => setShowUploadCompanyModal(false)}
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="form-group">
+                            <label>Select Company *</label>
+                            <select
+                                value={uploadCompany}
+                                onChange={(event) => setUploadCompany(event.target.value)}
+                                required
+                            >
+                                <option value="">Select Company</option>
+                                {companies.map((company) => (
+                                    <option key={company._id} value={company._id}>
+                                        {company.name || company.companyName || company.code}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <p>All rows from the selected Excel file will be saved under this company.</p>
+
+                        <div className="modal-footer">
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={() => setShowUploadCompanyModal(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                disabled={!uploadCompany || saving}
+                                onClick={() => {
+                                    setShowUploadCompanyModal(false);
+                                    setTimeout(() => fileInputRef.current?.click(), 0);
+                                }}
+                            >
+                                Continue to File
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Add/Edit Modal */}
             {showForm && (
                 <div className="modal-overlay">
                     <div className="modal-box">
@@ -841,67 +683,13 @@ const InstagramReelData = () => {
                             </h3>
 
                             <button
-                                type="button"
-                                onClick={() =>
-                                    setShowForm(false)
-                                }
+                                onClick={() => setShowForm(false)}
                             >
                                 ×
                             </button>
                         </div>
 
                         <form onSubmit={handleSubmit}>
-                            {!editingId && (
-                                <div className="form-group">
-                                    <label>
-                                        Company *
-                                    </label>
-
-                                    <select
-                                        name="company"
-                                        value={form.company}
-                                        onChange={handleChange}
-                                        required
-                                    >
-                                        <option value="">
-                                            Select Company
-                                        </option>
-
-                                        {companies.map(
-                                            (company) => (
-                                                <option
-                                                    key={
-                                                        company._id
-                                                    }
-                                                    value={
-                                                        company._id
-                                                    }
-                                                >
-                                                    {company.companyName ||
-                                                        company.companyCode}
-                                                </option>
-                                            )
-                                        )}
-                                    </select>
-                                </div>
-                            )}
-
-                            {editingId && (
-                                <div className="form-group">
-                                    <label>
-                                        Company
-                                    </label>
-
-                                    <input
-                                        value={getCompanyName({
-                                            company:
-                                                form.company,
-                                        })}
-                                        disabled
-                                    />
-                                </div>
-                            )}
-
                             <div className="form-group">
                                 <label>Name *</label>
 
@@ -914,15 +702,11 @@ const InstagramReelData = () => {
                             </div>
 
                             <div className="form-group">
-                                <label>
-                                    Contact Number *
-                                </label>
+                                <label>Contact Number *</label>
 
                                 <input
                                     name="contactNumber"
-                                    value={
-                                        form.contactNumber
-                                    }
+                                    value={form.contactNumber}
                                     onChange={handleChange}
                                     required
                                 />
@@ -940,9 +724,7 @@ const InstagramReelData = () => {
                             </div>
 
                             <div className="form-group">
-                                <label>
-                                    Looking For
-                                </label>
+                                <label>Looking For</label>
 
                                 <select
                                     name="lookingFor"
@@ -964,9 +746,7 @@ const InstagramReelData = () => {
                             </div>
 
                             <div className="form-group">
-                                <label>
-                                    Resume Link
-                                </label>
+                                <label>Resume Link</label>
 
                                 <input
                                     name="resumeLink"
@@ -1001,7 +781,7 @@ const InstagramReelData = () => {
                 </div>
             )}
 
-            {/* FOLLOW-UP MODAL */}
+            {/* Follow-up Modal */}
             {showFollowUp && selectedRecord && (
                 <div className="modal-overlay">
                     <div className="modal-box">
@@ -1009,7 +789,6 @@ const InstagramReelData = () => {
                             <h3>Take Follow-up</h3>
 
                             <button
-                                type="button"
                                 onClick={() =>
                                     setShowFollowUp(false)
                                 }
@@ -1026,21 +805,11 @@ const InstagramReelData = () => {
                             <span>
                                 {selectedRecord.contactNumber}
                             </span>
-
-                            <span>
-                                {getCompanyName(
-                                    selectedRecord
-                                )}
-                            </span>
                         </div>
 
-                        <form
-                            onSubmit={handleFollowUpSubmit}
-                        >
+                        <form onSubmit={handleFollowUpSubmit}>
                             <div className="form-group">
-                                <label>
-                                    Assign Employee *
-                                </label>
+                                <label>Assign Employee *</label>
 
                                 <select
                                     name="assignedEmployee"
@@ -1056,20 +825,14 @@ const InstagramReelData = () => {
                                         Select Employee
                                     </option>
 
-                                    {availableEmployees.map(
-                                        (employee) => (
-                                            <option
-                                                key={
-                                                    employee._id
-                                                }
-                                                value={
-                                                    employee._id
-                                                }
-                                            >
-                                                {employee.fullName}
-                                            </option>
-                                        )
-                                    )}
+                                    {employees.map((employee) => (
+                                        <option
+                                            key={employee._id}
+                                            value={employee._id}
+                                        >
+                                            {employee.fullName}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
 
@@ -1167,7 +930,7 @@ const InstagramReelData = () => {
                 </div>
             )}
 
-            {/* HISTORY MODAL */}
+            {/* Communication History Modal */}
             {showHistory && selectedRecord && (
                 <div className="modal-overlay">
                     <div className="modal-box history-modal">
@@ -1177,7 +940,6 @@ const InstagramReelData = () => {
                             </h3>
 
                             <button
-                                type="button"
                                 onClick={() =>
                                     setShowHistory(false)
                                 }
@@ -1188,8 +950,7 @@ const InstagramReelData = () => {
 
                         <h4>{selectedRecord.name}</h4>
 
-                        {selectedRecord.followUps?.length ===
-                        0 ? (
+                        {selectedRecord.followUps?.length === 0 ? (
                             <div className="empty-state">
                                 No communication history found
                             </div>
@@ -1200,59 +961,52 @@ const InstagramReelData = () => {
                                         []),
                                 ]
                                     .reverse()
-                                    .map(
-                                        (
-                                            followUp,
-                                            index
-                                        ) => (
-                                            <div
-                                                className="history-item"
-                                                key={
-                                                    followUp._id ||
-                                                    index
-                                                }
-                                            >
-                                                <div>
-                                                    <strong>
-                                                        {followUp
-                                                            .assignedEmployee
-                                                            ?.fullName ||
-                                                            "Unknown Employee"}
-                                                    </strong>
+                                    .map((followUp, index) => (
+                                        <div
+                                            className="history-item"
+                                            key={
+                                                followUp._id ||
+                                                index
+                                            }
+                                        >
+                                            <div>
+                                                <strong>
+                                                    {followUp
+                                                        .assignedEmployee
+                                                        ?.fullName ||
+                                                        "Unknown Employee"}
+                                                </strong>
 
-                                                    <span>
-                                                        {
-                                                            followUp.status
-                                                        }
-                                                    </span>
-                                                </div>
-
-                                                <p>
-                                                    <strong>
-                                                        Next Date:
-                                                    </strong>{" "}
-                                                    {followUp.nextFollowUpDate
-                                                        ? new Date(
-                                                              followUp.nextFollowUpDate
-                                                          ).toLocaleDateString()
-                                                        : "-"}
-                                                </p>
-
-                                                <p>
-                                                    {followUp.communicationNotes ||
-                                                        "No notes added"}
-                                                </p>
-
-                                                <small>
-                                                    {followUp.communicationDate
-                                                        ? new Date(
-                                                              followUp.communicationDate
-                                                          ).toLocaleString()
-                                                        : ""}
-                                                </small>
+                                                <span>
+                                                    {followUp.status}
+                                                </span>
                                             </div>
-                                        )
-                                    )}
+
+                                            <p>
+                                                <strong>
+                                                    Next Date:
+                                                </strong>{" "}
+                                                {followUp.nextFollowUpDate
+                                                    ? new Date(
+                                                        followUp.nextFollowUpDate
+                                                    ).toLocaleDateString()
+                                                    : "-"}
+                                            </p>
+
+                                            <p>
+                                                {followUp.communicationNotes ||
+                                                    "No notes added"}
+                                            </p>
+
+                                            <small>
+                                                {followUp.communicationDate
+                                                    ? new Date(
+                                                        followUp.communicationDate
+                                                    ).toLocaleString()
+                                                    : ""}
+                                            </small>
+                                        </div>
+                                    ))}
                             </div>
                         )}
                     </div>
