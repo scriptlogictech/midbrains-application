@@ -4,12 +4,18 @@ const InstagramReelData = require("../models/InstagramReelData");
 const User = require("../models/User");
 const Company = require("../models/Company");
 
-// Check Super Admin
+// ============================================================
+// CHECK SUPER ADMIN
+// ============================================================
+
 const isSuperAdmin = (req) => {
     return req.user?.role === "super_admin";
 };
 
-// Get logged-in user's company ID
+// ============================================================
+// GET LOGGED-IN USER'S COMPANY ID
+// ============================================================
+
 const getUserCompanyId = (req) => {
     const company = req.user?.company;
 
@@ -24,7 +30,10 @@ const getUserCompanyId = (req) => {
     return company.toString();
 };
 
-// Get company filter based on user role
+// ============================================================
+// GET COMPANY FILTER BASED ON USER ROLE
+// ============================================================
+
 const getCompanyFilter = (req) => {
     if (isSuperAdmin(req)) {
         return {};
@@ -39,7 +48,10 @@ const getCompanyFilter = (req) => {
     return { company: companyId };
 };
 
-// Create Instagram Reel Data
+// ============================================================
+// CREATE INSTAGRAM REEL DATA
+// ============================================================
+
 exports.createInstagramReelData = async (req, res) => {
     try {
         let companyId;
@@ -125,7 +137,10 @@ exports.createInstagramReelData = async (req, res) => {
     }
 };
 
-// Get all Instagram Reel Data
+// ============================================================
+// GET ALL INSTAGRAM REEL DATA
+// ============================================================
+
 exports.getInstagramReelData = async (req, res) => {
     try {
         const companyFilter = getCompanyFilter(req);
@@ -163,7 +178,10 @@ exports.getInstagramReelData = async (req, res) => {
     }
 };
 
-// Get single Instagram Reel Data record
+// ============================================================
+// GET SINGLE INSTAGRAM REEL DATA RECORD
+// ============================================================
+
 exports.getSingleInstagramReelData = async (req, res) => {
     try {
         const { id } = req.params;
@@ -218,7 +236,10 @@ exports.getSingleInstagramReelData = async (req, res) => {
     }
 };
 
-// Update Instagram Reel Data
+// ============================================================
+// UPDATE INSTAGRAM REEL DATA
+// ============================================================
+
 exports.updateInstagramReelData = async (req, res) => {
     try {
         const { id } = req.params;
@@ -298,7 +319,10 @@ exports.updateInstagramReelData = async (req, res) => {
     }
 };
 
-// Delete Instagram Reel Data
+// ============================================================
+// DELETE INSTAGRAM REEL DATA
+// ============================================================
+
 exports.deleteInstagramReelData = async (req, res) => {
     try {
         const { id } = req.params;
@@ -347,7 +371,10 @@ exports.deleteInstagramReelData = async (req, res) => {
     }
 };
 
-// Get employees
+// ============================================================
+// GET EMPLOYEES AND INTERNS
+// ============================================================
+
 exports.getCompanyEmployees = async (req, res) => {
     try {
         let employeeFilter = {
@@ -357,6 +384,8 @@ exports.getCompanyEmployees = async (req, res) => {
             isActive: true,
         };
 
+        // Super Admin can see employees and interns
+        // from all three companies.
         if (!isSuperAdmin(req)) {
             const companyId = getUserCompanyId(req);
 
@@ -390,7 +419,10 @@ exports.getCompanyEmployees = async (req, res) => {
     }
 };
 
-// Add follow-up
+// ============================================================
+// ADD FOLLOW-UP
+// ============================================================
+
 exports.addFollowUp = async (req, res) => {
     try {
         const { id } = req.params;
@@ -402,6 +434,7 @@ exports.addFollowUp = async (req, res) => {
             communicationNotes,
         } = req.body;
 
+        // Validate record ID
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
                 success: false,
@@ -409,6 +442,7 @@ exports.addFollowUp = async (req, res) => {
             });
         }
 
+        // Validate required fields
         if (!assignedEmployee || !nextFollowUpDate) {
             return res.status(400).json({
                 success: false,
@@ -417,6 +451,7 @@ exports.addFollowUp = async (req, res) => {
             });
         }
 
+        // Validate employee ID
         if (!mongoose.Types.ObjectId.isValid(assignedEmployee)) {
             return res.status(400).json({
                 success: false,
@@ -424,6 +459,7 @@ exports.addFollowUp = async (req, res) => {
             });
         }
 
+        // Validate follow-up date
         const followUpDate = new Date(nextFollowUpDate);
 
         if (Number.isNaN(followUpDate.getTime())) {
@@ -433,6 +469,7 @@ exports.addFollowUp = async (req, res) => {
             });
         }
 
+        // Get company filter
         const companyFilter = getCompanyFilter(req);
 
         if (companyFilter === null) {
@@ -442,7 +479,7 @@ exports.addFollowUp = async (req, res) => {
             });
         }
 
-        // Super Admin can access records from all companies
+        // Find the lead/record
         const record = await InstagramReelData.findOne({
             _id: id,
             ...companyFilter,
@@ -455,10 +492,16 @@ exports.addFollowUp = async (req, res) => {
             });
         }
 
-        // Employee must belong to the record's company
+        // ========================================================
+        // UPDATED EMPLOYEE VALIDATION
+        // ========================================================
+        // Employees and interns can work across all three companies.
+        // Therefore, do not filter by record.company.
+        // Validate only the employee ID, role, and active status.
+        // ========================================================
+
         const employee = await User.findOne({
             _id: assignedEmployee,
-            company: record.company,
             role: {
                 $in: ["employee", "intern"],
             },
@@ -468,12 +511,14 @@ exports.addFollowUp = async (req, res) => {
         if (!employee) {
             return res.status(404).json({
                 success: false,
-                message: "Employee not found in this company",
+                message:
+                    "Employee or intern not found or inactive",
             });
         }
 
         const followUpStatus = status || "Pending";
 
+        // Add follow-up
         record.followUps.push({
             assignedEmployee,
             nextFollowUpDate: followUpDate,
@@ -483,12 +528,14 @@ exports.addFollowUp = async (req, res) => {
             createdBy: req.user._id,
         });
 
+        // Update main record follow-up details
         record.lastFollowUpDate = new Date();
         record.nextFollowUpDate = followUpDate;
         record.followUpStatus = followUpStatus;
 
         await record.save();
 
+        // Populate updated record
         const populatedRecord = await InstagramReelData.findById(
             record._id
         )
