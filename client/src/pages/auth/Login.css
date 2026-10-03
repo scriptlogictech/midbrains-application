@@ -5,7 +5,7 @@
 
 
 /* =========================================================
-   GLOBAL BOX SIZING
+   GLOBAL
 ========================================================= */
 
 *,
@@ -49,7 +49,7 @@
 
 
 /* =========================================================
-   MAIN LOGIN CARD
+   MAIN CARD
 ========================================================= */
 
 .login-container {
@@ -59,6 +59,7 @@
   max-width: 1240px;
 
   height: min(720px, calc(100vh - 64px));
+
   min-height: 0;
 
   display: grid;
@@ -87,10 +88,12 @@
   min-width: 0;
   min-height: 0;
 
-  padding: 42px 55px 30px;
+  padding: 38px 48px 28px;
 
   display: flex;
+
   flex-direction: column;
+
   justify-content: space-between;
 
   overflow: hidden;
@@ -99,14 +102,14 @@
     linear-gradient(
       135deg,
       #ffffff 0%,
-      #fffdf9 45%,
-      #f7f8fb 100%
+      #fffdf9 48%,
+      #f6f8fc 100%
     );
 }
 
 
 /* =========================================================
-   TOP GOLD DECORATION
+   TOP DECORATIVE CIRCLE
 ========================================================= */
 
 .brand-decoration-top {
@@ -115,7 +118,7 @@
   width: 330px;
   height: 330px;
 
-  right: -125px;
+  right: -135px;
   top: -190px;
 
   border-radius: 50%;
@@ -126,7 +129,69 @@
     0 0 0 18px rgba(198, 151, 56, 0.025),
     0 0 0 36px rgba(198, 151, 56, 0.018);
 
+  z-index: 0;
+
   pointer-events: none;
+}
+
+
+/* =========================================================
+   BUILDING IMAGE
+========================================================= */
+
+.login-building-image {
+  position: absolute;
+
+  z-index: 1;
+
+  top: 0;
+  right: 0;
+
+  width: 48%;
+  height: 100%;
+
+  overflow: hidden;
+
+  pointer-events: none;
+}
+
+
+/* Gradient over building */
+
+.login-building-image::before {
+  content: "";
+
+  position: absolute;
+
+  z-index: 2;
+
+  inset: 0;
+
+  background:
+    linear-gradient(
+      90deg,
+      #fffdf9 0%,
+      rgba(255, 253, 249, 0.92) 5%,
+      rgba(255, 253, 249, 0.48) 22%,
+      rgba(255, 253, 249, 0.08) 52%,
+      rgba(255, 253, 249, 0) 75%
+    );
+}
+
+
+/* Building image */
+
+.login-building-image img {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+
+  object-position: center;
+
+  opacity: 0.98;
 }
 
 
@@ -137,24 +202,24 @@
 .brand-gold-curve {
   position: absolute;
 
-  width: 720px;
-  height: 170px;
+  z-index: 3;
 
-  left: -170px;
-  bottom: -105px;
+  width: 720px;
+  height: 160px;
+
+  left: -180px;
+  bottom: -108px;
 
   border-radius: 50%;
 
   background:
     linear-gradient(
       180deg,
-      #d7aa54 0%,
-      #c99532 100%
+      #d9ad58,
+      #c99532
     );
 
   transform: rotate(-7deg);
-
-  opacity: 0.95;
 
   pointer-events: none;
 }
@@ -165,11 +230,11 @@
 
   position: absolute;
 
-  width: 720px;
-  height: 150px;
+  width: 730px;
+  height: 140px;
 
   left: -5px;
-  top: 25px;
+  top: 27px;
 
   border-radius: 50%;
 
@@ -200,9 +265,10 @@
   width: 100%;
 
   display: flex;
+
   align-items: center;
 
-  margin-bottom: 22px;
+  margin-bottom: 20px;
 }
 
 
@@ -251,18 +317,18 @@
 
 
 .crm-badge i {
-  font-size: 13px;
-
   color: #10265a;
+
+  font-size: 13px;
 }
 
 
 /* =========================================================
-   MAIN HEADING
+   HEADING
 ========================================================= */
 
 .login-brand-content h1 {
-  max-width: 540px;
+  max-width: 530px;
 
   margin: 0 0 13px;
 
@@ -290,7 +356,7 @@
 ========================================================= */
 
 .login-brand-subtitle {
-  max-width: 530px;
+  max-width: 500px;
 
   margin: 0;
 
@@ -315,7 +381,7 @@
 
   margin-top: 20px;
 
-  max-width: 500px;
+  max-width: 490px;
 }
 
 
@@ -409,17 +475,17 @@
 
   display: flex;
 
-  justify-content: space-between;
-
   align-items: center;
+
+  justify-content: space-between;
 
   gap: 20px;
 
-  color: rgba(255, 255, 255, 0.78);
+  padding-top: 15px;
+
+  color: rgba(255, 255, 255, 0.82);
 
   font-size: 10px;
-
-  padding-top: 15px;
 }
 
 
@@ -438,7 +504,7 @@
 
 
 /* =========================================================
-   RIGHT FORM SECTION
+   RIGHT LOGIN SECTION
 ========================================================= */
 
 .login-form-section {
@@ -503,7 +569,7 @@
 
 
 /* =========================================================
-   FORM WRAPPER
+   LOGIN WRAPPER
 ========================================================= */
 
 .login-form-wrapper {
@@ -530,7 +596,6 @@
   display: block;
 
   width: 220px;
-
   max-width: 100%;
 
   height: auto;
@@ -538,7 +603,7 @@
 
 
 /* =========================================================
-   FORM HEADER
+   LOGIN HEADER
 ========================================================= */
 
 .login-form-header {
@@ -699,8 +764,6 @@
   font-size: 15px;
 
   pointer-events: none;
-
-  transition: color 0.2s ease;
 }
 
 
@@ -712,8 +775,6 @@
   width: 100%;
 
   height: 53px;
-
-  box-sizing: border-box;
 
   padding: 0 16px 0 45px;
 
@@ -755,11 +816,6 @@
 
   box-shadow:
     0 0 0 3px rgba(196, 150, 60, 0.11);
-}
-
-
-.login-input:focus + .login-input-icon {
-  color: #bd8829;
 }
 
 
@@ -836,6 +892,7 @@
   display: flex;
 
   align-items: center;
+
   justify-content: center;
 
   gap: 10px;
@@ -924,6 +981,7 @@
   display: flex;
 
   align-items: center;
+
   justify-content: center;
 
   gap: 7px;
@@ -981,22 +1039,27 @@
 
 
   .login-brand-section {
-    padding: 38px 35px 27px;
+    padding: 35px 32px 26px;
   }
 
 
   .login-brand-logo img {
-    width: 215px;
+    width: 210px;
   }
 
 
   .login-brand-content h1 {
-    font-size: 35px;
+    font-size: 34px;
   }
 
 
   .login-feature-content span {
     font-size: 10px;
+  }
+
+
+  .login-building-image {
+    width: 45%;
   }
 
 
@@ -1008,7 +1071,7 @@
 
 
 /* =========================================================
-   TABLET / SMALL LAPTOP
+   SMALL LAPTOP / TABLET
 ========================================================= */
 
 @media (max-width: 850px) {

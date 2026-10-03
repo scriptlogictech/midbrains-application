@@ -69,37 +69,64 @@ const Login = () => {
       <div className="login-container">
 
         {/* =====================================================
-            LEFT BRAND AREA
+            LEFT BRAND SECTION
         ===================================================== */}
 
         <section className="login-brand-section">
 
-          {/* Decorative gold circle */}
-          <div className="brand-decoration brand-decoration-top"></div>
+          {/* Decorative circles */}
 
-          {/* Decorative bottom curve */}
+          <div className="brand-decoration-top"></div>
+
+          {/* =================================================
+              BUILDING IMAGE
+          ================================================= */}
+
+          <div className="login-building-image">
+
+            <img
+              src="/midbrains-building.png"
+              alt="Midbrains Technologies"
+            />
+
+          </div>
+
+
+          {/* =================================================
+              GOLD / NAVY BOTTOM CURVE
+          ================================================= */}
+
           <div className="brand-gold-curve"></div>
+
+
+          {/* =================================================
+              BRAND CONTENT
+          ================================================= */}
 
           <div className="login-brand-content">
 
             {/* LOGO */}
 
             <div className="login-brand-logo">
+
               <img
                 src="/midbrains-logo.png"
                 alt="Midbrains Technologies"
               />
+
             </div>
 
 
             {/* CRM BADGE */}
 
             <div className="crm-badge">
+
               <i className="bi bi-briefcase-fill"></i>
 
               <span>
                 Follow-up CRM
               </span>
+
             </div>
 
 
@@ -122,7 +149,9 @@ const Login = () => {
             </p>
 
 
-            {/* FEATURES */}
+            {/* =================================================
+                FEATURES
+            ================================================= */}
 
             <div className="login-features">
 
@@ -222,19 +251,21 @@ const Login = () => {
           </div>
 
 
-          {/* =====================================================
-              BOTTOM BRAND FOOTER
-          ===================================================== */}
+          {/* =================================================
+              BRAND FOOTER
+          ================================================= */}
 
           <div className="login-brand-footer">
 
             <span>
               <i className="bi bi-shield-check"></i>
+
               Secure Business Management
             </span>
 
             <span>
               <i className="bi bi-shield-lock"></i>
+
               Protected Access
             </span>
 
@@ -244,7 +275,7 @@ const Login = () => {
 
 
         {/* =====================================================
-            RIGHT LOGIN AREA
+            RIGHT LOGIN SECTION
         ===================================================== */}
 
         <section className="login-form-section">
@@ -258,7 +289,9 @@ const Login = () => {
 
           <div className="login-form-wrapper">
 
-            {/* MOBILE LOGO */}
+            {/* =================================================
+                MOBILE LOGO
+            ================================================= */}
 
             <div className="login-mobile-logo">
 
@@ -271,7 +304,7 @@ const Login = () => {
 
 
             {/* =================================================
-                HEADER
+                LOGIN HEADER
             ================================================= */}
 
             <div className="login-form-header">
@@ -385,6 +418,9 @@ const Login = () => {
                     disabled={loading}
                   />
 
+
+                  {/* SHOW / HIDE PASSWORD */}
+
                   <button
                     type="button"
                     className="password-toggle"
@@ -398,6 +434,7 @@ const Login = () => {
                         : "Show password"
                     }
                   >
+
                     <i
                       className={`bi ${
                         showPassword
@@ -405,6 +442,7 @@ const Login = () => {
                           : "bi-eye"
                       }`}
                     ></i>
+
                   </button>
 
                 </div>
@@ -446,7 +484,7 @@ const Login = () => {
 
 
             {/* =================================================
-                SECURITY MESSAGE
+                SECURITY
             ================================================= */}
 
             <div className="login-security">
