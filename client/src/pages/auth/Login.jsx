@@ -68,40 +68,47 @@ const Login = () => {
 
       <div className="login-container">
 
-        {/* =====================================================
-            LEFT BRAND SECTION
-        ===================================================== */}
+        {/* ==================================================
+            LEFT SIDE
+        ================================================== */}
 
         <section className="login-brand-section">
 
-          {/* Decorative circles */}
+          {/* TOP DECORATION */}
 
-          <div className="brand-decoration-top"></div>
+          <div className="brand-circle-decoration"></div>
 
-          {/* =================================================
-              BUILDING IMAGE
-          ================================================= */}
 
-          <div className="login-building-image">
+          {/* BUILDING IMAGE */}
+
+          <div className="login-building">
 
             <img
               src="/midbrains-building.png"
-              alt="Midbrains Technologies"
+              alt="Midbrains Technologies Building"
             />
 
           </div>
 
 
-          {/* =================================================
-              GOLD / NAVY BOTTOM CURVE
-          ================================================= */}
+          {/* BUILDING IMAGE FADE */}
 
-          <div className="brand-gold-curve"></div>
+          <div className="building-fade"></div>
 
 
-          {/* =================================================
+          {/* GOLD CURVE */}
+
+          <div className="gold-curve"></div>
+
+
+          {/* NAVY BOTTOM CURVE */}
+
+          <div className="navy-curve"></div>
+
+
+          {/* ==================================================
               BRAND CONTENT
-          ================================================= */}
+          ================================================== */}
 
           <div className="login-brand-content">
 
@@ -130,7 +137,7 @@ const Login = () => {
             </div>
 
 
-            {/* MAIN HEADING */}
+            {/* HEADING */}
 
             <h1>
               Manage Leads,
@@ -142,28 +149,26 @@ const Login = () => {
 
             {/* DESCRIPTION */}
 
-            <p className="login-brand-subtitle">
+            <p className="brand-description">
               A centralized platform to manage leads,
               follow-ups, admissions and business
               activities across your organization.
             </p>
 
 
-            {/* =================================================
+            {/* ==================================================
                 FEATURES
-            ================================================= */}
+            ================================================== */}
 
             <div className="login-features">
 
-              {/* FEATURE 1 */}
-
               <div className="login-feature">
 
-                <div className="login-feature-icon">
+                <div className="feature-icon">
                   <i className="bi bi-people-fill"></i>
                 </div>
 
-                <div className="login-feature-content">
+                <div className="feature-content">
 
                   <strong>
                     Lead Management
@@ -178,15 +183,13 @@ const Login = () => {
               </div>
 
 
-              {/* FEATURE 2 */}
-
               <div className="login-feature">
 
-                <div className="login-feature-icon">
+                <div className="feature-icon">
                   <i className="bi bi-calendar-check-fill"></i>
                 </div>
 
-                <div className="login-feature-content">
+                <div className="feature-content">
 
                   <strong>
                     Follow-up Tracking
@@ -201,15 +204,13 @@ const Login = () => {
               </div>
 
 
-              {/* FEATURE 3 */}
-
               <div className="login-feature">
 
-                <div className="login-feature-icon">
+                <div className="feature-icon">
                   <i className="bi bi-bar-chart-fill"></i>
                 </div>
 
-                <div className="login-feature-content">
+                <div className="feature-content">
 
                   <strong>
                     Reports & Analytics
@@ -224,15 +225,13 @@ const Login = () => {
               </div>
 
 
-              {/* FEATURE 4 */}
-
               <div className="login-feature">
 
-                <div className="login-feature-icon">
+                <div className="feature-icon">
                   <i className="bi bi-buildings-fill"></i>
                 </div>
 
-                <div className="login-feature-content">
+                <div className="feature-content">
 
                   <strong>
                     Centralized Management
@@ -251,21 +250,19 @@ const Login = () => {
           </div>
 
 
-          {/* =================================================
-              BRAND FOOTER
-          ================================================= */}
+          {/* ==================================================
+              BOTTOM FOOTER
+          ================================================== */}
 
-          <div className="login-brand-footer">
+          <div className="brand-footer">
 
             <span>
               <i className="bi bi-shield-check"></i>
-
               Secure Business Management
             </span>
 
             <span>
               <i className="bi bi-shield-lock"></i>
-
               Protected Access
             </span>
 
@@ -274,26 +271,27 @@ const Login = () => {
         </section>
 
 
-        {/* =====================================================
-            RIGHT LOGIN SECTION
-        ===================================================== */}
+        {/* ==================================================
+            RIGHT LOGIN
+        ================================================== */}
 
         <section className="login-form-section">
 
-          {/* Decorative circles */}
+          {/* TOP RIGHT CIRCLE */}
 
-          <div className="form-decoration form-decoration-top"></div>
+          <div className="form-circle-top"></div>
 
-          <div className="form-decoration form-decoration-bottom"></div>
+
+          {/* BOTTOM RIGHT CIRCLE */}
+
+          <div className="form-circle-bottom"></div>
 
 
           <div className="login-form-wrapper">
 
-            {/* =================================================
-                MOBILE LOGO
-            ================================================= */}
+            {/* MOBILE LOGO */}
 
-            <div className="login-mobile-logo">
+            <div className="mobile-logo">
 
               <img
                 src="/midbrains-logo.png"
@@ -303,13 +301,11 @@ const Login = () => {
             </div>
 
 
-            {/* =================================================
-                LOGIN HEADER
-            ================================================= */}
+            {/* HEADER */}
 
             <div className="login-form-header">
 
-              <span className="login-welcome">
+              <span className="welcome-text">
                 Welcome back
               </span>
 
@@ -318,23 +314,19 @@ const Login = () => {
               </h2>
 
               <p>
-                Enter your credentials to access the
-                Follow-up CRM dashboard.
+                Enter your credentials to access
+                the Follow-up CRM dashboard.
               </p>
 
             </div>
 
 
-            {/* =================================================
-                ERROR
-            ================================================= */}
+            {/* ERROR */}
 
             {error && (
               <div className="login-error">
 
-                <div className="login-error-icon">
-                  <i className="bi bi-exclamation-circle-fill"></i>
-                </div>
+                <i className="bi bi-exclamation-circle-fill"></i>
 
                 <div>
 
@@ -352,9 +344,9 @@ const Login = () => {
             )}
 
 
-            {/* =================================================
-                LOGIN FORM
-            ================================================= */}
+            {/* ==================================================
+                FORM
+            ================================================== */}
 
             <form
               className="login-form"
@@ -363,21 +355,20 @@ const Login = () => {
 
               {/* EMAIL */}
 
-              <div className="login-field">
+              <div className="form-field">
 
                 <label htmlFor="email">
                   Email Address
                 </label>
 
-                <div className="login-input-wrapper">
+                <div className="input-wrapper">
 
-                  <i className="bi bi-envelope login-input-icon"></i>
+                  <i className="bi bi-envelope input-icon"></i>
 
                   <input
                     id="email"
                     type="email"
                     name="email"
-                    className="login-input"
                     placeholder="Enter your email"
                     value={formData.email}
                     onChange={handleChange}
@@ -392,15 +383,15 @@ const Login = () => {
 
               {/* PASSWORD */}
 
-              <div className="login-field">
+              <div className="form-field">
 
                 <label htmlFor="password">
                   Password
                 </label>
 
-                <div className="login-input-wrapper">
+                <div className="input-wrapper">
 
-                  <i className="bi bi-lock login-input-icon"></i>
+                  <i className="bi bi-lock input-icon"></i>
 
                   <input
                     id="password"
@@ -410,7 +401,6 @@ const Login = () => {
                         : "password"
                     }
                     name="password"
-                    className="login-input login-password-input"
                     placeholder="Enter your password"
                     value={formData.password}
                     onChange={handleChange}
@@ -418,16 +408,12 @@ const Login = () => {
                     disabled={loading}
                   />
 
-
-                  {/* SHOW / HIDE PASSWORD */}
-
                   <button
                     type="button"
-                    className="password-toggle"
+                    className="password-button"
                     onClick={() =>
                       setShowPassword(!showPassword)
                     }
-                    tabIndex="-1"
                     aria-label={
                       showPassword
                         ? "Hide password"
@@ -450,13 +436,11 @@ const Login = () => {
               </div>
 
 
-              {/* =================================================
-                  SIGN IN BUTTON
-              ================================================= */}
+              {/* LOGIN BUTTON */}
 
               <button
                 type="submit"
-                className="login-submit-btn"
+                className="login-button"
                 disabled={loading}
               >
 
@@ -483,11 +467,9 @@ const Login = () => {
             </form>
 
 
-            {/* =================================================
-                SECURITY
-            ================================================= */}
+            {/* SECURITY */}
 
-            <div className="login-security">
+            <div className="security-message">
 
               <i className="bi bi-shield-fill-check"></i>
 
@@ -501,7 +483,7 @@ const Login = () => {
 
             {/* COPYRIGHT */}
 
-            <div className="login-copyright">
+            <div className="copyright">
               © {new Date().getFullYear()} Midbrains Technologies
             </div>
 
