@@ -17,8 +17,7 @@ const Login = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showPassword, setShowPassword] =
-    useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -69,32 +68,82 @@ const Login = () => {
 
       <div className="login-container">
 
-        {/* ======================================
+        {/* ==================================================
             LEFT BRAND SECTION
-        ====================================== */}
+        ================================================== */}
 
         <div className="login-brand-section">
 
           <div className="login-brand-content">
 
+            {/* MIDBRAINS LOGO */}
+
             <div className="login-brand-logo">
-              <i className="bi bi-grid-1x2-fill"></i>
+              <img
+                src="/midbrains-logo.png"
+                alt="Midbrains Technologies"
+              />
             </div>
 
-            <h1>
+
+            {/* CRM BADGE */}
+
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "8px 14px",
+                borderRadius: "30px",
+                background: "#eef3ff",
+                color: "#172b63",
+                fontSize: "12px",
+                fontWeight: "700",
+                marginBottom: "18px",
+              }}
+            >
+              <i className="bi bi-briefcase-fill"></i>
+
               Follow-up CRM
+            </div>
+
+
+            {/* TITLE */}
+
+            <h1>
+              Manage Leads,
+              <br />
+
+              <span
+                style={{
+                  color: "#c08c2c",
+                }}
+              >
+                Build Relationships
+              </span>
             </h1>
 
+
+            {/* DESCRIPTION */}
+
             <p className="login-brand-subtitle">
-              Centralized Lead & Follow-up
-              Management System
+              A centralized platform to manage leads,
+              follow-ups, admissions and business
+              activities across your organization.
             </p>
+
 
             <div className="login-divider"></div>
 
+
+            {/* FEATURES */}
+
             <div className="login-features">
 
+              {/* LEAD MANAGEMENT */}
+
               <div className="login-feature">
+
                 <div className="login-feature-icon">
                   <i className="bi bi-people-fill"></i>
                 </div>
@@ -105,14 +154,19 @@ const Login = () => {
                   </strong>
 
                   <span>
-                    Manage and track leads efficiently
+                    Capture and track leads efficiently
                   </span>
                 </div>
+
               </div>
 
+
+              {/* FOLLOW-UP */}
+
               <div className="login-feature">
+
                 <div className="login-feature-icon">
-                  <i className="bi bi-calendar-check"></i>
+                  <i className="bi bi-calendar-check-fill"></i>
                 </div>
 
                 <div>
@@ -124,9 +178,14 @@ const Login = () => {
                     Never miss an important follow-up
                   </span>
                 </div>
+
               </div>
 
+
+              {/* ANALYTICS */}
+
               <div className="login-feature">
+
                 <div className="login-feature-icon">
                   <i className="bi bi-bar-chart-fill"></i>
                 </div>
@@ -140,13 +199,39 @@ const Login = () => {
                     Get meaningful business insights
                   </span>
                 </div>
+
+              </div>
+
+
+              {/* MULTI COMPANY */}
+
+              <div className="login-feature">
+
+                <div className="login-feature-icon">
+                  <i className="bi bi-buildings-fill"></i>
+                </div>
+
+                <div>
+                  <strong>
+                    Centralized Management
+                  </strong>
+
+                  <span>
+                    Manage your business operations in one place
+                  </span>
+                </div>
+
               </div>
 
             </div>
 
           </div>
 
+
+          {/* BRAND FOOTER */}
+
           <div className="login-brand-footer">
+
             <span>
               Secure Business Management
             </span>
@@ -155,32 +240,38 @@ const Login = () => {
               <i className="bi bi-shield-check me-1"></i>
               Protected Access
             </span>
+
           </div>
 
         </div>
 
-        {/* ======================================
+
+        {/* ==================================================
             RIGHT LOGIN SECTION
-        ====================================== */}
+        ================================================== */}
 
         <div className="login-form-section">
 
           <div className="login-form-wrapper">
 
-            {/* MOBILE LOGO */}
+
+            {/* ==================================================
+                MOBILE LOGO
+            ================================================== */}
 
             <div className="login-mobile-logo">
-              <div className="login-logo-icon">
-                <i className="bi bi-grid-1x2-fill"></i>
-              </div>
 
-              <div>
-                <h4>Follow-up CRM</h4>
-                <span>Management System</span>
-              </div>
+              <img
+                src="/midbrains-logo.png"
+                alt="Midbrains Technologies"
+              />
+
             </div>
 
-            {/* HEADER */}
+
+            {/* ==================================================
+                HEADER
+            ================================================== */}
 
             <div className="login-form-header">
 
@@ -194,12 +285,15 @@ const Login = () => {
 
               <p>
                 Enter your credentials to access
-                the management dashboard.
+                the Follow-up CRM dashboard.
               </p>
 
             </div>
 
-            {/* ERROR */}
+
+            {/* ==================================================
+                ERROR
+            ================================================== */}
 
             {error && (
               <div className="login-error">
@@ -209,6 +303,7 @@ const Login = () => {
                 </div>
 
                 <div>
+
                   <strong>
                     Login unsuccessful
                   </strong>
@@ -216,17 +311,22 @@ const Login = () => {
                   <span>
                     {error}
                   </span>
+
                 </div>
 
               </div>
             )}
 
-            {/* FORM */}
+
+            {/* ==================================================
+                LOGIN FORM
+            ================================================== */}
 
             <form
               onSubmit={handleSubmit}
               className="login-form"
             >
+
 
               {/* EMAIL */}
 
@@ -256,17 +356,14 @@ const Login = () => {
 
               </div>
 
+
               {/* PASSWORD */}
 
               <div className="login-field">
 
-                <div className="login-password-label">
-
-                  <label htmlFor="password">
-                    Password
-                  </label>
-
-                </div>
+                <label htmlFor="password">
+                  Password
+                </label>
 
                 <div className="login-input-wrapper">
 
@@ -288,6 +385,9 @@ const Login = () => {
                     disabled={loading}
                   />
 
+
+                  {/* PASSWORD TOGGLE */}
+
                   <button
                     type="button"
                     className="password-toggle"
@@ -303,6 +403,7 @@ const Login = () => {
                         : "Show password"
                     }
                   >
+
                     <i
                       className={`bi ${
                         showPassword
@@ -310,13 +411,17 @@ const Login = () => {
                           : "bi-eye"
                       }`}
                     ></i>
+
                   </button>
 
                 </div>
 
               </div>
 
-              {/* LOGIN BUTTON */}
+
+              {/* ==================================================
+                  LOGIN BUTTON
+              ================================================== */}
 
               <button
                 type="submit"
@@ -327,6 +432,7 @@ const Login = () => {
                 {loading ? (
                   <>
                     <span className="spinner-border spinner-border-sm"></span>
+
                     <span>
                       Signing in...
                     </span>
@@ -345,7 +451,10 @@ const Login = () => {
 
             </form>
 
-            {/* SECURITY INFO */}
+
+            {/* ==================================================
+                SECURITY MESSAGE
+            ================================================== */}
 
             <div className="login-security">
 
@@ -358,8 +467,13 @@ const Login = () => {
 
             </div>
 
+
+            {/* ==================================================
+                COPYRIGHT
+            ================================================== */}
+
             <div className="login-copyright">
-              © {new Date().getFullYear()} Follow-up CRM
+              © {new Date().getFullYear()} Midbrains Technologies
             </div>
 
           </div>
