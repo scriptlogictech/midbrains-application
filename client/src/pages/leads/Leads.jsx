@@ -1,11 +1,5 @@
-import {
-    useEffect,
-    useState,
-} from "react";
-
-import { useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-
 import {
     getLeads,
     createLead,
@@ -13,70 +7,40 @@ import {
     updateLeadStatus,
     addCommunication,
 } from "../../services/leadService";
-
-import {
-    getCompanyEmployeesAndInterns,
-} from "../../services/userService";
-
+import { getCompanyEmployeesAndInterns } from "../../services/userService";
 import "./Leads.css";
 
 const Leads = () => {
     const { user } = useAuth();
-    const { companyId: routeCompanyId } =
-        useParams();
-
-    // ============================================================
-    // COMPANY ID
-    // ============================================================
 
     const companyId =
-        routeCompanyId ||
         user?.company?._id ||
         user?.company ||
         localStorage.getItem("companyId");
 
-    // ============================================================
+    // =========================
     // STATES
-    // ============================================================
+    // =========================
 
     const [leads, setLeads] = useState([]);
+    const [employeesAndInterns, setEmployeesAndInterns] = useState([]);
 
-    const [
-        employeesAndInterns,
-        setEmployeesAndInterns,
-    ] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [userLoading, setUserLoading] = useState(true);
 
-    const [loading, setLoading] =
-        useState(true);
+    const [error, setError] = useState("");
 
-    const [userLoading, setUserLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState("");
-
-    const [showModal, setShowModal] =
+    const [showModal, setShowModal] = useState(false);
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
+    const [showCommunicationModal, setShowCommunicationModal] =
         useState(false);
 
-    const [
-        showDetailsModal,
-        setShowDetailsModal,
-    ] = useState(false);
+    const [editingLead, setEditingLead] = useState(null);
+    const [selectedLead, setSelectedLead] = useState(null);
 
-    const [
-        showCommunicationModal,
-        setShowCommunicationModal,
-    ] = useState(false);
-
-    const [editingLead, setEditingLead] =
-        useState(null);
-
-    const [selectedLead, setSelectedLead] =
-        useState(null);
-
-    // ============================================================
+    // =========================
     // FILTER STATES
-    // ============================================================
+    // =========================
 
     const [filters, setFilters] = useState({
         search: "",
@@ -90,28 +54,22 @@ const Leads = () => {
         limit: 10,
     });
 
-    const [pagination, setPagination] =
-        useState({
-            page: 1,
-            limit: 10,
-            total: 0,
-            totalPages: 1,
-            hasNextPage: false,
-            hasPreviousPage: false,
-        });
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 10,
+        total: 0,
+        pages: 1,
+    });
 
-    // ============================================================
+    // =========================
     // FORM STATES
-    // ============================================================
+    // =========================
 
     const initialForm = {
         fullName: "",
         contactNumber: "",
         email: "",
         city: "",
-        leadDate: new Date()
-            .toISOString()
-            .split("T")[0],
         courseInterested: "",
         inquiryType: "course",
         leadSource: "",
@@ -124,75 +82,35 @@ const Leads = () => {
         admissionDate: "",
     };
 
-    const [formData, setFormData] =
-        useState(initialForm);
+    const [formData, setFormData] = useState(initialForm);
 
-    const [
-        communicationData,
-        setCommunicationData,
-    ] = useState({
+    const [communicationData, setCommunicationData] = useState({
         type: "call",
         message: "",
     });
 
-    // ============================================================
+    // =========================
     // FETCH LEADS
-    // ============================================================
+    // =========================
 
     const fetchLeads = async () => {
-        if (!companyId) {
-            setLoading(false);
-            return;
-        }
+        if (!companyId) return;
 
         try {
             setLoading(true);
             setError("");
 
-            const response = await getLeads(
-                companyId,
-                filters
-            );
+            const response = await getLeads(companyId, filters);
 
-            const leadData =
-                response?.data ||
-                response?.leads ||
-                [];
+            const leadData = response?.data || response?.leads || [];
 
             setLeads(leadData);
 
             if (response?.pagination) {
-                setPagination({
-                    page:
-                        response.pagination.page ||
-                        1,
-
-                    limit:
-                        response.pagination.limit ||
-                        10,
-
-                    total:
-                        response.pagination.total ||
-                        0,
-
-                    totalPages:
-                        response.pagination.totalPages ||
-                        1,
-
-                    hasNextPage:
-                        response.pagination.hasNextPage ||
-                        false,
-
-                    hasPreviousPage:
-                        response.pagination.hasPreviousPage ||
-                        false,
-                });
+                setPagination(response.pagination);
             }
         } catch (err) {
-            console.error(
-                "Fetch Leads Error:",
-                err
-            );
+            console.error("Fetch Leads Error:", err);
 
             setError(
                 err?.response?.data?.message ||
@@ -203,66 +121,41 @@ const Leads = () => {
         }
     };
 
-    // ============================================================
+    // =========================
     // FETCH EMPLOYEES + INTERNS
-    // ============================================================
+    // =========================
 
-    const fetchEmployeesAndInterns =
-        async () => {
-            if (!companyId) {
-                setUserLoading(false);
-                return;
-            }
+    const fetchEmployeesAndInterns = async () => {
+        if (!companyId) return;
 
-            try {
-                setUserLoading(true);
+        try {
+            setUserLoading(true);
 
-                const response =
-                    await getCompanyEmployeesAndInterns(
-                        companyId
-                    );
+            const response =
+                await getCompanyEmployeesAndInterns(companyId);
 
-                const users =
-                    response?.users || [];
+            setEmployeesAndInterns(response?.users || []);
+        } catch (err) {
+            console.error(
+                "Fetch Employees and Interns Error:",
+                err
+            );
 
-                // ONLY EMPLOYEE + INTERN
-                const allowedUsers =
-                    users.filter(
-                        (item) =>
-                            item.role ===
-                                "employee" ||
-                            item.role ===
-                                "intern"
-                    );
+            setEmployeesAndInterns([]);
+        } finally {
+            setUserLoading(false);
+        }
+    };
 
-                setEmployeesAndInterns(
-                    allowedUsers
-                );
-            } catch (err) {
-                console.error(
-                    "Fetch Employees and Interns Error:",
-                    err
-                );
-
-                setEmployeesAndInterns([]);
-            } finally {
-                setUserLoading(false);
-            }
-        };
-
-    // ============================================================
+    // =========================
     // INITIAL LOAD
-    // ============================================================
+    // =========================
 
     useEffect(() => {
         if (!companyId) return;
 
         fetchEmployeesAndInterns();
     }, [companyId]);
-
-    // ============================================================
-    // FETCH LEADS WHEN FILTER CHANGES
-    // ============================================================
 
     useEffect(() => {
         if (!companyId) return;
@@ -281,15 +174,12 @@ const Leads = () => {
         filters.limit,
     ]);
 
-    // ============================================================
+    // =========================
     // HANDLE FILTER
-    // ============================================================
+    // =========================
 
     const handleFilterChange = (e) => {
-        const {
-            name,
-            value,
-        } = e.target;
+        const { name, value } = e.target;
 
         setFilters((prev) => ({
             ...prev,
@@ -312,15 +202,12 @@ const Leads = () => {
         });
     };
 
-    // ============================================================
+    // =========================
     // HANDLE FORM CHANGE
-    // ============================================================
+    // =========================
 
     const handleFormChange = (e) => {
-        const {
-            name,
-            value,
-        } = e.target;
+        const { name, value } = e.target;
 
         setFormData((prev) => ({
             ...prev,
@@ -328,127 +215,61 @@ const Leads = () => {
         }));
     };
 
-    // ============================================================
+    // =========================
     // OPEN CREATE MODAL
-    // ============================================================
+    // =========================
 
     const handleAddLead = () => {
         setEditingLead(null);
-
-        setFormData({
-            ...initialForm,
-            leadDate: new Date()
-                .toISOString()
-                .split("T")[0],
-        });
-
-        setError("");
+        setFormData(initialForm);
         setShowModal(true);
     };
 
-    // ============================================================
+    // =========================
     // OPEN EDIT MODAL
-    // ============================================================
+    // =========================
 
     const handleEditLead = (lead) => {
         setEditingLead(lead);
 
         setFormData({
-            fullName:
-                lead.fullName || "",
-
-            contactNumber:
-                lead.contactNumber || "",
-
-            email:
-                lead.email || "",
-
-            city:
-                lead.city || "",
-
-            leadDate:
-                lead.leadDate
-                    ? new Date(
-                          lead.leadDate
-                      )
-                          .toISOString()
-                          .split("T")[0]
-                    : new Date()
-                          .toISOString()
-                          .split("T")[0],
-
-            courseInterested:
-                lead.courseInterested ||
-                "",
-
-            inquiryType:
-                lead.inquiryType ||
-                "course",
-
-            leadSource:
-                lead.leadSource || "",
-
+            fullName: lead.fullName || "",
+            contactNumber: lead.contactNumber || "",
+            email: lead.email || "",
+            city: lead.city || "",
+            courseInterested: lead.courseInterested || "",
+            inquiryType: lead.inquiryType || "course",
+            leadSource: lead.leadSource || "",
             assignedCounselor:
                 lead.assignedCounselor?._id ||
                 lead.assignedCounselor ||
                 "",
-
-            priority:
-                lead.priority ||
-                "medium",
-
-            status:
-                lead.status ||
-                "new",
-
-            nextFollowUpDate:
-                lead.nextFollowUpDate
-                    ? new Date(
-                          lead.nextFollowUpDate
-                      )
-                          .toISOString()
-                          .split("T")[0]
-                    : "",
-
-            notes:
-                lead.notes || "",
-
+            priority: lead.priority || "medium",
+            status: lead.status || "new",
+            nextFollowUpDate: lead.nextFollowUpDate
+                ? new Date(lead.nextFollowUpDate)
+                      .toISOString()
+                      .split("T")[0]
+                : "",
+            notes: lead.notes || "",
             expectedFees:
-                lead.expectedFees !==
-                    undefined &&
-                lead.expectedFees !==
-                    null
+                lead.expectedFees !== undefined &&
+                lead.expectedFees !== null
                     ? lead.expectedFees
                     : "",
-
-            admissionDate:
-                lead.admissionDate
-                    ? new Date(
-                          lead.admissionDate
-                      )
-                          .toISOString()
-                          .split("T")[0]
-                    : "",
+            admissionDate: lead.admissionDate
+                ? new Date(lead.admissionDate)
+                      .toISOString()
+                      .split("T")[0]
+                : "",
         });
 
-        setError("");
         setShowModal(true);
     };
 
-    // ============================================================
-    // CLOSE LEAD MODAL
-    // ============================================================
-
-    const closeLeadModal = () => {
-        setShowModal(false);
-        setEditingLead(null);
-        setFormData(initialForm);
-        setError("");
-    };
-
-    // ============================================================
+    // =========================
     // SUBMIT LEAD
-    // ============================================================
+    // =========================
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -456,76 +277,30 @@ const Leads = () => {
         try {
             setError("");
 
-            if (!companyId) {
-                setError(
-                    "Company information is missing."
-                );
-
-                return;
-            }
-
             const payload = {
                 ...formData,
                 company: companyId,
             };
 
-            // ----------------------------------------------------
-            // EXPECTED FEES
-            // ----------------------------------------------------
-
-            if (
-                payload.expectedFees ===
-                ""
-            ) {
+            if (payload.expectedFees === "") {
                 delete payload.expectedFees;
             } else {
-                payload.expectedFees =
-                    Number(
-                        payload.expectedFees
-                    );
+                payload.expectedFees = Number(
+                    payload.expectedFees
+                );
             }
 
-            // ----------------------------------------------------
-            // ASSIGNED USER
-            // ----------------------------------------------------
-
-            if (
-                !payload.assignedCounselor
-            ) {
+            if (!payload.assignedCounselor) {
                 delete payload.assignedCounselor;
             }
 
-            // ----------------------------------------------------
-            // OPTIONAL DATES
-            // ----------------------------------------------------
-
-            if (
-                !payload.nextFollowUpDate
-            ) {
+            if (!payload.nextFollowUpDate) {
                 delete payload.nextFollowUpDate;
             }
 
-            if (
-                !payload.admissionDate
-            ) {
+            if (!payload.admissionDate) {
                 delete payload.admissionDate;
             }
-
-            // ----------------------------------------------------
-            // LEAD DATE
-            // ----------------------------------------------------
-
-            if (!payload.leadDate) {
-                setError(
-                    "Lead date is required."
-                );
-
-                return;
-            }
-
-            // ----------------------------------------------------
-            // CREATE / UPDATE
-            // ----------------------------------------------------
 
             if (editingLead) {
                 await updateLead(
@@ -536,14 +311,13 @@ const Leads = () => {
                 await createLead(payload);
             }
 
-            closeLeadModal();
+            setShowModal(false);
+            setEditingLead(null);
+            setFormData(initialForm);
 
             await fetchLeads();
         } catch (err) {
-            console.error(
-                "Save Lead Error:",
-                err
-            );
+            console.error("Save Lead Error:", err);
 
             setError(
                 err?.response?.data?.message ||
@@ -552,28 +326,19 @@ const Leads = () => {
         }
     };
 
-    // ============================================================
+    // =========================
     // UPDATE STATUS
-    // ============================================================
+    // =========================
 
-    const handleStatusChange = async (
-        leadId,
-        status
-    ) => {
+    const handleStatusChange = async (leadId, status) => {
         try {
-            setError("");
-
-            await updateLeadStatus(
-                leadId,
-                status
-            );
+            await updateLeadStatus(leadId, status);
 
             await fetchLeads();
 
             if (
                 selectedLead &&
-                selectedLead._id ===
-                    leadId
+                selectedLead._id === leadId
             ) {
                 setSelectedLead((prev) => ({
                     ...prev,
@@ -593,29 +358,20 @@ const Leads = () => {
         }
     };
 
-    // ============================================================
+    // =========================
     // VIEW DETAILS
-    // ============================================================
+    // =========================
 
-    const handleViewDetails = (
-        lead
-    ) => {
+    const handleViewDetails = (lead) => {
         setSelectedLead(lead);
         setShowDetailsModal(true);
     };
 
-    const closeDetailsModal = () => {
-        setSelectedLead(null);
-        setShowDetailsModal(false);
-    };
-
-    // ============================================================
+    // =========================
     // COMMUNICATION
-    // ============================================================
+    // =========================
 
-    const handleOpenCommunication = (
-        lead
-    ) => {
+    const handleOpenCommunication = (lead) => {
         setSelectedLead(lead);
 
         setCommunicationData({
@@ -626,253 +382,138 @@ const Leads = () => {
         setShowCommunicationModal(true);
     };
 
-    const handleCommunicationChange =
-        (e) => {
-            const {
-                name,
-                value,
-            } = e.target;
+    const handleCommunicationChange = (e) => {
+        const { name, value } = e.target;
 
-            setCommunicationData(
-                (prev) => ({
-                    ...prev,
-                    [name]: value,
-                })
+        setCommunicationData((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+    };
+
+    const handleAddCommunication = async (e) => {
+        e.preventDefault();
+
+        if (!selectedLead) return;
+
+        try {
+            await addCommunication(
+                selectedLead._id,
+                communicationData
             );
-        };
 
-    const handleAddCommunication =
-        async (e) => {
-            e.preventDefault();
+            setShowCommunicationModal(false);
 
-            if (!selectedLead) return;
+            setCommunicationData({
+                type: "call",
+                message: "",
+            });
 
-            try {
-                setError("");
+            await fetchLeads();
 
-                if (
-                    !communicationData.message.trim()
-                ) {
-                    setError(
-                        "Communication message is required."
-                    );
+            setError("");
+        } catch (err) {
+            console.error(
+                "Add Communication Error:",
+                err
+            );
 
-                    return;
-                }
+            setError(
+                err?.response?.data?.message ||
+                    "Failed to add communication"
+            );
+        }
+    };
 
-                await addCommunication(
-                    selectedLead._id,
-                    communicationData
-                );
-
-                setShowCommunicationModal(
-                    false
-                );
-
-                setCommunicationData({
-                    type: "call",
-                    message: "",
-                });
-
-                await fetchLeads();
-            } catch (err) {
-                console.error(
-                    "Add Communication Error:",
-                    err
-                );
-
-                setError(
-                    err?.response?.data
-                        ?.message ||
-                        "Failed to add communication"
-                );
-            }
-        };
-
-    // ============================================================
+    // =========================
     // PAGINATION
-    // ============================================================
+    // =========================
 
     const handlePreviousPage = () => {
-        if (
-            !pagination.hasPreviousPage
-        ) {
-            return;
-        }
+        if (pagination.page <= 1) return;
 
         setFilters((prev) => ({
             ...prev,
-            page:
-                pagination.page - 1,
+            page: pagination.page - 1,
         }));
     };
 
     const handleNextPage = () => {
-        if (!pagination.hasNextPage) {
-            return;
-        }
+        if (pagination.page >= pagination.pages) return;
 
         setFilters((prev) => ({
             ...prev,
-            page:
-                pagination.page + 1,
+            page: pagination.page + 1,
         }));
     };
 
-    // ============================================================
+    // =========================
     // HELPERS
-    // ============================================================
+    // =========================
 
-    const getUserName = (
-        assignedUser
-    ) => {
-        if (!assignedUser) {
-            return "Unassigned";
+    const getUserName = (assignedUser) => {
+        if (!assignedUser) return "Unassigned";
+
+        if (typeof assignedUser === "object") {
+            return assignedUser.fullName || "Unknown";
         }
 
-        if (
-            typeof assignedUser ===
-            "object"
-        ) {
-            return (
-                assignedUser.fullName ||
-                assignedUser.name ||
-                "Unknown"
-            );
-        }
-
-        const user =
-            employeesAndInterns.find(
-                (item) =>
-                    item._id ===
-                    assignedUser
-            );
-
-        return (
-            user?.fullName ||
-            user?.name ||
-            "Unknown"
+        const user = employeesAndInterns.find(
+            (item) => item._id === assignedUser
         );
+
+        return user?.fullName || "Unknown";
     };
 
-    const getUserRole = (
-        assignedUser
-    ) => {
-        if (!assignedUser) {
-            return "";
+    const getUserRole = (assignedUser) => {
+        if (!assignedUser) return "";
+
+        if (typeof assignedUser === "object") {
+            return assignedUser.role || "";
         }
 
-        if (
-            typeof assignedUser ===
-            "object"
-        ) {
-            return (
-                assignedUser.role || ""
-            );
-        }
-
-        const user =
-            employeesAndInterns.find(
-                (item) =>
-                    item._id ===
-                    assignedUser
-            );
+        const user = employeesAndInterns.find(
+            (item) => item._id === assignedUser
+        );
 
         return user?.role || "";
     };
 
-    // ============================================================
-    // ROLE LABEL
-    // ============================================================
-
-    // ONLY TWO ROLES CAN BE ASSIGNED TO A LEAD:
-    // EMPLOYEE OR INTERN
-
-    const getRoleLabel = (
-        role
-    ) => {
-        if (
-            role === "employee"
-        ) {
-            return "Employee";
-        }
-
-        if (
-            role === "intern"
-        ) {
-            return "Intern";
-        }
+    const getRoleLabel = (role) => {
+        if (role === "employee") return "Employee";
+        if (role === "intern") return "Intern";
 
         return "";
     };
 
-    const getStatusLabel = (
-        status
-    ) => {
+    const getStatusLabel = (status) => {
         const labels = {
             new: "New",
             contacted: "Contacted",
-            interested:
-                "Interested",
-            follow_up:
-                "Follow Up",
-            converted:
-                "Converted",
-            not_interested:
-                "Not Interested",
+            interested: "Interested",
+            follow_up: "Follow Up",
+            converted: "Converted",
+            not_interested: "Not Interested",
             closed: "Closed",
         };
 
-        return (
-            labels[status] ||
-            status
-        );
+        return labels[status] || status;
     };
 
-    const getInquiryTypeLabel = (
-        type
-    ) => {
-        const labels = {
-            course: "Course",
-            internship:
-                "Internship",
-            corporate_training:
-                "Corporate Training",
-            project: "Project",
-            placement:
-                "Placement",
-        };
-
-        return (
-            labels[type] ||
-            type ||
-            "-"
-        );
-    };
-
-    const getPriorityLabel = (
-        priority
-    ) => {
+    const getPriorityLabel = (priority) => {
         const labels = {
             low: "Low",
             medium: "Medium",
             high: "High",
         };
 
-        return (
-            labels[priority] ||
-            priority
-        );
+        return labels[priority] || priority;
     };
 
-    const formatDate = (
-        date
-    ) => {
+    const formatDate = (date) => {
         if (!date) return "-";
 
-        return new Date(
-            date
-        ).toLocaleDateString(
+        return new Date(date).toLocaleDateString(
             "en-IN",
             {
                 day: "2-digit",
@@ -882,492 +523,276 @@ const Leads = () => {
         );
     };
 
-    // ============================================================
-    // NO COMPANY
-    // ============================================================
-
-    if (!companyId) {
-        return (
-            <div className="empty-state">
-
-                <i className="bi bi-building"></i>
-
-                <h3>
-                    Company Not Selected
-                </h3>
-
-                <p>
-                    Please select a company
-                    before managing leads.
-                </p>
-
-            </div>
-        );
-    }
-
-    // ============================================================
+    // =========================
     // RENDER
-    // ============================================================
+    // =========================
 
     return (
         <div className="leads-page">
 
-            {/* ====================================================
-                HEADER
-            ==================================================== */}
+            {/* ================= HEADER ================= */}
 
             <div className="page-header">
-
                 <div>
-
-                    <h1>
-                        Lead Management
-                    </h1>
-
+                    <h1>Lead Management</h1>
                     <p>
-                        Manage leads,
-                        assignments,
-                        follow-ups and
-                        communications.
+                        Manage leads, assignments,
+                        follow-ups and communications.
                     </p>
-
                 </div>
 
                 <button
-                    type="button"
                     className="btn btn-primary"
-                    onClick={
-                        handleAddLead
-                    }
+                    onClick={handleAddLead}
                 >
                     <i className="bi bi-plus-lg"></i>
-
                     Add Lead
                 </button>
-
             </div>
 
-            {/* ====================================================
-                ERROR
-            ==================================================== */}
+            {/* ================= ERROR ================= */}
 
             {error && (
                 <div className="alert alert-danger">
-
                     <i className="bi bi-exclamation-triangle"></i>
-
                     {error}
-
                 </div>
             )}
 
-            {/* ====================================================
-                FILTERS
-            ==================================================== */}
+            {/* ================= FILTERS ================= */}
 
             <div className="filters-card">
 
                 <div className="filter-group search-group">
-
-                    <label>
-                        Search
-                    </label>
+                    <label>Search</label>
 
                     <div className="search-input">
-
                         <i className="bi bi-search"></i>
 
                         <input
                             type="text"
                             name="search"
                             placeholder="Search by name, phone or email..."
-                            value={
-                                filters.search
-                            }
-                            onChange={
-                                handleFilterChange
-                            }
+                            value={filters.search}
+                            onChange={handleFilterChange}
                         />
-
                     </div>
-
                 </div>
 
                 <div className="filter-group">
-
-                    <label>
-                        Status
-                    </label>
+                    <label>Status</label>
 
                     <select
                         name="status"
-                        value={
-                            filters.status
-                        }
-                        onChange={
-                            handleFilterChange
-                        }
+                        value={filters.status}
+                        onChange={handleFilterChange}
                     >
-
                         <option value="">
                             All Status
                         </option>
-
                         <option value="new">
                             New
                         </option>
-
                         <option value="contacted">
                             Contacted
                         </option>
-
                         <option value="interested">
                             Interested
                         </option>
-
                         <option value="follow_up">
                             Follow Up
                         </option>
-
                         <option value="converted">
                             Converted
                         </option>
-
                         <option value="not_interested">
                             Not Interested
                         </option>
-
                         <option value="closed">
                             Closed
                         </option>
-
                     </select>
-
                 </div>
 
                 <div className="filter-group">
-
-                    <label>
-                        Priority
-                    </label>
+                    <label>Priority</label>
 
                     <select
                         name="priority"
-                        value={
-                            filters.priority
-                        }
-                        onChange={
-                            handleFilterChange
-                        }
+                        value={filters.priority}
+                        onChange={handleFilterChange}
                     >
-
                         <option value="">
                             All Priority
                         </option>
-
                         <option value="low">
                             Low
                         </option>
-
                         <option value="medium">
                             Medium
                         </option>
-
                         <option value="high">
                             High
                         </option>
-
                     </select>
-
                 </div>
 
                 <div className="filter-group">
-
-                    <label>
-                        Inquiry Type
-                    </label>
+                    <label>Inquiry Type</label>
 
                     <select
                         name="inquiryType"
-                        value={
-                            filters.inquiryType
-                        }
-                        onChange={
-                            handleFilterChange
-                        }
+                        value={filters.inquiryType}
+                        onChange={handleFilterChange}
                     >
-
                         <option value="">
                             All Types
                         </option>
-
                         <option value="course">
                             Course
                         </option>
-
                         <option value="internship">
                             Internship
                         </option>
-
                         <option value="corporate_training">
                             Corporate Training
                         </option>
-
                         <option value="project">
                             Project
                         </option>
-
                         <option value="placement">
                             Placement
                         </option>
-
                     </select>
-
                 </div>
 
-                {/* =================================================
-                    ASSIGNED EMPLOYEE / INTERN
-                ================================================= */}
-
                 <div className="filter-group">
-
-                    <label>
-                        Assigned Employee / Intern
-                    </label>
+                    <label>Assigned To</label>
 
                     <select
                         name="assignedCounselor"
-                        value={
-                            filters.assignedCounselor
-                        }
-                        onChange={
-                            handleFilterChange
-                        }
+                        value={filters.assignedCounselor}
+                        onChange={handleFilterChange}
                     >
-
                         <option value="">
-                            All Employees / Interns
+                            All Users
                         </option>
 
                         {employeesAndInterns.map(
                             (item) => (
                                 <option
-                                    key={
-                                        item._id
-                                    }
-                                    value={
-                                        item._id
-                                    }
+                                    key={item._id}
+                                    value={item._id}
                                 >
-
-                                    {
-                                        item.fullName ||
-                                        item.name
-                                    }
-
-                                    {" ("}
-
+                                    {item.fullName}{" "}
+                                    (
                                     {getRoleLabel(
                                         item.role
                                     )}
-
-                                    {")"}
-
+                                    )
                                 </option>
                             )
                         )}
-
                     </select>
-
                 </div>
 
                 <div className="filter-group">
-
-                    <label>
-                        From Lead Date
-                    </label>
+                    <label>From Date</label>
 
                     <input
                         type="date"
                         name="startDate"
-                        value={
-                            filters.startDate
-                        }
-                        onChange={
-                            handleFilterChange
-                        }
+                        value={filters.startDate}
+                        onChange={handleFilterChange}
                     />
-
                 </div>
 
                 <div className="filter-group">
-
-                    <label>
-                        To Lead Date
-                    </label>
+                    <label>To Date</label>
 
                     <input
                         type="date"
                         name="endDate"
-                        value={
-                            filters.endDate
-                        }
-                        onChange={
-                            handleFilterChange
-                        }
+                        value={filters.endDate}
+                        onChange={handleFilterChange}
                     />
-
                 </div>
 
                 <button
-                    type="button"
                     className="btn btn-secondary clear-filter-btn"
-                    onClick={
-                        clearFilters
-                    }
+                    onClick={clearFilters}
                 >
-
                     <i className="bi bi-x-circle"></i>
-
                     Clear
-
                 </button>
-
             </div>
 
-            {/* ====================================================
-                TABLE
-            ==================================================== */}
+            {/* ================= TABLE ================= */}
 
             <div className="table-card">
 
                 <div className="table-header">
-
                     <div>
-
-                        <h3>
-                            All Leads
-                        </h3>
+                        <h3>All Leads</h3>
 
                         <span>
-                            {
-                                pagination.total ||
-                                0
-                            }{" "}
+                            {pagination.total || 0}{" "}
                             total leads
                         </span>
-
                     </div>
 
                     {userLoading && (
                         <span className="loading-text">
-                            Loading employees and interns...
+                            Loading users...
                         </span>
                     )}
-
                 </div>
 
                 {loading ? (
-
                     <div className="loading-container">
-
                         <div className="spinner"></div>
-
-                        <p>
-                            Loading leads...
-                        </p>
-
+                        <p>Loading leads...</p>
                     </div>
-
                 ) : leads.length === 0 ? (
-
                     <div className="empty-state">
-
                         <i className="bi bi-people"></i>
 
-                        <h3>
-                            No Leads Found
-                        </h3>
+                        <h3>No Leads Found</h3>
 
                         <p>
-                            No leads match
-                            your current
+                            No leads match your current
                             filters.
                         </p>
 
                         <button
-                            type="button"
                             className="btn btn-primary"
-                            onClick={
-                                handleAddLead
-                            }
+                            onClick={handleAddLead}
                         >
-
                             <i className="bi bi-plus-lg"></i>
-
                             Add First Lead
-
                         </button>
-
                     </div>
-
                 ) : (
-
                     <>
-
                         <div className="table-responsive">
-
                             <table className="leads-table">
 
                                 <thead>
-
                                     <tr>
-
-                                        <th>
-                                            Lead
-                                        </th>
-
-                                        <th>
-                                            Lead Date
-                                        </th>
-
-                                        <th>
-                                            Contact
-                                        </th>
-
-                                        <th>
-                                            Inquiry
-                                        </th>
-
-                                        <th>
-                                            Assigned Employee / Intern
-                                        </th>
-
-                                        <th>
-                                            Priority
-                                        </th>
-
-                                        <th>
-                                            Status
-                                        </th>
-
-                                        <th>
-                                            Next Follow-up
-                                        </th>
-
-                                        <th>
-                                            Actions
-                                        </th>
-
+                                        <th>Lead</th>
+                                        <th>Contact</th>
+                                        <th>Inquiry</th>
+                                        <th>Assigned To</th>
+                                        <th>Status</th>
+                                        <th>Next Follow-up</th>
+                                        <th>Communication History</th>
+                                        <th>Actions</th>
                                     </tr>
-
                                 </thead>
 
                                 <tbody>
-
                                     {leads.map(
                                         (lead) => {
-
                                             const role =
                                                 getUserRole(
                                                     lead.assignedCounselor
@@ -1379,13 +804,8 @@ const Leads = () => {
                                                         lead._id
                                                     }
                                                 >
-
-                                                    {/* LEAD */}
-
                                                     <td>
-
                                                         <div className="lead-info">
-
                                                             <strong>
                                                                 {
                                                                     lead.fullName
@@ -1398,59 +818,26 @@ const Leads = () => {
                                                                     "-"
                                                                 }
                                                             </span>
-
                                                         </div>
-
                                                     </td>
 
-                                                    {/* LEAD DATE */}
-
                                                     <td>
-                                                        {formatDate(
-                                                            lead.leadDate
-                                                        )}
-                                                    </td>
-
-                                                    {/* CONTACT */}
-
-                                                    <td>
-
                                                         <div className="contact-info">
-
                                                             <span>
-
                                                                 <i className="bi bi-telephone"></i>
-
                                                                 {
                                                                     lead.contactNumber
                                                                 }
-
                                                             </span>
 
-                                                            {lead.email && (
-                                                                <span>
-
-                                                                    <i className="bi bi-envelope"></i>
-
-                                                                    {
-                                                                        lead.email
-                                                                    }
-
-                                                                </span>
-                                                            )}
 
                                                         </div>
-
                                                     </td>
 
-                                                    {/* INQUIRY */}
-
                                                     <td>
-
                                                         <div className="inquiry-info">
-
                                                             <strong>
-                                                                {getInquiryTypeLabel(
+                                                                {getStatusLabel(
                                                                     lead.inquiryType
                                                                 )}
                                                             </strong>
@@ -1462,17 +849,11 @@ const Leads = () => {
                                                                     }
                                                                 </span>
                                                             )}
-
                                                         </div>
-
                                                     </td>
 
-                                                    {/* ASSIGNED USER */}
-
                                                     <td>
-
                                                         <div className="assigned-user">
-
                                                             <span>
                                                                 {getUserName(
                                                                     lead.assignedCounselor
@@ -1486,29 +867,10 @@ const Leads = () => {
                                                                     )}
                                                                 </small>
                                                             )}
-
                                                         </div>
-
                                                     </td>
 
-                                                    {/* PRIORITY */}
-
                                                     <td>
-
-                                                        <span
-                                                            className={`priority-badge ${lead.priority}`}
-                                                        >
-                                                            {getPriorityLabel(
-                                                                lead.priority
-                                                            )}
-                                                        </span>
-
-                                                    </td>
-
-                                                    {/* STATUS */}
-
-                                                    <td>
-
                                                         <select
                                                             className={`status-select ${lead.status}`}
                                                             value={
@@ -1519,11 +881,12 @@ const Leads = () => {
                                                             ) =>
                                                                 handleStatusChange(
                                                                     lead._id,
-                                                                    e.target.value
+                                                                    e
+                                                                        .target
+                                                                        .value
                                                                 )
                                                             }
                                                         >
-
                                                             <option value="new">
                                                                 New
                                                             </option>
@@ -1551,29 +914,45 @@ const Leads = () => {
                                                             <option value="closed">
                                                                 Closed
                                                             </option>
-
                                                         </select>
-
                                                     </td>
 
-                                                    {/* NEXT FOLLOW-UP */}
-
                                                     <td>
-
                                                         {formatDate(
                                                             lead.nextFollowUpDate
                                                         )}
-
                                                     </td>
 
-                                                    {/* ACTIONS */}
+                                                    <td>
+                                                        {lead.communicationHistory?.length ? (
+                                                            <div className="main-communication-history">
+                                                                {[...lead.communicationHistory]
+                                                                    .reverse()
+                                                                    .map((item, index) => (
+                                                                        <div
+                                                                            className="main-communication-item"
+                                                                            key={item._id || `${lead._id}-communication-${index}`}
+                                                                        >
+                                                                            <span className="main-communication-number">
+                                                                                {index + 1}.
+                                                                            </span>
+                                                                            <span className="main-communication-message">
+                                                                                {item.message || "No message"}
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="no-communication">
+                                                                No communication
+                                                            </span>
+                                                        )}
+                                                    </td>
 
                                                     <td>
-
                                                         <div className="action-buttons">
 
                                                             <button
-                                                                type="button"
                                                                 className="icon-btn"
                                                                 title="View Details"
                                                                 onClick={() =>
@@ -1582,13 +961,10 @@ const Leads = () => {
                                                                     )
                                                                 }
                                                             >
-
                                                                 <i className="bi bi-eye"></i>
-
                                                             </button>
 
                                                             <button
-                                                                type="button"
                                                                 className="icon-btn"
                                                                 title="Edit Lead"
                                                                 onClick={() =>
@@ -1597,13 +973,10 @@ const Leads = () => {
                                                                     )
                                                                 }
                                                             >
-
                                                                 <i className="bi bi-pencil"></i>
-
                                                             </button>
 
                                                             <button
-                                                                type="button"
                                                                 className="icon-btn"
                                                                 title="Add Communication"
                                                                 onClick={() =>
@@ -1612,105 +985,77 @@ const Leads = () => {
                                                                     )
                                                                 }
                                                             >
-
                                                                 <i className="bi bi-chat-left-text"></i>
-
                                                             </button>
 
                                                         </div>
-
                                                     </td>
-
                                                 </tr>
                                             );
                                         }
                                     )}
-
                                 </tbody>
 
                             </table>
-
                         </div>
 
-                        {/* PAGINATION */}
+                        {/* ================= PAGINATION ================= */}
 
                         <div className="pagination">
 
                             <span>
-
                                 Page{" "}
-
-                                {
-                                    pagination.page
-                                }{" "}
-
+                                {pagination.page || 1}{" "}
                                 of{" "}
-
-                                {
-                                    pagination.totalPages
-                                }
-
+                                {pagination.pages || 1}
                             </span>
 
                             <div>
-
                                 <button
-                                    type="button"
                                     className="btn btn-secondary"
                                     disabled={
-                                        !pagination.hasPreviousPage
+                                        pagination.page <=
+                                        1
                                     }
                                     onClick={
                                         handlePreviousPage
                                     }
                                 >
-
                                     <i className="bi bi-chevron-left"></i>
-
                                     Previous
-
                                 </button>
 
                                 <button
-                                    type="button"
                                     className="btn btn-secondary"
                                     disabled={
-                                        !pagination.hasNextPage
+                                        pagination.page >=
+                                        pagination.pages
                                     }
                                     onClick={
                                         handleNextPage
                                     }
                                 >
-
                                     Next
-
                                     <i className="bi bi-chevron-right"></i>
-
                                 </button>
-
                             </div>
 
                         </div>
-
                     </>
-
                 )}
-
             </div>
 
-            {/* ====================================================
+            {/* =====================================================
                 ADD / EDIT LEAD MODAL
-            ==================================================== */}
+            ===================================================== */}
 
             {showModal && (
-
                 <div
                     className="modal-overlay"
-                    onClick={
-                        closeLeadModal
+                    onClick={() =>
+                        setShowModal(false)
                     }
                 >
-
                     <div
                         className="modal-content large-modal"
                         onClick={(e) =>
@@ -1719,59 +1064,44 @@ const Leads = () => {
                     >
 
                         <div className="modal-header">
-
                             <div>
-
                                 <h2>
-
                                     {editingLead
                                         ? "Edit Lead"
                                         : "Add New Lead"}
-
                                 </h2>
 
                                 <p>
-                                    Enter lead
-                                    information
+                                    Enter lead information
                                     below.
                                 </p>
-
                             </div>
 
                             <button
-                                type="button"
                                 className="modal-close"
-                                onClick={
-                                    closeLeadModal
+                                onClick={() =>
+                                    setShowModal(false)
                                 }
                             >
-
                                 <i className="bi bi-x-lg"></i>
-
                             </button>
-
                         </div>
 
                         <form
-                            onSubmit={
-                                handleSubmit
-                            }
+                            onSubmit={handleSubmit}
                             className="lead-form"
                         >
 
                             {/* PERSONAL INFORMATION */}
 
                             <div className="form-section">
-
                                 <h3>
-                                    Personal
-                                    Information
+                                    Personal Information
                                 </h3>
 
                                 <div className="form-grid">
 
                                     <div className="form-group">
-
                                         <label>
                                             Full Name *
                                         </label>
@@ -1788,11 +1118,9 @@ const Leads = () => {
                                             required
                                             placeholder="Enter full name"
                                         />
-
                                     </div>
 
                                     <div className="form-group">
-
                                         <label>
                                             Contact Number *
                                         </label>
@@ -1809,11 +1137,9 @@ const Leads = () => {
                                             required
                                             placeholder="Enter contact number"
                                         />
-
                                     </div>
 
                                     <div className="form-group">
-
                                         <label>
                                             Email
                                         </label>
@@ -1829,11 +1155,9 @@ const Leads = () => {
                                             }
                                             placeholder="Enter email"
                                         />
-
                                     </div>
 
                                     <div className="form-group">
-
                                         <label>
                                             City
                                         </label>
@@ -1849,47 +1173,21 @@ const Leads = () => {
                                             }
                                             placeholder="Enter city"
                                         />
-
                                     </div>
 
                                 </div>
-
                             </div>
 
                             {/* LEAD INFORMATION */}
 
                             <div className="form-section">
-
                                 <h3>
                                     Lead Information
                                 </h3>
 
                                 <div className="form-grid">
 
-                                    {/* LEAD DATE */}
-
                                     <div className="form-group">
-
-                                        <label>
-                                            Lead Date *
-                                        </label>
-
-                                        <input
-                                            type="date"
-                                            name="leadDate"
-                                            value={
-                                                formData.leadDate
-                                            }
-                                            onChange={
-                                                handleFormChange
-                                            }
-                                            required
-                                        />
-
-                                    </div>
-
-                                    <div className="form-group">
-
                                         <label>
                                             Inquiry Type *
                                         </label>
@@ -1904,7 +1202,6 @@ const Leads = () => {
                                             }
                                             required
                                         >
-
                                             <option value="course">
                                                 Course
                                             </option>
@@ -1924,13 +1221,10 @@ const Leads = () => {
                                             <option value="placement">
                                                 Placement
                                             </option>
-
                                         </select>
-
                                     </div>
 
                                     <div className="form-group">
-
                                         <label>
                                             Course Interested
                                         </label>
@@ -1946,11 +1240,9 @@ const Leads = () => {
                                             }
                                             placeholder="Enter course"
                                         />
-
                                     </div>
 
                                     <div className="form-group">
-
                                         <label>
                                             Lead Source
                                         </label>
@@ -1964,7 +1256,6 @@ const Leads = () => {
                                                 handleFormChange
                                             }
                                         >
-
                                             <option value="">
                                                 Select Source
                                             </option>
@@ -2012,15 +1303,10 @@ const Leads = () => {
                                             <option value="project_client">
                                                 Project Client
                                             </option>
-
                                         </select>
-
                                     </div>
 
-                                    {/* ASSIGNED EMPLOYEE / INTERN */}
-
                                     <div className="form-group">
-
                                         <label>
                                             Assigned Employee / Intern
                                         </label>
@@ -2034,7 +1320,6 @@ const Leads = () => {
                                                 handleFormChange
                                             }
                                         >
-
                                             <option value="">
                                                 Select Employee / Intern
                                             </option>
@@ -2051,30 +1336,23 @@ const Leads = () => {
                                                             item._id
                                                         }
                                                     >
-
                                                         {
-                                                            item.fullName ||
-                                                            item.name
+                                                            item.fullName
+                                                        }{" "}
+                                                        (
+                                                        {
+                                                            getRoleLabel(
+                                                                item.role
+                                                            )
                                                         }
-
-                                                        {" ("}
-
-                                                        {getRoleLabel(
-                                                            item.role
-                                                        )}
-
-                                                        {")"}
-
+                                                        )
                                                     </option>
                                                 )
                                             )}
-
                                         </select>
-
                                     </div>
 
                                     <div className="form-group">
-
                                         <label>
                                             Priority
                                         </label>
@@ -2088,7 +1366,6 @@ const Leads = () => {
                                                 handleFormChange
                                             }
                                         >
-
                                             <option value="low">
                                                 Low
                                             </option>
@@ -2100,13 +1377,10 @@ const Leads = () => {
                                             <option value="high">
                                                 High
                                             </option>
-
                                         </select>
-
                                     </div>
 
                                     <div className="form-group">
-
                                         <label>
                                             Status
                                         </label>
@@ -2120,7 +1394,6 @@ const Leads = () => {
                                                 handleFormChange
                                             }
                                         >
-
                                             <option value="new">
                                                 New
                                             </option>
@@ -2148,28 +1421,22 @@ const Leads = () => {
                                             <option value="closed">
                                                 Closed
                                             </option>
-
                                         </select>
-
                                     </div>
 
                                 </div>
-
                             </div>
 
                             {/* FOLLOW-UP INFORMATION */}
 
                             <div className="form-section">
-
                                 <h3>
-                                    Follow-up
-                                    Information
+                                    Follow-up Information
                                 </h3>
 
                                 <div className="form-grid">
 
                                     <div className="form-group">
-
                                         <label>
                                             Next Follow-up Date
                                         </label>
@@ -2184,11 +1451,9 @@ const Leads = () => {
                                                 handleFormChange
                                             }
                                         />
-
                                     </div>
 
                                     <div className="form-group">
-
                                         <label>
                                             Expected Fees
                                         </label>
@@ -2205,11 +1470,9 @@ const Leads = () => {
                                             placeholder="Enter expected fees"
                                             min="0"
                                         />
-
                                     </div>
 
                                     <div className="form-group">
-
                                         <label>
                                             Admission Date
                                         </label>
@@ -2224,13 +1487,11 @@ const Leads = () => {
                                                 handleFormChange
                                             }
                                         />
-
                                     </div>
 
                                 </div>
 
                                 <div className="form-group full-width">
-
                                     <label>
                                         Notes
                                     </label>
@@ -2246,7 +1507,6 @@ const Leads = () => {
                                         rows="4"
                                         placeholder="Add notes about this lead..."
                                     ></textarea>
-
                                 </div>
 
                             </div>
@@ -2258,8 +1518,8 @@ const Leads = () => {
                                 <button
                                     type="button"
                                     className="btn btn-secondary"
-                                    onClick={
-                                        closeLeadModal
+                                    onClick={() =>
+                                        setShowModal(false)
                                     }
                                 >
                                     Cancel
@@ -2269,50 +1529,41 @@ const Leads = () => {
                                     type="submit"
                                     className="btn btn-primary"
                                 >
-
                                     <i className="bi bi-check-lg"></i>
 
                                     {editingLead
                                         ? "Update Lead"
                                         : "Create Lead"}
-
                                 </button>
 
                             </div>
 
                         </form>
-
                     </div>
-
                 </div>
-
             )}
 
-            {/* ====================================================
+            {/* =====================================================
                 LEAD DETAILS MODAL
-            ==================================================== */}
+            ===================================================== */}
 
             {showDetailsModal &&
                 selectedLead && (
-
                     <div
                         className="modal-overlay"
-                        onClick={
-                            closeDetailsModal
+                        onClick={() =>
+                            setShowDetailsModal(false)
                         }
                     >
-
                         <div
-                            className="modal-content"
+                            className="modal-content details-modal"
                             onClick={(e) =>
                                 e.stopPropagation()
                             }
                         >
 
                             <div className="modal-header">
-
                                 <div>
-
                                     <h2>
                                         Lead Details
                                     </h2>
@@ -2321,37 +1572,28 @@ const Leads = () => {
                                         Complete lead
                                         information.
                                     </p>
-
                                 </div>
 
                                 <button
-                                    type="button"
                                     className="modal-close"
-                                    onClick={
-                                        closeDetailsModal
+                                    onClick={() =>
+                                        setShowDetailsModal(
+                                            false
+                                        )
                                     }
                                 >
-
                                     <i className="bi bi-x-lg"></i>
-
                                 </button>
-
                             </div>
 
                             <div className="details-content">
 
-                                {/* PROFILE */}
-
                                 <div className="details-profile">
-
                                     <div className="profile-icon">
-
                                         <i className="bi bi-person"></i>
-
                                     </div>
 
                                     <div>
-
                                         <h3>
                                             {
                                                 selectedLead.fullName
@@ -2363,17 +1605,12 @@ const Leads = () => {
                                                 selectedLead.status
                                             )}
                                         </span>
-
                                     </div>
-
                                 </div>
-
-                                {/* DETAILS */}
 
                                 <div className="details-grid">
 
                                     <div className="detail-item">
-
                                         <label>
                                             Contact Number
                                         </label>
@@ -2383,11 +1620,9 @@ const Leads = () => {
                                                 selectedLead.contactNumber
                                             }
                                         </strong>
-
                                     </div>
 
                                     <div className="detail-item">
-
                                         <label>
                                             Email
                                         </label>
@@ -2398,11 +1633,9 @@ const Leads = () => {
                                                 "-"
                                             }
                                         </strong>
-
                                     </div>
 
                                     <div className="detail-item">
-
                                         <label>
                                             City
                                         </label>
@@ -2413,41 +1646,21 @@ const Leads = () => {
                                                 "-"
                                             }
                                         </strong>
-
-                                    </div>
-
-                                    {/* LEAD DATE */}
-
-                                    <div className="detail-item">
-
-                                        <label>
-                                            Lead Date
-                                        </label>
-
-                                        <strong>
-                                            {formatDate(
-                                                selectedLead.leadDate
-                                            )}
-                                        </strong>
-
                                     </div>
 
                                     <div className="detail-item">
-
                                         <label>
                                             Inquiry Type
                                         </label>
 
                                         <strong>
-                                            {getInquiryTypeLabel(
+                                            {
                                                 selectedLead.inquiryType
-                                            )}
+                                            }
                                         </strong>
-
                                     </div>
 
                                     <div className="detail-item">
-
                                         <label>
                                             Course Interested
                                         </label>
@@ -2458,11 +1671,9 @@ const Leads = () => {
                                                 "-"
                                             }
                                         </strong>
-
                                     </div>
 
                                     <div className="detail-item">
-
                                         <label>
                                             Lead Source
                                         </label>
@@ -2473,19 +1684,14 @@ const Leads = () => {
                                                 "-"
                                             }
                                         </strong>
-
                                     </div>
 
-                                    {/* ASSIGNED USER */}
-
                                     <div className="detail-item">
-
                                         <label>
                                             Assigned Employee / Intern
                                         </label>
 
                                         <strong>
-
                                             {getUserName(
                                                 selectedLead.assignedCounselor
                                             )}
@@ -2494,24 +1700,20 @@ const Leads = () => {
                                                 selectedLead.assignedCounselor
                                             ) && (
                                                 <small>
-                                                    {" ("}
-
+                                                    {" "}
+                                                    (
                                                     {getRoleLabel(
                                                         getUserRole(
                                                             selectedLead.assignedCounselor
                                                         )
                                                     )}
-
-                                                    {")"}
+                                                    )
                                                 </small>
                                             )}
-
                                         </strong>
-
                                     </div>
 
                                     <div className="detail-item">
-
                                         <label>
                                             Priority
                                         </label>
@@ -2521,11 +1723,9 @@ const Leads = () => {
                                                 selectedLead.priority
                                             )}
                                         </strong>
-
                                     </div>
 
                                     <div className="detail-item">
-
                                         <label>
                                             Next Follow-up
                                         </label>
@@ -2535,17 +1735,14 @@ const Leads = () => {
                                                 selectedLead.nextFollowUpDate
                                             )}
                                         </strong>
-
                                     </div>
 
                                     <div className="detail-item">
-
                                         <label>
                                             Expected Fees
                                         </label>
 
                                         <strong>
-
                                             {selectedLead.expectedFees
                                                 ? `₹${Number(
                                                       selectedLead.expectedFees
@@ -2553,13 +1750,10 @@ const Leads = () => {
                                                       "en-IN"
                                                   )}`
                                                 : "-"}
-
                                         </strong>
-
                                     </div>
 
                                     <div className="detail-item">
-
                                         <label>
                                             Admission Date
                                         </label>
@@ -2569,11 +1763,9 @@ const Leads = () => {
                                                 selectedLead.admissionDate
                                             )}
                                         </strong>
-
                                     </div>
 
                                     <div className="detail-item">
-
                                         <label>
                                             Created Date
                                         </label>
@@ -2583,15 +1775,11 @@ const Leads = () => {
                                                 selectedLead.createdAt
                                             )}
                                         </strong>
-
                                     </div>
 
                                 </div>
 
-                                {/* NOTES */}
-
-                                <div className="detail-section">
-
+                                <div className="detail-section notes-section">
                                     <label>
                                         Notes
                                     </label>
@@ -2602,50 +1790,36 @@ const Leads = () => {
                                             "No notes available."
                                         }
                                     </p>
-
                                 </div>
 
                                 {/* COMMUNICATION HISTORY */}
 
-                                <div className="detail-section">
-
+                                <div className="detail-section communication-history-section">
                                     <div className="section-title-row">
-
                                         <h3>
                                             Communication
                                             History
                                         </h3>
 
                                         <button
-                                            type="button"
                                             className="btn btn-primary btn-sm"
                                             onClick={() => {
-
                                                 setShowDetailsModal(
                                                     false
                                                 );
-
                                                 handleOpenCommunication(
                                                     selectedLead
                                                 );
-
                                             }}
                                         >
-
                                             <i className="bi bi-plus-lg"></i>
-
                                             Add
-
                                         </button>
-
                                     </div>
 
-                                    {selectedLead
-                                        .communicationHistory
+                                    {selectedLead.communicationHistory
                                         ?.length ? (
-
                                         <div className="communication-list">
-
                                             {[
                                                 ...selectedLead.communicationHistory,
                                             ]
@@ -2655,129 +1829,86 @@ const Leads = () => {
                                                         item,
                                                         index
                                                     ) => (
-
                                                         <div
                                                             className="communication-item"
                                                             key={
                                                                 index
                                                             }
                                                         >
-
-                                                            <div className="communication-icon">
-
-                                                                <i
-                                                                    className={`bi ${
-                                                                        item.type ===
-                                                                        "call"
-                                                                            ? "bi-telephone"
-                                                                            : item.type ===
-                                                                              "whatsapp"
-                                                                            ? "bi-whatsapp"
-                                                                            : item.type ===
-                                                                              "email"
-                                                                            ? "bi-envelope"
-                                                                            : "bi-people"
-                                                                    }`}
-                                                                ></i>
-
+                                                            <div className="communication-number">
+                                                                {index + 1}.
                                                             </div>
 
                                                             <div className="communication-content">
+                                                                <div className="communication-message-row">
+                                                                    <p>
+                                                                        {item.message ||
+                                                                            getStatusLabel(
+                                                                                item.type
+                                                                            )}
+                                                                    </p>
 
-                                                                <div>
-
-                                                                    <strong>
-                                                                        {
-                                                                            item.type
-                                                                        }
-                                                                    </strong>
-
-                                                                    <span>
-                                                                        {formatDate(
-                                                                            item.date
-                                                                        )}
-                                                                    </span>
-
+                                                                    {item.date && (
+                                                                        <span>
+                                                                            {formatDate(
+                                                                                item.date
+                                                                            )}
+                                                                        </span>
+                                                                    )}
                                                                 </div>
-
-                                                                <p>
-                                                                    {
-                                                                        item.message
-                                                                    }
-                                                                </p>
-
                                                             </div>
-
                                                         </div>
-
                                                     )
                                                 )}
-
                                         </div>
-
                                     ) : (
-
                                         <p className="empty-text">
                                             No communication
-                                            history
-                                            available.
+                                            history available.
                                         </p>
-
                                     )}
-
                                 </div>
 
                             </div>
 
                             <div className="modal-footer">
-
                                 <button
-                                    type="button"
                                     className="btn btn-secondary"
-                                    onClick={
-                                        closeDetailsModal
+                                    onClick={() =>
+                                        setShowDetailsModal(
+                                            false
+                                        )
                                     }
                                 >
                                     Close
                                 </button>
 
                                 <button
-                                    type="button"
                                     className="btn btn-primary"
                                     onClick={() => {
-
                                         setShowDetailsModal(
                                             false
                                         );
-
                                         handleEditLead(
                                             selectedLead
                                         );
-
                                     }}
                                 >
-
                                     <i className="bi bi-pencil"></i>
-
                                     Edit Lead
-
                                 </button>
-
                             </div>
 
                         </div>
-
                     </div>
-
                 )}
 
-            {/* ====================================================
+            {/* =====================================================
                 COMMUNICATION MODAL
-            ==================================================== */}
+            ===================================================== */}
 
             {showCommunicationModal &&
                 selectedLead && (
-
                     <div
                         className="modal-overlay"
                         onClick={() =>
@@ -2786,18 +1917,15 @@ const Leads = () => {
                             )
                         }
                     >
-
                         <div
-                            className="modal-content"
+                            className="modal-content details-modal"
                             onClick={(e) =>
                                 e.stopPropagation()
                             }
                         >
 
                             <div className="modal-header">
-
                                 <div>
-
                                     <h2>
                                         Add Communication
                                     </h2>
@@ -2805,19 +1933,15 @@ const Leads = () => {
                                     <p>
                                         Add communication
                                         details for{" "}
-
                                         <strong>
                                             {
                                                 selectedLead.fullName
                                             }
                                         </strong>
-
                                     </p>
-
                                 </div>
 
                                 <button
-                                    type="button"
                                     className="modal-close"
                                     onClick={() =>
                                         setShowCommunicationModal(
@@ -2825,11 +1949,8 @@ const Leads = () => {
                                         )
                                     }
                                 >
-
                                     <i className="bi bi-x-lg"></i>
-
                                 </button>
-
                             </div>
 
                             <form
@@ -2839,7 +1960,6 @@ const Leads = () => {
                             >
 
                                 <div className="form-group">
-
                                     <label>
                                         Communication Type
                                     </label>
@@ -2854,7 +1974,6 @@ const Leads = () => {
                                         }
                                         required
                                     >
-
                                         <option value="call">
                                             Phone Call
                                         </option>
@@ -2870,13 +1989,10 @@ const Leads = () => {
                                         <option value="meeting">
                                             Meeting
                                         </option>
-
                                     </select>
-
                                 </div>
 
                                 <div className="form-group">
-
                                     <label>
                                         Message / Notes
                                     </label>
@@ -2893,7 +2009,6 @@ const Leads = () => {
                                         required
                                         placeholder="Enter communication details..."
                                     ></textarea>
-
                                 </div>
 
                                 <div className="modal-footer">
@@ -2914,11 +2029,8 @@ const Leads = () => {
                                         type="submit"
                                         className="btn btn-primary"
                                     >
-
                                         <i className="bi bi-check-lg"></i>
-
                                         Add Communication
-
                                     </button>
 
                                 </div>
@@ -2926,9 +2038,7 @@ const Leads = () => {
                             </form>
 
                         </div>
-
                     </div>
-
                 )}
 
         </div>

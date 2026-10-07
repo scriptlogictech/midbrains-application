@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import "./DashboardLayout.css"
 
 const DashboardLayout = ({ children }) => {
   const { companyId } = useParams();
@@ -149,19 +150,13 @@ const DashboardLayout = ({ children }) => {
 
         <div className="sidebar-brand">
 
-          <div className="brand-icon">
-            <i className="bi bi-grid-1x2-fill"></i>
-          </div>
+  <img
+    src="/midbrains-logo.png"
+    alt="Midbrains Technologies"
+    className="sidebar-logo"
+  />
 
-          <div>
-            <h5>Follow-up CRM</h5>
-
-            <small>
-              Management System
-            </small>
-          </div>
-
-        </div>
+</div>
 
         {/* Menu */}
 

@@ -4,7 +4,9 @@ const User = require("../models/User");
 // ============================================================
 // HELPER: GET COMPANY ID
 // ============================================================
+
 // authMiddleware.js populates req.user.company.
+//
 // Therefore req.user.company can be:
 //
 // 1. ObjectId
@@ -73,6 +75,52 @@ const getTargetCompany = (
     }
 
     return null;
+};
+
+// ============================================================
+// HELPER: GET DEFAULT FOLLOW-UP DATE
+// ============================================================
+//
+// If the user does NOT provide a next follow-up date,
+// automatically use the next working day.
+//
+// Rules:
+//
+// Monday    -> Tuesday
+// Tuesday   -> Wednesday
+// Wednesday -> Thursday
+// Thursday  -> Friday
+// Friday    -> Saturday
+// Saturday  -> Monday
+// Sunday    -> Monday
+//
+// Sunday is never used as the default follow-up date.
+// ============================================================
+
+const getDefaultFollowUpDate = (
+    leadDate = new Date()
+) => {
+    const followUpDate = new Date(
+        leadDate
+    );
+
+    // Move to next day
+    followUpDate.setDate(
+        followUpDate.getDate() + 1
+    );
+
+    // JavaScript:
+    // Sunday = 0
+    //
+    // If the next day is Sunday,
+    // move forward to Monday.
+    if (followUpDate.getDay() === 0) {
+        followUpDate.setDate(
+            followUpDate.getDate() + 1
+        );
+    }
+
+    return followUpDate;
 };
 
 // ============================================================
@@ -369,6 +417,7 @@ exports.createLead = async (req, res) => {
             "super_admin"
         ) {
             // Super Admin must provide company
+
             if (!company) {
                 return res.status(400).json({
                     success: false,
@@ -380,6 +429,7 @@ exports.createLead = async (req, res) => {
             targetCompany = company;
         } else {
             // Employee / Intern automatically use own company
+
             const userCompanyId =
                 getUserCompanyId(req);
 
@@ -440,6 +490,35 @@ exports.createLead = async (req, res) => {
         }
 
         // --------------------------------------------------------
+        // CALCULATE LEAD DATE
+        // --------------------------------------------------------
+
+        const actualLeadDate = leadDate
+            ? new Date(leadDate)
+            : new Date();
+
+        // --------------------------------------------------------
+        // CALCULATE NEXT FOLLOW-UP DATE
+        // --------------------------------------------------------
+        //
+        // If user manually selected a date:
+        //     use that date.
+        //
+        // If user did NOT select a date:
+        //     automatically use next working day.
+        //
+        // Saturday -> Monday
+        // Sunday   -> Monday
+        // --------------------------------------------------------
+
+        const actualNextFollowUpDate =
+            nextFollowUpDate
+                ? new Date(nextFollowUpDate)
+                : getDefaultFollowUpDate(
+                      actualLeadDate
+                  );
+
+        // --------------------------------------------------------
         // CREATE LEAD
         // --------------------------------------------------------
 
@@ -461,7 +540,7 @@ exports.createLead = async (req, res) => {
             city,
 
             // Use provided lead date.
-            // If not provided, Lead model default Date.now is used.
+            // If not provided, use current date.
             leadDate:
                 leadDate || undefined,
 
@@ -477,7 +556,10 @@ exports.createLead = async (req, res) => {
 
             status,
 
-            nextFollowUpDate,
+            // Manual date is preserved.
+            // Otherwise use automatic next working day.
+            nextFollowUpDate:
+                actualNextFollowUpDate,
 
             notes,
 
@@ -702,12 +784,41 @@ exports.updateLead = async (req, res) => {
                 status;
         }
 
+        // --------------------------------------------------------
+        // UPDATE NEXT FOLLOW-UP
+        // --------------------------------------------------------
+        //
+        // If a follow-up date is explicitly provided,
+        // use that date.
+        //
+        // If it is explicitly cleared/empty during an update,
+        // automatically calculate the next working day
+        // based on the lead date.
+        // --------------------------------------------------------
+
         if (
             nextFollowUpDate !==
             undefined
         ) {
-            updateData.nextFollowUpDate =
-                nextFollowUpDate;
+            if (nextFollowUpDate) {
+                updateData.nextFollowUpDate =
+                    nextFollowUpDate;
+            } else {
+                const updateLeadDate =
+                    leadDate !==
+                    undefined
+                        ? new Date(
+                              leadDate
+                          )
+                        : lead.leadDate ||
+                          lead.createdAt ||
+                          new Date();
+
+                updateData.nextFollowUpDate =
+                    getDefaultFollowUpDate(
+                        updateLeadDate
+                    );
+            }
         }
 
         if (notes !== undefined) {

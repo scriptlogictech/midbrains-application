@@ -95,10 +95,6 @@ const leadSchema = new mongoose.Schema(
         // Keeping the existing field name
         // "assignedCounselor" to avoid breaking
         // the existing frontend/database structure.
-        //
-        // It can reference either:
-        // - Employee
-        // - Intern
 
         assignedCounselor: {
             type: mongoose.Schema.Types.ObjectId,
@@ -136,6 +132,9 @@ const leadSchema = new mongoose.Schema(
         // ==========================================
         // Follow-up
         // ==========================================
+        // If no date is provided while creating
+        // the lead, the controller will automatically
+        // set the next working day.
 
         nextFollowUpDate: {
             type: Date,
