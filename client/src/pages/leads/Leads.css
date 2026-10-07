@@ -5072,3 +5072,56 @@
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
+
+
+
+/* ============================================================
+   ADD / EDIT LEAD MODAL SIZE
+============================================================ */
+
+.leads-page .modal-overlay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+}
+
+.leads-page .modal-content {
+    width: 1000px;
+    max-width: calc(100vw - 80px);
+    max-height: 90vh;
+    margin: 0 auto;
+    border-radius: 14px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Large screens */
+@media (min-width: 1200px) {
+    .leads-page .modal-content {
+        width: 1000px;
+        max-width: 1000px;
+    }
+}
+
+/* Medium screens */
+@media (max-width: 1100px) {
+    .leads-page .modal-content {
+        width: 900px;
+        max-width: calc(100vw - 50px);
+    }
+}
+
+/* Mobile */
+@media (max-width: 700px) {
+    .leads-page .modal-overlay {
+        padding: 15px;
+    }
+
+    .leads-page .modal-content {
+        width: 100%;
+        max-width: 100%;
+        max-height: 92vh;
+        border-radius: 10px;
+    }
+}
