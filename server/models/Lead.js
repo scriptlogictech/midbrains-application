@@ -41,6 +41,7 @@ const leadSchema = new mongoose.Schema(
         // ==========================================
         // Lead Date
         // ==========================================
+
         // The actual date on which the lead was received.
 
         leadDate: {
@@ -59,6 +60,7 @@ const leadSchema = new mongoose.Schema(
         inquiryType: {
             type: String,
             enum: [
+                "interview",
                 "course",
                 "internship",
                 "corporate_training",
@@ -92,6 +94,7 @@ const leadSchema = new mongoose.Schema(
         // ==========================================
         // Assigned Employee / Intern
         // ==========================================
+
         // Keeping the existing field name
         // "assignedCounselor" to avoid breaking
         // the existing frontend/database structure.
@@ -132,6 +135,7 @@ const leadSchema = new mongoose.Schema(
         // ==========================================
         // Follow-up
         // ==========================================
+
         // If no date is provided while creating
         // the lead, the controller will automatically
         // set the next working day.

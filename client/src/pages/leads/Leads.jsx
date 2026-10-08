@@ -1202,6 +1202,10 @@ const Leads = () => {
                                             }
                                             required
                                         >
+                                            <option value="interview">
+                                                Interview
+                                            </option>
+
                                             <option value="course">
                                                 Course
                                             </option>
