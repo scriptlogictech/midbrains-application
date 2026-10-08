@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
     getLeads,
@@ -12,8 +13,13 @@ import "./Leads.css";
 
 const Leads = () => {
     const { user } = useAuth();
+    const { companyId: routeCompanyId } = useParams();
 
+    // Super Admin does not have a company assigned.
+    // For Super Admin, use the company ID from the dashboard URL first.
+    // For Employee / Intern, fall back to their assigned company.
     const companyId =
+        routeCompanyId ||
         user?.company?._id ||
         user?.company ||
         localStorage.getItem("companyId");
@@ -647,6 +653,9 @@ const Leads = () => {
                     >
                         <option value="">
                             All Types
+                        </option>
+                        <option value="interview">
+                            Interview
                         </option>
                         <option value="course">
                             Course
