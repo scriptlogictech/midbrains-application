@@ -936,7 +936,6 @@ const Leads = () => {
                                                         {lead.communicationHistory?.length ? (
                                                             <div className="main-communication-history">
                                                                 {[...lead.communicationHistory]
-                                                                    .reverse()
                                                                     .map((item, index) => (
                                                                         <div
                                                                             className="main-communication-item"
@@ -1836,7 +1835,7 @@ const Leads = () => {
                                             {[
                                                 ...selectedLead.communicationHistory,
                                             ]
-                                                .reverse()
+                                                
                                                 .map(
                                                     (
                                                         item,
