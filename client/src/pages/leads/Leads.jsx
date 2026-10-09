@@ -113,7 +113,33 @@ const Leads = () => {
             setLeads(leadData);
 
             if (response?.pagination) {
-                setPagination(response.pagination);
+                setPagination({
+                    page: Number(response.pagination.page) || 1,
+                    limit: Number(response.pagination.limit) || 10,
+                    total: Number(response.pagination.total) || 0,
+                    pages:
+                        Number(
+                            response.pagination.totalPages ??
+                            response.pagination.pages
+                        ) || 1,
+                    totalPages:
+                        Number(
+                            response.pagination.totalPages ??
+                            response.pagination.pages
+                        ) || 1,
+                    hasNextPage:
+                        response.pagination.hasNextPage ??
+                        (
+                            Number(response.pagination.page) <
+                            Number(
+                                response.pagination.totalPages ??
+                                response.pagination.pages
+                            )
+                        ),
+                    hasPreviousPage:
+                        response.pagination.hasPreviousPage ??
+                        Number(response.pagination.page) > 1,
+                });
             }
         } catch (err) {
             console.error("Fetch Leads Error:", err);
