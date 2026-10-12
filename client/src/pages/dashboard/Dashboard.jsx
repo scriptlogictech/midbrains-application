@@ -126,7 +126,7 @@ const Dashboard = () => {
           </div>
 
           <h1>
-            Good to see you!
+            Good to  see!
           </h1>
 
           <p>
