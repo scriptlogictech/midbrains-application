@@ -16,6 +16,15 @@ const leadSchema = new mongoose.Schema(
         // Basic Details
         // ==========================================
 
+
+
+
+
+        serialNumber: {
+            type: Number,
+            required: true,
+        },
+
         fullName: {
             type: String,
             required: true,
@@ -121,15 +130,12 @@ const leadSchema = new mongoose.Schema(
         status: {
             type: String,
             enum: [
-                "new",
                 "contacted",
                 "interested",
-                "follow_up",
-                "converted",
                 "not_interested",
-                "closed",
+                "enrolled",
             ],
-            default: "new",
+            default: "contacted",
         },
 
         // ==========================================

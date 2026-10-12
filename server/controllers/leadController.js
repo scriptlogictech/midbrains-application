@@ -1,18 +1,10 @@
+
 const Lead = require("../models/Lead");
 const User = require("../models/User");
+const LeadCounter = require("../models/LeadCounter");
 
 // ============================================================
 // HELPER: GET COMPANY ID
-// ============================================================
-
-// authMiddleware.js populates req.user.company.
-//
-// Therefore req.user.company can be:
-//
-// 1. ObjectId
-// 2. Populated Company document
-//
-// This helper always returns the actual company ID.
 // ============================================================
 
 const getUserCompanyId = (req) => {
@@ -36,91 +28,112 @@ const hasCompanyAccess = (req, companyId) => {
         return false;
     }
 
-    // Super Admin can access all companies
     if (req.user.role === "super_admin") {
         return true;
     }
 
-    // Employee / Intern can access only their own company
     const userCompanyId = getUserCompanyId(req);
 
     if (!userCompanyId) {
         return false;
     }
 
-    return (
-        userCompanyId === companyId.toString()
-    );
+    return userCompanyId === companyId.toString();
 };
 
 // ============================================================
 // HELPER: GET TARGET COMPANY
 // ============================================================
 
-const getTargetCompany = (
-    req,
-    requestedCompanyId
-) => {
-    // Super Admin can work with selected company
+const getTargetCompany = (req, requestedCompanyId) => {
     if (req.user.role === "super_admin") {
         return requestedCompanyId || null;
     }
 
-    // Employee / Intern must always use their own company
-    const userCompanyId =
-        getUserCompanyId(req);
+    const userCompanyId = getUserCompanyId(req);
 
-    if (userCompanyId) {
-        return userCompanyId;
-    }
-
-    return null;
+    return userCompanyId || null;
 };
 
 // ============================================================
 // HELPER: GET DEFAULT FOLLOW-UP DATE
 // ============================================================
-//
-// If the user does NOT provide a next follow-up date,
-// automatically use the next working day.
-//
-// Rules:
-//
-// Monday    -> Tuesday
-// Tuesday   -> Wednesday
-// Wednesday -> Thursday
-// Thursday  -> Friday
-// Friday    -> Saturday
-// Saturday  -> Monday
-// Sunday    -> Monday
-//
-// Sunday is never used as the default follow-up date.
-// ============================================================
 
-const getDefaultFollowUpDate = (
-    leadDate = new Date()
-) => {
-    const followUpDate = new Date(
-        leadDate
-    );
+const getDefaultFollowUpDate = (leadDate = new Date()) => {
+    const followUpDate = new Date(leadDate);
 
-    // Move to next day
-    followUpDate.setDate(
-        followUpDate.getDate() + 1
-    );
+    followUpDate.setDate(followUpDate.getDate() + 1);
 
-    // JavaScript:
-    // Sunday = 0
-    //
-    // If the next day is Sunday,
-    // move forward to Monday.
+    // Sunday is skipped; follow-up defaults to Monday.
     if (followUpDate.getDay() === 0) {
-        followUpDate.setDate(
-            followUpDate.getDate() + 1
-        );
+        followUpDate.setDate(followUpDate.getDate() + 1);
     }
 
     return followUpDate;
+};
+
+// ============================================================
+// HELPER: GENERATE COMPANY-WISE SERIAL NUMBER
+// ============================================================
+
+
+
+const getNextLeadSerialNumber = async (companyId) => {
+    // Find the highest serial number already saved for this company.
+    const highestLead = await Lead.findOne({
+        company: companyId,
+        serialNumber: { $type: "number" },
+    })
+        .sort({ serialNumber: -1 })
+        .select("serialNumber")
+        .lean();
+
+    const highestNumber = Number(highestLead?.serialNumber || 0);
+
+    // Initialize counter if it does not exist.
+    let counter = await LeadCounter.findOne({
+        company: companyId,
+    });
+
+    if (!counter) {
+        try {
+            counter = await LeadCounter.create({
+                company: companyId,
+                lastNumber: highestNumber,
+            });
+        } catch (error) {
+            if (error.code !== 11000) {
+                throw error;
+            }
+
+            counter = await LeadCounter.findOne({
+                company: companyId,
+            });
+        }
+    }
+
+    if (!counter) {
+        throw new Error("Could not initialize lead counter");
+    }
+
+    // Sync counter with existing lead numbers.
+    if (counter.lastNumber < highestNumber) {
+        counter.lastNumber = highestNumber;
+        await counter.save();
+    }
+
+    // Atomically increment counter.
+    const updatedCounter = await LeadCounter.findOneAndUpdate(
+        { company: companyId },
+        { $inc: { lastNumber: 1 } },
+        { new: true }
+    );
+
+    if (!updatedCounter) {
+        throw new Error("Could not generate lead serial number");
+    }
+
+    return updatedCounter.lastNumber;
 };
 
 // ============================================================
@@ -142,194 +155,71 @@ exports.getLeads = async (req, res) => {
             companyId,
         } = req.query;
 
-        // --------------------------------------------------------
-        // DETERMINE COMPANY
-        // --------------------------------------------------------
-
-        const targetCompanyId =
-            getTargetCompany(
-                req,
-                companyId
-            );
+        const targetCompanyId = getTargetCompany(req, companyId);
 
         if (!targetCompanyId) {
             return res.status(400).json({
                 success: false,
-                message:
-                    "Company ID is required",
+                message: "Company ID is required",
             });
         }
 
-        // --------------------------------------------------------
-        // COMPANY ACCESS
-        // --------------------------------------------------------
-
-        if (
-            !hasCompanyAccess(
-                req,
-                targetCompanyId
-            )
-        ) {
+        if (!hasCompanyAccess(req, targetCompanyId)) {
             return res.status(403).json({
                 success: false,
-                message:
-                    "You do not have access to this company",
+                message: "You do not have access to this company",
             });
         }
-
-        // --------------------------------------------------------
-        // BASE FILTER
-        // --------------------------------------------------------
 
         const filter = {
             company: targetCompanyId,
         };
 
-        // --------------------------------------------------------
-        // SEARCH
-        // --------------------------------------------------------
-
         if (search.trim()) {
             filter.$or = [
-                {
-                    fullName: {
-                        $regex: search.trim(),
-                        $options: "i",
-                    },
-                },
-                {
-                    contactNumber: {
-                        $regex: search.trim(),
-                        $options: "i",
-                    },
-                },
-                {
-                    email: {
-                        $regex: search.trim(),
-                        $options: "i",
-                    },
-                },
-                {
-                    city: {
-                        $regex: search.trim(),
-                        $options: "i",
-                    },
-                },
-                {
-                    courseInterested: {
-                        $regex: search.trim(),
-                        $options: "i",
-                    },
-                },
+                { fullName: { $regex: search.trim(), $options: "i" } },
+                { contactNumber: { $regex: search.trim(), $options: "i" } },
+                { email: { $regex: search.trim(), $options: "i" } },
+                { city: { $regex: search.trim(), $options: "i" } },
+                { courseInterested: { $regex: search.trim(), $options: "i" } },
             ];
         }
 
-        // --------------------------------------------------------
-        // STATUS FILTER
-        // --------------------------------------------------------
-
-        if (status) {
-            filter.status = status;
-        }
-
-        // --------------------------------------------------------
-        // PRIORITY FILTER
-        // --------------------------------------------------------
-
-        if (priority) {
-            filter.priority = priority;
-        }
-
-        // --------------------------------------------------------
-        // INQUIRY TYPE FILTER
-        // --------------------------------------------------------
-
-        if (inquiryType) {
-            filter.inquiryType =
-                inquiryType;
-        }
-
-        // --------------------------------------------------------
-        // ASSIGNED EMPLOYEE / INTERN FILTER
-        // --------------------------------------------------------
+        if (status) filter.status = status;
+        if (priority) filter.priority = priority;
+        if (inquiryType) filter.inquiryType = inquiryType;
 
         if (assignedCounselor) {
-            filter.assignedCounselor =
-                assignedCounselor;
+            filter.assignedCounselor = assignedCounselor;
         }
-
-        // --------------------------------------------------------
-        // LEAD DATE FILTER
-        // --------------------------------------------------------
 
         if (startDate || endDate) {
             filter.leadDate = {};
 
             if (startDate) {
-                filter.leadDate.$gte =
-                    new Date(
-                        `${startDate}T00:00:00`
-                    );
+                filter.leadDate.$gte = new Date(`${startDate}T00:00:00`);
             }
 
             if (endDate) {
-                filter.leadDate.$lte =
-                    new Date(
-                        `${endDate}T23:59:59.999`
-                    );
+                filter.leadDate.$lte = new Date(`${endDate}T23:59:59.999`);
             }
         }
 
-        // --------------------------------------------------------
-        // PAGINATION
-        // --------------------------------------------------------
+        const currentPage = Math.max(Number(page) || 1, 1);
+        const pageLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+        const skip = (currentPage - 1) * pageLimit;
 
-        const currentPage = Math.max(
-            Number(page),
-            1
-        );
+        const [leads, total] = await Promise.all([
+            Lead.find(filter)
+                .populate("company", "companyName companyCode")
+                .populate("assignedCounselor", "fullName email role")
+                .populate("createdBy", "fullName email role")
+                .sort({ leadDate: -1, createdAt: -1 })
+                .skip(skip)
+                .limit(pageLimit),
 
-        const pageLimit = Math.min(
-            Math.max(Number(limit), 1),
-            100
-        );
-
-        const skip =
-            (currentPage - 1) *
-            pageLimit;
-
-        // --------------------------------------------------------
-        // FETCH LEADS
-        // --------------------------------------------------------
-
-        const [leads, total] =
-            await Promise.all([
-                Lead.find(filter)
-                    .populate(
-                        "company",
-                        "companyName companyCode"
-                    )
-                    .populate(
-                        "assignedCounselor",
-                        "fullName email role"
-                    )
-                    .populate(
-                        "createdBy",
-                        "fullName email role"
-                    )
-                    .sort({
-                        leadDate: -1,
-                        createdAt: -1,
-                    })
-                    .skip(skip)
-                    .limit(pageLimit),
-
-                Lead.countDocuments(filter),
-            ]);
-
-        // --------------------------------------------------------
-        // RESPONSE
-        // --------------------------------------------------------
+            Lead.countDocuments(filter),
+        ]);
 
         return res.status(200).json({
             success: true,
@@ -338,29 +228,17 @@ exports.getLeads = async (req, res) => {
                 total,
                 page: currentPage,
                 limit: pageLimit,
-                totalPages:
-                    Math.ceil(
-                        total / pageLimit
-                    ),
-                hasNextPage:
-                    currentPage <
-                    Math.ceil(
-                        total / pageLimit
-                    ),
-                hasPreviousPage:
-                    currentPage > 1,
+                totalPages: Math.ceil(total / pageLimit),
+                hasNextPage: currentPage < Math.ceil(total / pageLimit),
+                hasPreviousPage: currentPage > 1,
             },
         });
     } catch (error) {
-        console.error(
-            "Get Leads Error:",
-            error
-        );
+        console.error("Get Leads Error:", error);
 
         return res.status(500).json({
             success: false,
-            message:
-                "Failed to fetch leads",
+            message: "Failed to fetch leads",
             error: error.message,
         });
     }
@@ -391,222 +269,138 @@ exports.createLead = async (req, res) => {
             admissionDate,
         } = req.body || {};
 
-        // --------------------------------------------------------
-        // REQUIRED FIELDS
-        // --------------------------------------------------------
-
         if (
-            !fullName ||
-            !contactNumber
+            typeof fullName !== "string" ||
+            !fullName.trim() ||
+            typeof contactNumber !== "string" ||
+            !contactNumber.trim()
         ) {
             return res.status(400).json({
                 success: false,
-                message:
-                    "Full name and contact number are required",
+                message: "Full name and contact number are required",
             });
         }
 
-        // --------------------------------------------------------
-        // DETERMINE COMPANY
-        // --------------------------------------------------------
-
+        // Determine company.
         let targetCompany;
 
-        if (
-            req.user.role ===
-            "super_admin"
-        ) {
-            // Super Admin must provide company
-
+        if (req.user.role === "super_admin") {
             if (!company) {
                 return res.status(400).json({
                     success: false,
-                    message:
-                        "Company is required",
+                    message: "Company is required",
                 });
             }
 
             targetCompany = company;
         } else {
-            // Employee / Intern automatically use own company
-
-            const userCompanyId =
-                getUserCompanyId(req);
+            const userCompanyId = getUserCompanyId(req);
 
             if (!userCompanyId) {
                 return res.status(403).json({
                     success: false,
-                    message:
-                        "You are not assigned to a company",
+                    message: "You are not assigned to a company",
                 });
             }
 
-            targetCompany =
-                userCompanyId;
+            targetCompany = userCompanyId;
         }
 
-        // --------------------------------------------------------
-        // COMPANY ACCESS
-        // --------------------------------------------------------
-
-        if (
-            !hasCompanyAccess(
-                req,
-                targetCompany
-            )
-        ) {
+        // Check company access.
+        if (!hasCompanyAccess(req, targetCompany)) {
             return res.status(403).json({
                 success: false,
-                message:
-                    "You cannot create a lead for another company",
+                message: "You cannot create a lead for another company",
             });
         }
 
-        // --------------------------------------------------------
-        // ASSIGNED EMPLOYEE / INTERN VALIDATION
-        // --------------------------------------------------------
-
+        // Validate assigned employee/intern.
         if (assignedCounselor) {
-            const assignedUser =
-                await User.findOne({
-                    _id: assignedCounselor,
-                    company: targetCompany,
-                    role: {
-                        $in: [
-                            "employee",
-                            "intern",
-                        ],
-                    },
-                    isActive: true,
-                });
+            const assignedUser = await User.findOne({
+                _id: assignedCounselor,
+                company: targetCompany,
+                role: { $in: ["employee", "intern"] },
+                isActive: true,
+            });
 
             if (!assignedUser) {
                 return res.status(400).json({
                     success: false,
-                    message:
-                        "Invalid or inactive employee/intern for this company",
+                    message: "Invalid or inactive employee/intern for this company",
                 });
             }
         }
 
-        // --------------------------------------------------------
-        // CALCULATE LEAD DATE
-        // --------------------------------------------------------
-
+        // Validate lead date.
         const actualLeadDate = leadDate
             ? new Date(leadDate)
             : new Date();
 
-        // --------------------------------------------------------
-        // CALCULATE NEXT FOLLOW-UP DATE
-        // --------------------------------------------------------
-        //
-        // If user manually selected a date:
-        //     use that date.
-        //
-        // If user did NOT select a date:
-        //     automatically use next working day.
-        //
-        // Saturday -> Monday
-        // Sunday   -> Monday
-        // --------------------------------------------------------
+        if (Number.isNaN(actualLeadDate.getTime())) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid lead date",
+            });
+        }
 
-        const actualNextFollowUpDate =
-            nextFollowUpDate
-                ? new Date(nextFollowUpDate)
-                : getDefaultFollowUpDate(
-                      actualLeadDate
-                  );
+        // Calculate follow-up date.
+        const actualNextFollowUpDate = nextFollowUpDate
+            ? new Date(nextFollowUpDate)
+            : getDefaultFollowUpDate(actualLeadDate);
 
-        // --------------------------------------------------------
-        // CREATE LEAD
-        // --------------------------------------------------------
+        if (Number.isNaN(actualNextFollowUpDate.getTime())) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid follow-up date",
+            });
+        }
+
+        // Generate the next permanent company-wise serial number.
+        // IMPORTANT: synchronize counters with existing leads first.
+        const serialNumber = await getNextLeadSerialNumber(targetCompany);
 
         const lead = await Lead.create({
             company: targetCompany,
+            serialNumber,
 
-            fullName:
-                fullName.trim(),
-
-            contactNumber:
-                contactNumber.trim(),
+            fullName: fullName.trim(),
+            contactNumber: contactNumber.trim(),
 
             email: email
-                ? email
-                      .trim()
-                      .toLowerCase()
+                ? email.trim().toLowerCase()
                 : undefined,
 
             city,
-
-            // Use provided lead date.
-            // If not provided, use current date.
-            leadDate:
-                leadDate || undefined,
-
+            leadDate: actualLeadDate,
             courseInterested,
-
             inquiryType,
-
             leadSource,
-
             assignedCounselor,
-
             priority,
-
             status,
-
-            // Manual date is preserved.
-            // Otherwise use automatic next working day.
-            nextFollowUpDate:
-                actualNextFollowUpDate,
-
+            nextFollowUpDate: actualNextFollowUpDate,
             notes,
-
             expectedFees,
-
             admissionDate,
-
             createdBy: req.user._id,
         });
 
-        // --------------------------------------------------------
-        // POPULATE CREATED LEAD
-        // --------------------------------------------------------
-
-        const populatedLead =
-            await Lead.findById(
-                lead._id
-            )
-                .populate(
-                    "assignedCounselor",
-                    "fullName email role"
-                )
-                .populate(
-                    "createdBy",
-                    "fullName email role"
-                )
-                .populate(
-                    "company",
-                    "companyName companyCode"
-                );
+        const populatedLead = await Lead.findById(lead._id)
+            .populate("assignedCounselor", "fullName email role")
+            .populate("createdBy", "fullName email role")
+            .populate("company", "companyName companyCode");
 
         return res.status(201).json({
             success: true,
-            message:
-                "Lead created successfully",
+            message: "Lead created successfully",
             lead: populatedLead,
         });
     } catch (error) {
-        console.error(
-            "Create Lead Error:",
-            error
-        );
+        console.error("Create Lead Error:", error);
 
         return res.status(500).json({
             success: false,
-            message:
-                "Failed to create lead",
+            message: "Failed to create lead",
             error: error.message,
         });
     }
@@ -618,36 +412,21 @@ exports.createLead = async (req, res) => {
 
 exports.updateLead = async (req, res) => {
     try {
-        const { leadId } =
-            req.params;
+        const { leadId } = req.params;
 
-        const lead =
-            await Lead.findById(
-                leadId
-            );
+        const lead = await Lead.findById(leadId);
 
         if (!lead) {
             return res.status(404).json({
                 success: false,
-                message:
-                    "Lead not found",
+                message: "Lead not found",
             });
         }
 
-        // --------------------------------------------------------
-        // COMPANY ACCESS
-        // --------------------------------------------------------
-
-        if (
-            !hasCompanyAccess(
-                req,
-                lead.company
-            )
-        ) {
+        if (!hasCompanyAccess(req, lead.company)) {
             return res.status(403).json({
                 success: false,
-                message:
-                    "You do not have access to this lead",
+                message: "You do not have access to this lead",
             });
         }
 
@@ -669,220 +448,112 @@ exports.updateLead = async (req, res) => {
             admissionDate,
         } = req.body || {};
 
-        // --------------------------------------------------------
-        // ASSIGNED EMPLOYEE / INTERN VALIDATION
-        // --------------------------------------------------------
-
         if (assignedCounselor) {
-            const assignedUser =
-                await User.findOne({
-                    _id: assignedCounselor,
-                    company: lead.company,
-                    role: {
-                        $in: [
-                            "employee",
-                            "intern",
-                        ],
-                    },
-                    isActive: true,
-                });
+            const assignedUser = await User.findOne({
+                _id: assignedCounselor,
+                company: lead.company,
+                role: { $in: ["employee", "intern"] },
+                isActive: true,
+            });
 
             if (!assignedUser) {
                 return res.status(400).json({
                     success: false,
-                    message:
-                        "Invalid or inactive employee/intern for this company",
+                    message: "Invalid or inactive employee/intern for this company",
                 });
             }
         }
 
-        // --------------------------------------------------------
-        // UPDATE DATA
-        // --------------------------------------------------------
-
         const updateData = {};
 
-        if (
-            fullName !== undefined
-        ) {
-            updateData.fullName =
-                fullName.trim();
+        if (fullName !== undefined) {
+            if (typeof fullName !== "string" || !fullName.trim()) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Full name cannot be empty",
+                });
+            }
+
+            updateData.fullName = fullName.trim();
         }
 
-        if (
-            contactNumber !==
-            undefined
-        ) {
-            updateData.contactNumber =
-                contactNumber.trim();
+        if (contactNumber !== undefined) {
+            if (
+                typeof contactNumber !== "string" ||
+                !contactNumber.trim()
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Contact number cannot be empty",
+                });
+            }
+
+            updateData.contactNumber = contactNumber.trim();
         }
 
         if (email !== undefined) {
             updateData.email = email
-                ? email
-                      .trim()
-                      .toLowerCase()
+                ? email.trim().toLowerCase()
                 : "";
         }
 
-        if (city !== undefined) {
-            updateData.city = city;
-        }
+        if (city !== undefined) updateData.city = city;
+        if (leadDate !== undefined) updateData.leadDate = leadDate;
+        if (courseInterested !== undefined) updateData.courseInterested = courseInterested;
+        if (inquiryType !== undefined) updateData.inquiryType = inquiryType;
+        if (leadSource !== undefined) updateData.leadSource = leadSource;
+        if (assignedCounselor !== undefined) updateData.assignedCounselor = assignedCounselor;
+        if (priority !== undefined) updateData.priority = priority;
+        if (status !== undefined) updateData.status = status;
+        if (notes !== undefined) updateData.notes = notes;
+        if (expectedFees !== undefined) updateData.expectedFees = expectedFees;
+        if (admissionDate !== undefined) updateData.admissionDate = admissionDate;
 
-        // --------------------------------------------------------
-        // UPDATE LEAD DATE
-        // --------------------------------------------------------
-
-        if (
-            leadDate !== undefined
-        ) {
-            updateData.leadDate =
-                leadDate;
-        }
-
-        if (
-            courseInterested !==
-            undefined
-        ) {
-            updateData.courseInterested =
-                courseInterested;
-        }
-
-        if (
-            inquiryType !==
-            undefined
-        ) {
-            updateData.inquiryType =
-                inquiryType;
-        }
-
-        if (
-            leadSource !==
-            undefined
-        ) {
-            updateData.leadSource =
-                leadSource;
-        }
-
-        if (
-            assignedCounselor !==
-            undefined
-        ) {
-            updateData.assignedCounselor =
-                assignedCounselor;
-        }
-
-        if (
-            priority !== undefined
-        ) {
-            updateData.priority =
-                priority;
-        }
-
-        if (status !== undefined) {
-            updateData.status =
-                status;
-        }
-
-        // --------------------------------------------------------
-        // UPDATE NEXT FOLLOW-UP
-        // --------------------------------------------------------
-        //
-        // If a follow-up date is explicitly provided,
-        // use that date.
-        //
-        // If it is explicitly cleared/empty during an update,
-        // automatically calculate the next working day
-        // based on the lead date.
-        // --------------------------------------------------------
-
-        if (
-            nextFollowUpDate !==
-            undefined
-        ) {
+        if (nextFollowUpDate !== undefined) {
             if (nextFollowUpDate) {
-                updateData.nextFollowUpDate =
-                    nextFollowUpDate;
+                const parsedDate = new Date(nextFollowUpDate);
+
+                if (Number.isNaN(parsedDate.getTime())) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Invalid follow-up date",
+                    });
+                }
+
+                updateData.nextFollowUpDate = parsedDate;
             } else {
-                const updateLeadDate =
-                    leadDate !==
-                    undefined
-                        ? new Date(
-                              leadDate
-                          )
-                        : lead.leadDate ||
-                          lead.createdAt ||
-                          new Date();
+                const baseDate = leadDate !== undefined
+                    ? new Date(leadDate)
+                    : lead.leadDate || lead.createdAt || new Date();
 
                 updateData.nextFollowUpDate =
-                    getDefaultFollowUpDate(
-                        updateLeadDate
-                    );
+                    getDefaultFollowUpDate(baseDate);
             }
         }
 
-        if (notes !== undefined) {
-            updateData.notes = notes;
-        }
-
-        if (
-            expectedFees !==
-            undefined
-        ) {
-            updateData.expectedFees =
-                expectedFees;
-        }
-
-        if (
-            admissionDate !==
-            undefined
-        ) {
-            updateData.admissionDate =
-                admissionDate;
-        }
-
-        // --------------------------------------------------------
-        // UPDATE LEAD
-        // --------------------------------------------------------
-
-        const updatedLead =
-            await Lead.findByIdAndUpdate(
-                leadId,
-                updateData,
-                {
-                    new: true,
-                    runValidators: true,
-                }
-            )
-                .populate(
-                    "assignedCounselor",
-                    "fullName email role"
-                )
-                .populate(
-                    "createdBy",
-                    "fullName email role"
-                )
-                .populate(
-                    "company",
-                    "companyName companyCode"
-                );
+        const updatedLead = await Lead.findByIdAndUpdate(
+            leadId,
+            updateData,
+            {
+                new: true,
+                runValidators: true,
+            }
+        )
+            .populate("assignedCounselor", "fullName email role")
+            .populate("createdBy", "fullName email role")
+            .populate("company", "companyName companyCode");
 
         return res.status(200).json({
             success: true,
-            message:
-                "Lead updated successfully",
+            message: "Lead updated successfully",
             lead: updatedLead,
         });
     } catch (error) {
-        console.error(
-            "Update Lead Error:",
-            error
-        );
+        console.error("Update Lead Error:", error);
 
         return res.status(500).json({
             success: false,
-            message:
-                "Failed to update lead",
+            message: "Failed to update lead",
             error: error.message,
         });
     }
@@ -892,190 +563,121 @@ exports.updateLead = async (req, res) => {
 // UPDATE LEAD STATUS
 // ============================================================
 
-exports.updateLeadStatus =
-    async (req, res) => {
-        try {
-            const { leadId } =
-                req.params;
+exports.updateLeadStatus = async (req, res) => {
+    try {
+        const { leadId } = req.params;
+        const { status } = req.body || {};
 
-            const { status } =
-                req.body || {};
+        const allowedStatuses = [
+            "contacted",
+            "interested",
+            "not_interested",
+            "enrolled",
+        ];
 
-            if (!status) {
-                return res.status(400).json({
-                    success: false,
-                    message:
-                        "Status is required",
-                });
-            }
-
-            const lead =
-                await Lead.findById(
-                    leadId
-                );
-
-            if (!lead) {
-                return res.status(404).json({
-                    success: false,
-                    message:
-                        "Lead not found",
-                });
-            }
-
-            // ----------------------------------------------------
-            // COMPANY ACCESS
-            // ----------------------------------------------------
-
-            if (
-                !hasCompanyAccess(
-                    req,
-                    lead.company
-                )
-            ) {
-                return res.status(403).json({
-                    success: false,
-                    message:
-                        "You do not have access to this lead",
-                });
-            }
-
-            lead.status = status;
-
-            await lead.save();
-
-            const updatedLead =
-                await Lead.findById(
-                    lead._id
-                )
-                    .populate(
-                        "assignedCounselor",
-                        "fullName email role"
-                    )
-                    .populate(
-                        "company",
-                        "companyName companyCode"
-                    );
-
-            return res.status(200).json({
-                success: true,
-                message:
-                    "Lead status updated successfully",
-                lead: updatedLead,
-            });
-        } catch (error) {
-            console.error(
-                "Update Lead Status Error:",
-                error
-            );
-
-            return res.status(500).json({
+        if (!status || !allowedStatuses.includes(status)) {
+            return res.status(400).json({
                 success: false,
-                message:
-                    "Failed to update lead status",
-                error: error.message,
+                message: "Invalid status",
+                allowedStatuses,
             });
         }
-    };
+
+        const lead = await Lead.findById(leadId);
+
+        if (!lead) {
+            return res.status(404).json({
+                success: false,
+                message: "Lead not found",
+            });
+        }
+
+        if (!hasCompanyAccess(req, lead.company)) {
+            return res.status(403).json({
+                success: false,
+                message: "You do not have access to this lead",
+            });
+        }
+
+        lead.status = status;
+        await lead.save();
+
+        const updatedLead = await Lead.findById(lead._id)
+            .populate("assignedCounselor", "fullName email role")
+            .populate("company", "companyName companyCode");
+
+        return res.status(200).json({
+            success: true,
+            message: "Lead status updated successfully",
+            lead: updatedLead,
+        });
+    } catch (error) {
+        console.error("Update Lead Status Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to update lead status",
+            error: error.message,
+        });
+    }
+};
 
 // ============================================================
 // ADD COMMUNICATION
 // ============================================================
 
-exports.addCommunication =
-    async (req, res) => {
-        try {
-            const { leadId } =
-                req.params;
+exports.addCommunication = async (req, res) => {
+    try {
+        const { leadId } = req.params;
+        const { type, message, date } = req.body || {};
 
-            const {
-                type,
-                message,
-                date,
-            } = req.body || {};
-
-            if (
-                !type ||
-                !message
-            ) {
-                return res.status(400).json({
-                    success: false,
-                    message:
-                        "Communication type and message are required",
-                });
-            }
-
-            const lead =
-                await Lead.findById(
-                    leadId
-                );
-
-            if (!lead) {
-                return res.status(404).json({
-                    success: false,
-                    message:
-                        "Lead not found",
-                });
-            }
-
-            // ----------------------------------------------------
-            // COMPANY ACCESS
-            // ----------------------------------------------------
-
-            if (
-                !hasCompanyAccess(
-                    req,
-                    lead.company
-                )
-            ) {
-                return res.status(403).json({
-                    success: false,
-                    message:
-                        "You do not have access to this lead",
-                });
-            }
-
-            lead.communicationHistory.push(
-                {
-                    type,
-                    message,
-                    date:
-                        date ||
-                        Date.now(),
-                }
-            );
-
-            await lead.save();
-
-            const updatedLead =
-                await Lead.findById(
-                    lead._id
-                )
-                    .populate(
-                        "assignedCounselor",
-                        "fullName email role"
-                    )
-                    .populate(
-                        "company",
-                        "companyName companyCode"
-                    );
-
-            return res.status(200).json({
-                success: true,
-                message:
-                    "Communication added successfully",
-                lead: updatedLead,
-            });
-        } catch (error) {
-            console.error(
-                "Add Communication Error:",
-                error
-            );
-
-            return res.status(500).json({
+        if (!type || !message) {
+            return res.status(400).json({
                 success: false,
-                message:
-                    "Failed to add communication",
-                error: error.message,
+                message: "Communication type and message are required",
             });
         }
-    };
+
+        const lead = await Lead.findById(leadId);
+
+        if (!lead) {
+            return res.status(404).json({
+                success: false,
+                message: "Lead not found",
+            });
+        }
+
+        if (!hasCompanyAccess(req, lead.company)) {
+            return res.status(403).json({
+                success: false,
+                message: "You do not have access to this lead",
+            });
+        }
+
+        lead.communicationHistory.push({
+            type,
+            message,
+            date: date || Date.now(),
+        });
+
+        await lead.save();
+
+        const updatedLead = await Lead.findById(lead._id)
+            .populate("assignedCounselor", "fullName email role")
+            .populate("company", "companyName companyCode");
+
+        return res.status(200).json({
+            success: true,
+            message: "Communication added successfully",
+            lead: updatedLead,
+        });
+    } catch (error) {
+        console.error("Add Communication Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to add communication",
+            error: error.message,
+        });
+    }
+};

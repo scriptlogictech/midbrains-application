@@ -5125,3 +5125,31 @@
         border-radius: 10px;
     }
 }
+
+/* Interested - Green */
+.lead-row-interested td {
+  background-color: #81c995 !important;
+}
+
+/* Enrolled - Yellow */
+.lead-row-enrolled td {
+  background-color: #ffd966 !important;
+}
+
+/* Not Interested - Red */
+.lead-row-not-interested td {
+  background-color: rgb(236, 111, 111) !important;
+}
+
+/* Contacted - Sky Blue */
+.lead-row-contacted td {
+  background-color: #81d4fa !important;
+}
+
+/* Smooth transition */
+.lead-row-interested td,
+.lead-row-enrolled td,
+.lead-row-not-interested td,
+.lead-row-contacted td {
+  transition: background-color 0.2s ease;
+}

@@ -81,7 +81,7 @@ const Leads = () => {
         leadSource: "",
         assignedCounselor: "",
         priority: "medium",
-        status: "new",
+        status: "contacted",
         nextFollowUpDate: "",
         notes: "",
         expectedFees: "",
@@ -146,7 +146,7 @@ const Leads = () => {
 
             setError(
                 err?.response?.data?.message ||
-                    "Failed to load leads"
+                "Failed to load leads"
             );
         } finally {
             setLoading(false);
@@ -280,19 +280,19 @@ const Leads = () => {
             status: lead.status || "new",
             nextFollowUpDate: lead.nextFollowUpDate
                 ? new Date(lead.nextFollowUpDate)
-                      .toISOString()
-                      .split("T")[0]
+                    .toISOString()
+                    .split("T")[0]
                 : "",
             notes: lead.notes || "",
             expectedFees:
                 lead.expectedFees !== undefined &&
-                lead.expectedFees !== null
+                    lead.expectedFees !== null
                     ? lead.expectedFees
                     : "",
             admissionDate: lead.admissionDate
                 ? new Date(lead.admissionDate)
-                      .toISOString()
-                      .split("T")[0]
+                    .toISOString()
+                    .split("T")[0]
                 : "",
         });
 
@@ -353,7 +353,7 @@ const Leads = () => {
 
             setError(
                 err?.response?.data?.message ||
-                    "Failed to save lead"
+                "Failed to save lead"
             );
         }
     };
@@ -385,7 +385,7 @@ const Leads = () => {
 
             setError(
                 err?.response?.data?.message ||
-                    "Failed to update lead status"
+                "Failed to update lead status"
             );
         }
     };
@@ -452,7 +452,7 @@ const Leads = () => {
 
             setError(
                 err?.response?.data?.message ||
-                    "Failed to add communication"
+                "Failed to add communication"
             );
         }
     };
@@ -520,17 +520,35 @@ const Leads = () => {
 
     const getStatusLabel = (status) => {
         const labels = {
-            new: "New",
             contacted: "Contacted",
             interested: "Interested",
-            follow_up: "Follow Up",
-            converted: "Converted",
             not_interested: "Not Interested",
-            closed: "Closed",
+            enrolled: "Enrolled",
         };
 
         return labels[status] || status;
     };
+
+
+    const getLeadRowClass = (status) => {
+        switch (String(status || "").toLowerCase()) {
+            case "interested":
+                return "lead-row-interested";
+
+            case "enrolled":
+                return "lead-row-enrolled";
+
+            case "not_interested":
+                return "lead-row-not-interested";
+
+            case "contacted":
+                return "lead-row-contacted";
+
+            default:
+                return "";
+        }
+    };
+
 
     const getPriorityLabel = (priority) => {
         const labels = {
@@ -622,26 +640,20 @@ const Leads = () => {
                         <option value="">
                             All Status
                         </option>
-                        <option value="new">
-                            New
-                        </option>
+
                         <option value="contacted">
                             Contacted
                         </option>
                         <option value="interested">
                             Interested
                         </option>
-                        <option value="follow_up">
-                            Follow Up
-                        </option>
-                        <option value="converted">
-                            Converted
-                        </option>
+
+
                         <option value="not_interested">
                             Not Interested
                         </option>
-                        <option value="closed">
-                            Closed
+                        <option value="enrolled">
+                            Enrolled
                         </option>
                     </select>
                 </div>
@@ -814,6 +826,8 @@ const Leads = () => {
 
                                 <thead>
                                     <tr>
+
+                                        <th>Sr. No.</th>
                                         <th>Lead</th>
                                         <th>Contact</th>
                                         <th>Inquiry</th>
@@ -826,209 +840,145 @@ const Leads = () => {
                                 </thead>
 
                                 <tbody>
-                                    {leads.map(
-                                        (lead) => {
-                                            const role =
-                                                getUserRole(
-                                                    lead.assignedCounselor
-                                                );
+    {leads.map((lead, index) => {
+        const role = getUserRole(lead.assignedCounselor);
+        const serialNumber =
+            (Number(pagination.page || 1) - 1) *
+                Number(pagination.limit || 10) +
+            index +
+            1;
 
-                                            return (
-                                                <tr
-                                                    key={
-                                                        lead._id
-                                                    }
-                                                >
-                                                    <td>
-                                                        <div className="lead-info">
-                                                            <strong>
-                                                                {
-                                                                    lead.fullName
-                                                                }
-                                                            </strong>
+        return (
+            <tr
+                key={lead._id || lead.id || index}
+                className={getLeadRowClass(lead.status)}
+            >
+                {/* Sr. No. */}
+                <td>{serialNumber}</td>
 
-                                                            <span>
-                                                                {
-                                                                    lead.city ||
-                                                                    "-"
-                                                                }
-                                                            </span>
-                                                        </div>
-                                                    </td>
+                {/* Lead */}
+                <td>
+                    <div className="lead-info">
+                        <strong>{lead.fullName || "-"}</strong>
+                        <span>{lead.city || "-"}</span>
+                    </div>
+                </td>
 
-                                                    <td>
-                                                        <div className="contact-info">
-                                                            <span>
-                                                                <i className="bi bi-telephone"></i>
-                                                                {
-                                                                    lead.contactNumber
-                                                                }
-                                                            </span>
+                {/* Contact */}
+                <td>
+                    <div className="contact-info">
+                        <span>
+                            <i className="bi bi-telephone"></i>{" "}
+                            {lead.contactNumber || "-"}
+                        </span>
+                    </div>
+                </td>
 
+                {/* Inquiry */}
+                <td>
+                    <div className="inquiry-info">
+                        <strong>
+                            {lead.inquiryType
+                                ? lead.inquiryType
+                                      .replace(/_/g, " ")
+                                      .replace(/\b\w/g, (char) => char.toUpperCase())
+                                : "-"}
+                        </strong>
+                        {lead.courseInterested && (
+                            <span>{lead.courseInterested}</span>
+                        )}
+                    </div>
+                </td>
 
-                                                        </div>
-                                                    </td>
+                {/* Assigned To */}
+                <td>
+                    <div className="assigned-user">
+                        <span>{getUserName(lead.assignedCounselor)}</span>
+                        {role && <small>{getRoleLabel(role)}</small>}
+                    </div>
+                </td>
 
-                                                    <td>
-                                                        <div className="inquiry-info">
-                                                            <strong>
-                                                                {getStatusLabel(
-                                                                    lead.inquiryType
-                                                                )}
-                                                            </strong>
+                {/* Status */}
+                <td>
+                    <select
+                        className={`status-select ${lead.status || ""}`}
+                        value={lead.status || ""}
+                        onChange={(e) =>
+                            handleStatusChange(
+                                lead._id || lead.id,
+                                e.target.value
+                            )
+                        }
+                    >
+                        <option value="contacted">Contacted</option>
+                        <option value="interested">Interested</option>
+                        <option value="not_interested">Not Interested</option>
+                        <option value="enrolled">Enrolled</option>
+                    </select>
+                </td>
 
-                                                            {lead.courseInterested && (
-                                                                <span>
-                                                                    {
-                                                                        lead.courseInterested
-                                                                    }
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </td>
+                {/* Next Follow-up */}
+                <td>{formatDate(lead.nextFollowUpDate)}</td>
 
-                                                    <td>
-                                                        <div className="assigned-user">
-                                                            <span>
-                                                                {getUserName(
-                                                                    lead.assignedCounselor
-                                                                )}
-                                                            </span>
+                {/* Communication History */}
+                <td>
+                    {lead.communicationHistory?.length ? (
+                        <div className="main-communication-history">
+                            {lead.communicationHistory.map((item, communicationIndex) => (
+                                <div
+                                    className="main-communication-item"
+                                    key={
+                                        item._id ||
+                                        `${lead._id || lead.id}-communication-${communicationIndex}`
+                                    }
+                                >
+                                    <span className="main-communication-number">
+                                        {communicationIndex + 1}.
+                                    </span>
+                                    <span className="main-communication-message">
+                                        {item.message || "No message"}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <span className="no-communication">No communication</span>
+                    )}
+                </td>
 
-                                                            {role && (
-                                                                <small>
-                                                                    {getRoleLabel(
-                                                                        role
-                                                                    )}
-                                                                </small>
-                                                            )}
-                                                        </div>
-                                                    </td>
-
-                                                    <td>
-                                                        <select
-                                                            className={`status-select ${lead.status}`}
-                                                            value={
-                                                                lead.status
-                                                            }
-                                                            onChange={(
-                                                                e
-                                                            ) =>
-                                                                handleStatusChange(
-                                                                    lead._id,
-                                                                    e
-                                                                        .target
-                                                                        .value
-                                                                )
-                                                            }
-                                                        >
-                                                            <option value="new">
-                                                                New
-                                                            </option>
-
-                                                            <option value="contacted">
-                                                                Contacted
-                                                            </option>
-
-                                                            <option value="interested">
-                                                                Interested
-                                                            </option>
-
-                                                            <option value="follow_up">
-                                                                Follow Up
-                                                            </option>
-
-                                                            <option value="converted">
-                                                                Converted
-                                                            </option>
-
-                                                            <option value="not_interested">
-                                                                Not Interested
-                                                            </option>
-
-                                                            <option value="closed">
-                                                                Closed
-                                                            </option>
-                                                        </select>
-                                                    </td>
-
-                                                    <td>
-                                                        {formatDate(
-                                                            lead.nextFollowUpDate
-                                                        )}
-                                                    </td>
-
-                                                    <td>
-                                                        {lead.communicationHistory?.length ? (
-                                                            <div className="main-communication-history">
-                                                                {[...lead.communicationHistory]
-                                                                    .map((item, index) => (
-                                                                        <div
-                                                                            className="main-communication-item"
-                                                                            key={item._id || `${lead._id}-communication-${index}`}
-                                                                        >
-                                                                            <span className="main-communication-number">
-                                                                                {index + 1}.
-                                                                            </span>
-                                                                            <span className="main-communication-message">
-                                                                                {item.message || "No message"}
-                                                                            </span>
-                                                                        </div>
-                                                                    ))}
-                                                            </div>
-                                                        ) : (
-                                                            <span className="no-communication">
-                                                                No communication
-                                                            </span>
-                                                        )}
-                                                    </td>
-
-                                                    <td>
-                                                        <div className="action-buttons">
-
-                                                            <button
-                                                                className="icon-btn"
-                                                                title="View Details"
-                                                                onClick={() =>
-                                                                    handleViewDetails(
-                                                                        lead
-                                                                    )
-                                                                }
-                                                            >
-                                                                <i className="bi bi-eye"></i>
-                                                            </button>
-
-                                                            <button
-                                                                className="icon-btn"
-                                                                title="Edit Lead"
-                                                                onClick={() =>
-                                                                    handleEditLead(
-                                                                        lead
-                                                                    )
-                                                                }
-                                                            >
-                                                                <i className="bi bi-pencil"></i>
-                                                            </button>
-
-                                                            <button
-                                                                className="icon-btn"
-                                                                title="Add Communication"
-                                                                onClick={() =>
-                                                                    handleOpenCommunication(
-                                                                        lead
-                                                                    )
-                                                                }
-                                                            >
-                                                                <i className="bi bi-chat-left-text"></i>
-                                                            </button>
-
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        }
-                                    )}
-                                </tbody>
+                {/* Actions */}
+                <td>
+                    <div className="action-buttons">
+                        <button
+                            type="button"
+                            className="icon-btn"
+                            title="View Details"
+                            onClick={() => handleViewDetails(lead)}
+                        >
+                            <i className="bi bi-eye"></i>
+                        </button>
+                        <button
+                            type="button"
+                            className="icon-btn"
+                            title="Edit Lead"
+                            onClick={() => handleEditLead(lead)}
+                        >
+                            <i className="bi bi-pencil"></i>
+                        </button>
+                        <button
+                            type="button"
+                            className="icon-btn"
+                            title="Add Communication"
+                            onClick={() => handleOpenCommunication(lead)}
+                        >
+                            <i className="bi bi-chat-left-text"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        );
+    })}
+</tbody>
 
                             </table>
                         </div>
@@ -1432,9 +1382,7 @@ const Leads = () => {
                                                 handleFormChange
                                             }
                                         >
-                                            <option value="new">
-                                                New
-                                            </option>
+
 
                                             <option value="contacted">
                                                 Contacted
@@ -1444,20 +1392,13 @@ const Leads = () => {
                                                 Interested
                                             </option>
 
-                                            <option value="follow_up">
-                                                Follow Up
-                                            </option>
-
-                                            <option value="converted">
-                                                Converted
-                                            </option>
 
                                             <option value="not_interested">
                                                 Not Interested
                                             </option>
 
-                                            <option value="closed">
-                                                Closed
+                                            <option value="enrolled">
+                                                Enrolled
                                             </option>
                                         </select>
                                     </div>
@@ -1737,17 +1678,17 @@ const Leads = () => {
                                             {getUserRole(
                                                 selectedLead.assignedCounselor
                                             ) && (
-                                                <small>
-                                                    {" "}
-                                                    (
-                                                    {getRoleLabel(
-                                                        getUserRole(
-                                                            selectedLead.assignedCounselor
+                                                    <small>
+                                                        {" "}
+                                                        (
+                                                        {getRoleLabel(
+                                                            getUserRole(
+                                                                selectedLead.assignedCounselor
+                                                            )
+                                                        )}
                                                         )
-                                                    )}
-                                                    )
-                                                </small>
-                                            )}
+                                                    </small>
+                                                )}
                                         </strong>
                                     </div>
 
@@ -1783,10 +1724,10 @@ const Leads = () => {
                                         <strong>
                                             {selectedLead.expectedFees
                                                 ? `₹${Number(
-                                                      selectedLead.expectedFees
-                                                  ).toLocaleString(
-                                                      "en-IN"
-                                                  )}`
+                                                    selectedLead.expectedFees
+                                                ).toLocaleString(
+                                                    "en-IN"
+                                                )}`
                                                 : "-"}
                                         </strong>
                                     </div>
@@ -1861,7 +1802,7 @@ const Leads = () => {
                                             {[
                                                 ...selectedLead.communicationHistory,
                                             ]
-                                                
+
                                                 .map(
                                                     (
                                                         item,
