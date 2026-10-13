@@ -612,15 +612,29 @@ exports.updateLeadStatus = async (req, res) => {
 };
 
 // ADD COMMUNICATION
+
+// ADD COMMUNICATION
 exports.addCommunication = async (req, res) => {
     try {
         const { leadId } = req.params;
         const { type, message, date } = req.body || {};
 
-        if (!type || !message) {
+        const allowedTypes = [
+            "call",
+            "whatsapp",
+            "email",
+            "meeting",
+        ];
+
+        if (
+            !type ||
+            !allowedTypes.includes(type) ||
+            typeof message !== "string" ||
+            !message.trim()
+        ) {
             return res.status(400).json({
                 success: false,
-                message: "Communication type and message are required",
+                message: "Valid communication type and message are required",
             });
         }
 
@@ -640,15 +654,32 @@ exports.addCommunication = async (req, res) => {
             });
         }
 
-        lead.communicationHistory.push({
-            type,
-            message,
-            date: date || Date.now(),
-        });
+        const communicationDate = date ? new Date(date) : new Date();
 
-        await lead.save();
+        if (Number.isNaN(communicationDate.getTime())) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid communication date",
+            });
+        }
 
-        const updatedLead = await Lead.findById(lead._id)
+        // Update only communicationHistory instead of calling lead.save().
+        const updatedLead = await Lead.findByIdAndUpdate(
+            leadId,
+            {
+                $push: {
+                    communicationHistory: {
+                        type,
+                        message: message.trim(),
+                        date: communicationDate,
+                    },
+                },
+            },
+            {
+                new: true,
+                runValidators: true,
+            }
+        )
             .populate("assignedCounselor", "fullName email role")
             .populate("company", "companyName companyCode");
 
