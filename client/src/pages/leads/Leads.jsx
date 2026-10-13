@@ -598,10 +598,7 @@ const Leads = () => {
             <div className="page-header">
                 <div>
                     <h1>Lead Management</h1>
-                    <p>
-                        Manage leads, assignments,
-                        follow-ups and communications.
-                    </p>
+
                 </div>
 
                 <button
@@ -856,10 +853,10 @@ const Leads = () => {
     {leads.map((lead, index) => {
         const role = getUserRole(lead.assignedCounselor);
         const serialNumber =
-            (Number(pagination.page || 1) - 1) *
-                Number(pagination.limit || 10) +
-            index +
-            1;
+    (Number(pagination.total) || 0) -
+    ((Number(pagination.page || 1) - 1) *
+        Number(pagination.limit || 10)) -
+    index;
 
         return (
             <tr
