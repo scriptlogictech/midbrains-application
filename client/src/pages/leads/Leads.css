@@ -1262,3 +1262,38 @@
         width: 100%;
     }
 }
+
+
+
+/* Remove horizontal scrollbar from the leads table */
+.leads-page .table-responsive {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden !important;
+}
+
+/* Fit table inside the available width */
+.leads-page .leads-table {
+    width: 100% !important;
+    max-width: 100%;
+    table-layout: fixed !important;
+    border-collapse: collapse;
+}
+
+/* Prevent cell content from expanding table width */
+.leads-page .leads-table th,
+.leads-page .leads-table td {
+    box-sizing: border-box;
+    padding-left: 6px;
+    padding-right: 6px;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+/* Keep action buttons within their column */
+.leads-page .action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-width: 100%;
+}
