@@ -81,7 +81,7 @@ const Leads = () => {
         leadSource: "",
         assignedCounselor: "",
         priority: "medium",
-        status: "contacted",
+        status: "",
         nextFollowUpDate: "",
         notes: "",
         expectedFees: "",
@@ -277,7 +277,7 @@ const Leads = () => {
                 lead.assignedCounselor ||
                 "",
             priority: lead.priority || "medium",
-            status: lead.status || "new",
+            status: lead.status || "",
             nextFollowUpDate: lead.nextFollowUpDate
                 ? new Date(lead.nextFollowUpDate)
                     .toISOString()
@@ -910,6 +910,7 @@ const Leads = () => {
                             )
                         }
                     >
+                        <option value=""></option>
                         <option value="contacted">Contacted</option>
                         <option value="interested">Interested</option>
                         <option value="not_interested">Not Interested</option>
@@ -1383,6 +1384,8 @@ const Leads = () => {
                                             }
                                         >
 
+
+                                            <option value=""></option>
 
                                             <option value="contacted">
                                                 Contacted

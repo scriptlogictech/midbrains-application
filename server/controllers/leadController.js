@@ -1,12 +1,8 @@
-
 const Lead = require("../models/Lead");
 const User = require("../models/User");
 const LeadCounter = require("../models/LeadCounter");
 
-// ============================================================
-// HELPER: GET COMPANY ID
-// ============================================================
-
+// Get the logged-in user's company ID
 const getUserCompanyId = (req) => {
     if (!req.user || !req.user.company) {
         return null;
@@ -19,10 +15,7 @@ const getUserCompanyId = (req) => {
     return req.user.company.toString();
 };
 
-// ============================================================
-// HELPER: CHECK COMPANY ACCESS
-// ============================================================
-
+// Check company access
 const hasCompanyAccess = (req, companyId) => {
     if (!req.user || !companyId) {
         return false;
@@ -41,10 +34,7 @@ const hasCompanyAccess = (req, companyId) => {
     return userCompanyId === companyId.toString();
 };
 
-// ============================================================
-// HELPER: GET TARGET COMPANY
-// ============================================================
-
+// Get target company
 const getTargetCompany = (req, requestedCompanyId) => {
     if (req.user.role === "super_admin") {
         return requestedCompanyId || null;
@@ -55,16 +45,13 @@ const getTargetCompany = (req, requestedCompanyId) => {
     return userCompanyId || null;
 };
 
-// ============================================================
-// HELPER: GET DEFAULT FOLLOW-UP DATE
-// ============================================================
-
+// Get default follow-up date
 const getDefaultFollowUpDate = (leadDate = new Date()) => {
     const followUpDate = new Date(leadDate);
 
     followUpDate.setDate(followUpDate.getDate() + 1);
 
-    // Sunday is skipped; follow-up defaults to Monday.
+    // Skip Sunday
     if (followUpDate.getDay() === 0) {
         followUpDate.setDate(followUpDate.getDate() + 1);
     }
@@ -72,14 +59,8 @@ const getDefaultFollowUpDate = (leadDate = new Date()) => {
     return followUpDate;
 };
 
-// ============================================================
-// HELPER: GENERATE COMPANY-WISE SERIAL NUMBER
-// ============================================================
-
-
-
+// Generate company-wise serial number
 const getNextLeadSerialNumber = async (companyId) => {
-    // Find the highest serial number already saved for this company.
     const highestLead = await Lead.findOne({
         company: companyId,
         serialNumber: { $type: "number" },
@@ -90,7 +71,6 @@ const getNextLeadSerialNumber = async (companyId) => {
 
     const highestNumber = Number(highestLead?.serialNumber || 0);
 
-    // Initialize counter if it does not exist.
     let counter = await LeadCounter.findOne({
         company: companyId,
     });
@@ -116,13 +96,11 @@ const getNextLeadSerialNumber = async (companyId) => {
         throw new Error("Could not initialize lead counter");
     }
 
-    // Sync counter with existing lead numbers.
     if (counter.lastNumber < highestNumber) {
         counter.lastNumber = highestNumber;
         await counter.save();
     }
 
-    // Atomically increment counter.
     const updatedCounter = await LeadCounter.findOneAndUpdate(
         { company: companyId },
         { $inc: { lastNumber: 1 } },
@@ -136,10 +114,7 @@ const getNextLeadSerialNumber = async (companyId) => {
     return updatedCounter.lastNumber;
 };
 
-// ============================================================
 // GET LEADS
-// ============================================================
-
 exports.getLeads = async (req, res) => {
     try {
         const {
@@ -244,10 +219,7 @@ exports.getLeads = async (req, res) => {
     }
 };
 
-// ============================================================
 // CREATE LEAD
-// ============================================================
-
 exports.createLead = async (req, res) => {
     try {
         const {
@@ -281,7 +253,6 @@ exports.createLead = async (req, res) => {
             });
         }
 
-        // Determine company.
         let targetCompany;
 
         if (req.user.role === "super_admin") {
@@ -306,7 +277,6 @@ exports.createLead = async (req, res) => {
             targetCompany = userCompanyId;
         }
 
-        // Check company access.
         if (!hasCompanyAccess(req, targetCompany)) {
             return res.status(403).json({
                 success: false,
@@ -314,7 +284,6 @@ exports.createLead = async (req, res) => {
             });
         }
 
-        // Validate assigned employee/intern.
         if (assignedCounselor) {
             const assignedUser = await User.findOne({
                 _id: assignedCounselor,
@@ -331,7 +300,6 @@ exports.createLead = async (req, res) => {
             }
         }
 
-        // Validate lead date.
         const actualLeadDate = leadDate
             ? new Date(leadDate)
             : new Date();
@@ -343,7 +311,6 @@ exports.createLead = async (req, res) => {
             });
         }
 
-        // Calculate follow-up date.
         const actualNextFollowUpDate = nextFollowUpDate
             ? new Date(nextFollowUpDate)
             : getDefaultFollowUpDate(actualLeadDate);
@@ -355,21 +322,14 @@ exports.createLead = async (req, res) => {
             });
         }
 
-        // Generate the next permanent company-wise serial number.
-        // IMPORTANT: synchronize counters with existing leads first.
         const serialNumber = await getNextLeadSerialNumber(targetCompany);
 
         const lead = await Lead.create({
             company: targetCompany,
             serialNumber,
-
             fullName: fullName.trim(),
             contactNumber: contactNumber.trim(),
-
-            email: email
-                ? email.trim().toLowerCase()
-                : undefined,
-
+            email: email ? email.trim().toLowerCase() : undefined,
             city,
             leadDate: actualLeadDate,
             courseInterested,
@@ -377,7 +337,7 @@ exports.createLead = async (req, res) => {
             leadSource,
             assignedCounselor,
             priority,
-            status,
+            status: status ?? "",
             nextFollowUpDate: actualNextFollowUpDate,
             notes,
             expectedFees,
@@ -406,10 +366,7 @@ exports.createLead = async (req, res) => {
     }
 };
 
-// ============================================================
 // UPDATE LEAD
-// ============================================================
-
 exports.updateLead = async (req, res) => {
     try {
         const { leadId } = req.params;
@@ -504,7 +461,27 @@ exports.updateLead = async (req, res) => {
         if (leadSource !== undefined) updateData.leadSource = leadSource;
         if (assignedCounselor !== undefined) updateData.assignedCounselor = assignedCounselor;
         if (priority !== undefined) updateData.priority = priority;
-        if (status !== undefined) updateData.status = status;
+
+        if (status !== undefined) {
+            const allowedStatuses = [
+                "",
+                "contacted",
+                "interested",
+                "not_interested",
+                "enrolled",
+            ];
+
+            if (!allowedStatuses.includes(status)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid status",
+                    allowedStatuses,
+                });
+            }
+
+            updateData.status = status;
+        }
+
         if (notes !== undefined) updateData.notes = notes;
         if (expectedFees !== undefined) updateData.expectedFees = expectedFees;
         if (admissionDate !== undefined) updateData.admissionDate = admissionDate;
@@ -559,23 +536,25 @@ exports.updateLead = async (req, res) => {
     }
 };
 
-// ============================================================
 // UPDATE LEAD STATUS
-// ============================================================
-
 exports.updateLeadStatus = async (req, res) => {
     try {
         const { leadId } = req.params;
         const { status } = req.body || {};
 
         const allowedStatuses = [
+            "",
             "contacted",
             "interested",
             "not_interested",
             "enrolled",
         ];
 
-        if (!status || !allowedStatuses.includes(status)) {
+        if (
+            status === undefined ||
+            status === null ||
+            !allowedStatuses.includes(status)
+        ) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid status",
@@ -622,10 +601,7 @@ exports.updateLeadStatus = async (req, res) => {
     }
 };
 
-// ============================================================
 // ADD COMMUNICATION
-// ============================================================
-
 exports.addCommunication = async (req, res) => {
     try {
         const { leadId } = req.params;

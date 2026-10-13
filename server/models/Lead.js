@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 
 const leadSchema = new mongoose.Schema(
@@ -15,10 +16,6 @@ const leadSchema = new mongoose.Schema(
         // ==========================================
         // Basic Details
         // ==========================================
-
-
-
-
 
         serialNumber: {
             type: Number,
@@ -127,15 +124,18 @@ const leadSchema = new mongoose.Schema(
         // Status
         // ==========================================
 
+        // Empty until a status is selected.
+
         status: {
             type: String,
             enum: [
+                "",
                 "contacted",
                 "interested",
                 "not_interested",
                 "enrolled",
             ],
-            default: "contacted",
+            default: "",
         },
 
         // ==========================================
