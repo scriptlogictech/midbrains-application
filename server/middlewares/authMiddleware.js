@@ -1,3 +1,4 @@
+
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
@@ -5,44 +6,47 @@ exports.protect = async (req, res, next) => {
     try {
         let token;
 
-        // Check authorization header
-        if (req.headers.authorization?.startsWith("Bearer")) {
+        // Check Authorization header
+        if (req.headers.authorization?.startsWith("Bearer ")) {
             token = req.headers.authorization.split(" ")[1];
         }
 
-        // Check token
         if (!token) {
             return res.status(401).json({
+                success: false,
                 message: "Not Authorized",
             });
         }
 
-        // Verify token
+        // Verify JWT
         const decoded = jwt.verify(
             token,
             process.env.JWT_SECRET
         );
 
-        // Find logged-in user and populate company
+        // Find user and populate company
         const user = await User.findById(decoded.id)
             .select("-password")
             .populate("company", "companyName companyCode");
 
-        // Check user exists
         if (!user) {
             return res.status(401).json({
+                success: false,
                 message: "User no longer exists",
             });
         }
 
-        // Check user active status
         if (!user.isActive) {
             return res.status(403).json({
+                success: false,
                 message: "Your account has been deactivated",
             });
         }
 
-        // Debug logged-in user company details
+        // Attach authenticated user
+        req.user = user;
+
+        // Debug information
         console.log("========== AUTH USER DETAILS ==========");
         console.log("User ID:", user._id);
         console.log("User Email:", user.email);
@@ -53,23 +57,33 @@ exports.protect = async (req, res, next) => {
             console.log("Company ID:", user.company._id);
             console.log("Company Name:", user.company.companyName);
             console.log("Company Code:", user.company.companyCode);
+        } else if (user.role === "super_admin") {
+            console.log("Super Admin: no personal company required");
         } else {
             console.log("Company is missing for this user");
         }
 
         console.log("=======================================");
 
-        // Attach user to request
-        req.user = user;
+        // Super Admin does not require a personal company
+        if (user.role === "super_admin") {
+            return next();
+        }
 
-        next();
+        // Other users must belong to a company
+        if (!user.company) {
+            return res.status(403).json({
+                success: false,
+                message: "Your account is not assigned to a company",
+            });
+        }
+
+        return next();
     } catch (error) {
-        console.error(
-            "Auth Middleware Error:",
-            error.message
-        );
+        console.error("Auth Middleware Error:", error.message);
 
         return res.status(401).json({
+            success: false,
             message: "Token Failed",
         });
     }
@@ -80,16 +94,18 @@ exports.authorizeRoles = (...roles) => {
     return (req, res, next) => {
         if (!req.user) {
             return res.status(401).json({
+                success: false,
                 message: "Not Authorized",
             });
         }
 
         if (!roles.includes(req.user.role)) {
             return res.status(403).json({
+                success: false,
                 message: "You do not have permission",
             });
         }
 
-        next();
+        return next();
     };
 };
