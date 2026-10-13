@@ -309,8 +309,21 @@ const Leads = () => {
         try {
             setError("");
 
+            const allowedStatuses = [
+                "",
+                "contacted",
+                "interested",
+                "not_interested",
+                "enrolled",
+            ];
+
+            const submittedStatus = String(formData.status ?? "").trim();
+
             const payload = {
                 ...formData,
+                status: allowedStatuses.includes(submittedStatus)
+                    ? submittedStatus
+                    : "",
                 company: companyId,
             };
 
