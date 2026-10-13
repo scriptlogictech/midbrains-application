@@ -537,6 +537,8 @@ exports.updateLead = async (req, res) => {
 };
 
 // UPDATE LEAD STATUS
+
+// UPDATE LEAD STATUS
 exports.updateLeadStatus = async (req, res) => {
     try {
         const { leadId } = req.params;
@@ -553,6 +555,7 @@ exports.updateLeadStatus = async (req, res) => {
         if (
             status === undefined ||
             status === null ||
+            typeof status !== "string" ||
             !allowedStatuses.includes(status)
         ) {
             return res.status(400).json({
@@ -578,10 +581,17 @@ exports.updateLeadStatus = async (req, res) => {
             });
         }
 
-        lead.status = status;
-        await lead.save();
-
-        const updatedLead = await Lead.findById(lead._id)
+        // Update only the status field.
+        // Avoid lead.save(), which validates the entire document
+        // and can fail if an older lead has no serialNumber.
+        const updatedLead = await Lead.findByIdAndUpdate(
+            leadId,
+            { $set: { status } },
+            {
+                new: true,
+                runValidators: true,
+            }
+        )
             .populate("assignedCounselor", "fullName email role")
             .populate("company", "companyName companyCode");
 
