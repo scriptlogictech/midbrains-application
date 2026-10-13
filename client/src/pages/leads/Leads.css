@@ -5203,3 +5203,41 @@
     display: inline-block !important;
     font-size: 14px !important;
 }
+
+
+
+
+
+/* Keep all lead filters in one horizontal line */
+.leads-page .filters-container {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
+    gap: 12px;
+    align-items: end;
+}
+
+/* Prevent filter fields from exceeding their columns */
+.leads-page .filters-container > div {
+    min-width: 0;
+}
+
+.leads-page .filters-container input,
+.leads-page .filters-container select {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+/* Keep filters on one line on desktop */
+@media (min-width: 1200px) {
+    .leads-page .filters-container {
+        grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
+    }
+}
+
+/* Allow wrapping on smaller screens */
+@media (max-width: 1199px) {
+    .leads-page .filters-container {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
