@@ -48,6 +48,13 @@ const LEAD_SOURCES = [
     { value: "project_client", label: "Project Client" },
 ];
 
+const getLocalDateInputValue = (date = new Date()) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+};
+
 const Leads = () => {
     const { user } = useAuth();
     const { companyId: routeCompanyId } = useParams();
@@ -121,6 +128,7 @@ const Leads = () => {
         assignedCounselor: "",
         priority: "medium",
         status: "",
+        leadDate: getLocalDateInputValue(),
         nextFollowUpDate: "",
         notes: "",
         expectedFees: "",
@@ -319,6 +327,11 @@ const Leads = () => {
                 "",
             priority: lead.priority || "medium",
             status: lead.status || "",
+            leadDate: lead.leadDate
+                ? getLocalDateInputValue(new Date(lead.leadDate))
+                : lead.createdAt
+                    ? getLocalDateInputValue(new Date(lead.createdAt))
+                    : getLocalDateInputValue(),
             nextFollowUpDate: lead.nextFollowUpDate
                 ? new Date(lead.nextFollowUpDate)
                     .toISOString()
@@ -378,6 +391,10 @@ const Leads = () => {
 
             if (!payload.assignedCounselor) {
                 delete payload.assignedCounselor;
+            }
+
+            if (!payload.leadDate) {
+                delete payload.leadDate;
             }
 
             if (!payload.nextFollowUpDate) {
@@ -1322,6 +1339,17 @@ const Leads = () => {
                                 <div className="form-grid">
 
                                     <div className="form-group">
+                                        <label>Lead Date *</label>
+                                        <input
+                                            type="date"
+                                            name="leadDate"
+                                            value={formData.leadDate}
+                                            onChange={handleFormChange}
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
                                         <label>Next Follow-up Date</label>
 
                                         <input
@@ -1578,6 +1606,11 @@ const Leads = () => {
                                     <strong>
                                         {getPriorityLabel(selectedLead.priority)}
                                     </strong>
+                                </div>
+
+                                <div className="detail-item">
+                                    <label>Lead Date</label>
+                                    <strong>{formatDate(selectedLead.leadDate || selectedLead.createdAt)}</strong>
                                 </div>
 
                                 <div className="detail-item">
