@@ -1,3 +1,4 @@
+
 const express = require("express");
 const router = express.Router();
 
@@ -7,92 +8,49 @@ const {
     updateLead,
     updateLeadStatus,
     addCommunication,
+    updateCommunication,
+    deleteCommunication,
 } = require("../controllers/leadController");
 
 const { protect } = require("../middlewares/authMiddleware");
 const { authorizeRoles } = require("../middlewares/roleMiddleware");
 
-/*
-|--------------------------------------------------------------------------
-| Lead Management
-|--------------------------------------------------------------------------
-| Super Admin, Employee and Intern can manage leads.
-|--------------------------------------------------------------------------
-*/
+const leadAccess = [
+    protect,
+    authorizeRoles("super_admin", "employee", "intern"),
+];
 
-// ==========================================
 // Create Lead
-// ==========================================
+router.post("/", ...leadAccess, createLead);
 
-router.post(
-    "/",
-    protect,
-    authorizeRoles(
-        "super_admin",
-        "employee",
-        "intern"
-    ),
-    createLead
-);
-
-// ==========================================
 // Get All Leads
-// ==========================================
+router.get("/", ...leadAccess, getLeads);
 
-router.get(
-    "/",
-    protect,
-    authorizeRoles(
-        "super_admin",
-        "employee",
-        "intern"
-    ),
-    getLeads
-);
-
-// ==========================================
 // Update Lead
-// ==========================================
+router.put("/:leadId", ...leadAccess, updateLead);
 
-router.put(
-    "/:leadId",
-    protect,
-    authorizeRoles(
-        "super_admin",
-        "employee",
-        "intern"
-    ),
-    updateLead
-);
-
-// ==========================================
 // Update Lead Status
-// ==========================================
+router.put("/:leadId/status", ...leadAccess, updateLeadStatus);
 
-router.put(
-    "/:leadId/status",
-    protect,
-    authorizeRoles(
-        "super_admin",
-        "employee",
-        "intern"
-    ),
-    updateLeadStatus
-);
-
-// ==========================================
 // Add Communication
-// ==========================================
-
 router.post(
     "/:leadId/communication",
-    protect,
-    authorizeRoles(
-        "super_admin",
-        "employee",
-        "intern"
-    ),
+    ...leadAccess,
     addCommunication
+);
+
+// Update Communication
+router.put(
+    "/:leadId/communication/:communicationId",
+    ...leadAccess,
+    updateCommunication
+);
+
+// Delete Communication
+router.delete(
+    "/:leadId/communication/:communicationId",
+    ...leadAccess,
+    deleteCommunication
 );
 
 module.exports = router;

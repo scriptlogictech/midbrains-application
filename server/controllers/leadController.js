@@ -698,3 +698,195 @@ exports.addCommunication = async (req, res) => {
         });
     }
 };
+
+
+
+
+
+/* ==========================================
+   UPDATE COMMUNICATION
+========================================== */
+
+exports.updateCommunication = async (req, res) => {
+    try {
+        const { leadId, communicationId } = req.params;
+        const { type, message, date } = req.body || {};
+
+        const allowedTypes = [
+            "call",
+            "whatsapp",
+            "email",
+            "meeting",
+        ];
+
+        if (type !== undefined && !allowedTypes.includes(type)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid communication type",
+            });
+        }
+
+        if (
+            message !== undefined &&
+            (typeof message !== "string" || !message.trim())
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Communication message cannot be empty",
+            });
+        }
+
+        let communicationDate;
+
+        if (date !== undefined) {
+            communicationDate = new Date(date);
+
+            if (Number.isNaN(communicationDate.getTime())) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid communication date",
+                });
+            }
+        }
+
+        const lead = await Lead.findById(leadId);
+
+        if (!lead) {
+            return res.status(404).json({
+                success: false,
+                message: "Lead not found",
+            });
+        }
+
+        if (!hasCompanyAccess(req, lead.company)) {
+            return res.status(403).json({
+                success: false,
+                message: "You do not have access to this lead",
+            });
+        }
+
+        const communication = lead.communicationHistory.id(
+            communicationId
+        );
+
+        if (!communication) {
+            return res.status(404).json({
+                success: false,
+                message: "Communication record not found",
+            });
+        }
+
+        const updates = {};
+
+        if (type !== undefined) {
+            updates["communicationHistory.$.type"] = type;
+        }
+
+        if (message !== undefined) {
+            updates["communicationHistory.$.message"] =
+                message.trim();
+        }
+
+        if (communicationDate !== undefined) {
+            updates["communicationHistory.$.date"] =
+                communicationDate;
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "No changes provided",
+            });
+        }
+
+        const updatedLead = await Lead.findOneAndUpdate(
+            {
+                _id: leadId,
+                "communicationHistory._id": communicationId,
+            },
+            { $set: updates },
+            { new: true, runValidators: true }
+        )
+            .populate("assignedCounselor", "fullName email role")
+            .populate("company", "companyName companyCode");
+
+        return res.status(200).json({
+            success: true,
+            message: "Communication updated successfully",
+            lead: updatedLead,
+        });
+    } catch (error) {
+        console.error("Update Communication Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to update communication",
+            error: error.message,
+        });
+    }
+};
+
+
+/* ==========================================
+   DELETE COMMUNICATION
+========================================== */
+
+exports.deleteCommunication = async (req, res) => {
+    try {
+        const { leadId, communicationId } = req.params;
+
+        const lead = await Lead.findById(leadId);
+
+        if (!lead) {
+            return res.status(404).json({
+                success: false,
+                message: "Lead not found",
+            });
+        }
+
+        if (!hasCompanyAccess(req, lead.company)) {
+            return res.status(403).json({
+                success: false,
+                message: "You do not have access to this lead",
+            });
+        }
+
+        const communicationExists =
+            lead.communicationHistory.id(communicationId);
+
+        if (!communicationExists) {
+            return res.status(404).json({
+                success: false,
+                message: "Communication record not found",
+            });
+        }
+
+        const updatedLead = await Lead.findByIdAndUpdate(
+            leadId,
+            {
+                $pull: {
+                    communicationHistory: {
+                        _id: communicationId,
+                    },
+                },
+            },
+            { new: true }
+        )
+            .populate("assignedCounselor", "fullName email role")
+            .populate("company", "companyName companyCode");
+
+        return res.status(200).json({
+            success: true,
+            message: "Communication deleted successfully",
+            lead: updatedLead,
+        });
+    } catch (error) {
+        console.error("Delete Communication Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to delete communication",
+            error: error.message,
+        });
+    }
+};
