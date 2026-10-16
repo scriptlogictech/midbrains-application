@@ -303,6 +303,7 @@ const Leads = () => {
 
     const handleEditLead = (lead) => {
         setEditingLead(lead);
+        setSelectedLead(lead);
 
         setFormData({
             fullName: lead.fullName || "",
@@ -1027,6 +1028,11 @@ const Leads = () => {
                                                                         <span className="main-communication-type-icon" title={getCommunicationMeta(item.type).label}>
                                                                             <i className={`bi ${getCommunicationMeta(item.type).icon}`}></i>
                                                                         </span>
+                                                                        {item.date && (
+                                                                            <span className="main-communication-date">
+                                                                                {formatDate(item.date)}
+                                                                            </span>
+                                                                        )}
                                                                         <span className="main-communication-message">
                                                                             {item.message || "No message"}
                                                                         </span>
@@ -1047,18 +1053,11 @@ const Leads = () => {
                                                         <button
                                                             type="button"
                                                             className="icon-btn"
-                                                            title="View Details"
-                                                            onClick={() => handleViewDetails(lead)}
-                                                        >
-                                                            <i className="bi bi-eye"></i>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            className="icon-btn"
-                                                            title="Edit Lead"
+                                                            title="View or Edit Lead"
+                                                            aria-label="View or Edit Lead"
                                                             onClick={() => handleEditLead(lead)}
                                                         >
-                                                            <i className="bi bi-pencil"></i>
+                                                            <i className="bi bi-pencil-square"></i>
                                                         </button>
                                                         <button
                                                             type="button"
@@ -1373,6 +1372,77 @@ const Leads = () => {
 
                             </div>
 
+                            {/* COMMUNICATION HISTORY - AVAILABLE INSIDE EDIT LEAD */}
+
+                            {editingLead && (
+                                <div className="form-section edit-lead-communication-section">
+                                    <div className="section-title-row">
+                                        <h3>Communication History</h3>
+                                        <button
+                                            type="button"
+                                            className="btn btn-primary btn-sm"
+                                            onClick={() => {
+                                                setSelectedLead((prev) =>
+                                                    prev?._id === editingLead._id ? prev : editingLead
+                                                );
+                                                setEditingCommunication(null);
+                                                setCommunicationData({
+                                                    type: "call",
+                                                    message: "",
+                                                    date: new Date().toISOString().slice(0, 10),
+                                                });
+                                                setShowCommunicationModal(true);
+                                            }}
+                                        >
+                                            <i className="bi bi-plus-lg"></i> Add Communication
+                                        </button>
+                                    </div>
+
+                                    {selectedLead?._id === editingLead._id && selectedLead.communicationHistory?.length ? (
+                                        <div className="communication-list">
+                                            {selectedLead.communicationHistory.map((item, index) => (
+                                                <div className="communication-item" key={item._id || index}>
+                                                    <div className="communication-type-icon" title={getCommunicationMeta(item.type).label}>
+                                                        <i className={`bi ${getCommunicationMeta(item.type).icon}`}></i>
+                                                    </div>
+                                                    {item.date && (
+                                                        <span className="communication-date-inline">{formatDate(item.date)}</span>
+                                                    )}
+                                                    <div className="communication-content">
+                                                        <div className="communication-message-row">
+                                                            <div className="communication-entry-heading">
+                                                                <strong>{getCommunicationMeta(item.type).label}</strong>
+                                                            </div>
+                                                            <p>{item.message || "No message"}</p>
+                                                        </div>
+                                                        <div className="communication-entry-actions">
+                                                            <button
+                                                                type="button"
+                                                                className="icon-btn"
+                                                                title="Edit communication"
+                                                                onClick={() => handleEditCommunication(item)}
+                                                            >
+                                                                <i className="bi bi-pencil"></i>
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className="icon-btn communication-delete-btn"
+                                                                title="Delete communication"
+                                                                onClick={() => handleDeleteCommunication(item)}
+                                                            >
+                                                                <i className="bi bi-trash3"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="empty-text">No communication history available.</p>
+                                    )}
+                                </div>
+                            )}
+
                             {/* FORM ACTIONS */}
 
                             <div className="modal-footer">
@@ -1581,12 +1651,16 @@ const Leads = () => {
                                                     <div className="communication-type-icon" title={getCommunicationMeta(item.type).label}>
                                                         <i className={`bi ${getCommunicationMeta(item.type).icon}`}></i>
                                                     </div>
+                                                    {item.date && (
+                                                        <span className="communication-date-inline">
+                                                            {formatDate(item.date)}
+                                                        </span>
+                                                    )}
 
                                                     <div className="communication-content">
                                                         <div className="communication-message-row">
                                                             <div className="communication-entry-heading">
                                                                 <strong>{getCommunicationMeta(item.type).label}</strong>
-                                                                {item.date && <span>{formatDate(item.date)}</span>}
                                                             </div>
                                                             <p>{item.message || "No message"}</p>
                                                         </div>

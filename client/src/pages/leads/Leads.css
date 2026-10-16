@@ -1537,3 +1537,191 @@
         flex-basis: 26px;
     }
 }
+
+
+/* Compact communication date displayed immediately after the type icon */
+.leads-page .main-communication-date {
+    flex: 0 0 auto;
+    align-self: center;
+    color: #7b8794;
+    font-size: 10px;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.leads-page .communication-date-inline {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    margin-top: 3px;
+    color: #7b8794;
+    font-size: 10px;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+/* ============================================================
+   EDIT LEAD MODAL — WIDE TWO-COLUMN LAYOUT
+   Uses horizontal space to reduce modal height and hide the
+   visible scrollbar while retaining overflow handling if needed.
+============================================================ */
+.leads-page .modal-content.large-modal {
+    width: min(1440px, calc(100vw - 28px));
+    max-width: calc(100vw - 28px);
+    max-height: calc(100vh - 20px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.leads-page .modal-content.large-modal::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+.leads-page .large-modal .lead-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 0;
+}
+
+.leads-page .large-modal .lead-form > .form-section {
+    min-width: 0;
+    align-self: stretch;
+    padding: 12px 16px;
+}
+
+.leads-page .large-modal .lead-form > .form-section:nth-of-type(1) {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.leads-page .large-modal .lead-form > .form-section:nth-of-type(2) {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.leads-page .large-modal .lead-form > .form-section:nth-of-type(3) {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.leads-page .large-modal .lead-form > .edit-lead-communication-section {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+}
+
+.leads-page .large-modal .lead-form > .modal-footer {
+    grid-column: 1 / -1;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.leads-page .large-modal .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
+}
+
+.leads-page .large-modal .form-group input,
+.leads-page .large-modal .form-group select {
+    height: 32px;
+    padding: 0 8px;
+    font-size: 12px;
+}
+
+.leads-page .large-modal .form-group textarea {
+    min-height: 48px;
+    height: 48px;
+    resize: vertical;
+    padding: 6px 8px;
+    font-size: 12px;
+}
+
+.leads-page .large-modal .form-group.full-width {
+    margin-top: 7px;
+}
+
+.leads-page .large-modal .edit-lead-communication-section .section-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.leads-page .large-modal .edit-lead-communication-section .section-title-row h3 {
+    margin: 0;
+}
+
+.leads-page .large-modal .edit-lead-communication-section .btn-sm {
+    flex: 0 0 auto;
+    padding: 5px 8px;
+    font-size: 11px;
+}
+
+.leads-page .large-modal .edit-lead-communication-section .communication-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    overflow: visible;
+}
+
+.leads-page .large-modal .edit-lead-communication-section .communication-item {
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 7px;
+}
+
+.leads-page .large-modal .edit-lead-communication-section .communication-type-icon {
+    width: 24px;
+    height: 24px;
+    flex-basis: 24px;
+}
+
+.leads-page .large-modal .edit-lead-communication-section .communication-content {
+    gap: 5px;
+}
+
+.leads-page .large-modal .edit-lead-communication-section .communication-message-row p {
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.leads-page .large-modal .edit-lead-communication-section .communication-entry-actions .icon-btn {
+    width: 25px;
+    height: 25px;
+    flex-basis: 25px;
+}
+
+.leads-page .large-modal .modal-footer {
+    padding: 9px 16px;
+}
+
+@media (max-width: 900px) {
+    .leads-page .modal-content.large-modal {
+        width: calc(100vw - 20px);
+        max-width: calc(100vw - 20px);
+    }
+
+    .leads-page .large-modal .lead-form {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .leads-page .large-modal .lead-form > .form-section:nth-of-type(1),
+    .leads-page .large-modal .lead-form > .form-section:nth-of-type(2),
+    .leads-page .large-modal .lead-form > .form-section:nth-of-type(3),
+    .leads-page .large-modal .lead-form > .edit-lead-communication-section,
+    .leads-page .large-modal .lead-form > .modal-footer {
+        grid-column: 1;
+        grid-row: auto;
+    }
+}
+
+@media (max-width: 520px) {
+    .leads-page .large-modal .form-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
