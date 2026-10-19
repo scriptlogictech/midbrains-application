@@ -607,6 +607,69 @@ const Leads = () => {
         }));
     };
 
+
+    const getPaginationItems = () => {
+    const totalPages = Math.max(Number(pagination.pages) || 1, 1);
+    const currentPage = Math.min(
+        Math.max(Number(pagination.page) || 1, 1),
+        totalPages
+    );
+
+    const pageSet = new Set([
+        1,
+        2,
+        3,
+        4,
+        5,
+        totalPages - 1,
+        totalPages,
+        currentPage - 1,
+        currentPage,
+        currentPage + 1,
+    ]);
+
+    const pages = [...pageSet]
+        .filter((page) => page >= 1 && page <= totalPages)
+        .sort((a, b) => a - b);
+
+    const items = [];
+
+    pages.forEach((page, index) => {
+        if (index > 0) {
+            const previousPage = pages[index - 1];
+            const gap = page - previousPage;
+
+            if (gap === 2) {
+                items.push(previousPage + 1);
+            } else if (gap > 2) {
+                items.push("...");
+            }
+        }
+
+        items.push(page);
+    });
+
+    return items;
+};
+
+const handlePageChange = (page) => {
+    const targetPage = Number(page);
+
+    if (
+        !Number.isInteger(targetPage) ||
+        targetPage < 1 ||
+        targetPage > pagination.pages ||
+        targetPage === pagination.page
+    ) {
+        return;
+    }
+
+    setFilters((prev) => ({
+        ...prev,
+        page: targetPage,
+    }));
+};
+
     // =========================
     // HELPERS
     // =========================
@@ -1096,36 +1159,65 @@ const Leads = () => {
 
                         {/* ================= PAGINATION ================= */}
 
-                        <div className="pagination">
+                        {/* ================= NUMBERED PAGINATION ================= */}
 
-                            <span>
-                                Page{" "}
-                                {pagination.page || 1}{" "}
-                                of{" "}
-                                {pagination.pages || 1}
-                            </span>
+<div className="pagination">
+    <div className="pagination-info">
+        Page {pagination.page || 1} of {pagination.pages || 1}
+        <span> ({pagination.total || 0} total leads)</span>
+    </div>
 
-                            <div>
-                                <button
-                                    className="btn btn-secondary"
-                                    disabled={pagination.page <= 1}
-                                    onClick={handlePreviousPage}
-                                >
-                                    <i className="bi bi-chevron-left"></i>
-                                    Previous
-                                </button>
+    <div className="pagination-controls">
+        <button
+            type="button"
+            className="pagination-nav-btn"
+            disabled={pagination.page <= 1}
+            onClick={handlePreviousPage}
+        >
+            <i className="bi bi-chevron-left"></i>
+            Previous
+        </button>
 
-                                <button
-                                    className="btn btn-secondary"
-                                    disabled={pagination.page >= pagination.pages}
-                                    onClick={handleNextPage}
-                                >
-                                    Next
-                                    <i className="bi bi-chevron-right"></i>
-                                </button>
-                            </div>
+        <div className="pagination-numbers">
+            {getPaginationItems().map((item, index) =>
+                item === "..." ? (
+                    <span
+                        key={`ellipsis-${index}`}
+                        className="pagination-ellipsis"
+                        aria-hidden="true"
+                    >
+                        ...
+                    </span>
+                ) : (
+                    <button
+                        key={item}
+                        type="button"
+                        className={`pagination-number ${
+                            pagination.page === item ? "active" : ""
+                        }`}
+                        aria-label={`Go to page ${item}`}
+                        aria-current={
+                            pagination.page === item ? "page" : undefined
+                        }
+                        onClick={() => handlePageChange(item)}
+                    >
+                        {item}
+                    </button>
+                )
+            )}
+        </div>
 
-                        </div>
+        <button
+            type="button"
+            className="pagination-nav-btn"
+            disabled={pagination.page >= pagination.pages}
+            onClick={handleNextPage}
+        >
+            Next
+            <i className="bi bi-chevron-right"></i>
+        </button>
+    </div>
+</div>
                     </>
                 )}
             </div>
