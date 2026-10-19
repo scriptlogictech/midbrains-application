@@ -1,3 +1,4 @@
+
 const Lead = require("../models/Lead");
 const User = require("../models/User");
 const LeadCounter = require("../models/LeadCounter");
@@ -156,7 +157,12 @@ exports.getLeads = async (req, res) => {
                 { contactNumber: { $regex: search.trim(), $options: "i" } },
                 { email: { $regex: search.trim(), $options: "i" } },
                 { city: { $regex: search.trim(), $options: "i" } },
-                { courseInterested: { $regex: search.trim(), $options: "i" } },
+                {
+                    courseInterested: {
+                        $regex: search.trim(),
+                        $options: "i",
+                    },
+                },
             ];
         }
 
@@ -172,24 +178,40 @@ exports.getLeads = async (req, res) => {
             filter.leadDate = {};
 
             if (startDate) {
-                filter.leadDate.$gte = new Date(`${startDate}T00:00:00`);
+                filter.leadDate.$gte = new Date(
+                    `${startDate}T00:00:00`
+                );
             }
 
             if (endDate) {
-                filter.leadDate.$lte = new Date(`${endDate}T23:59:59.999`);
+                filter.leadDate.$lte = new Date(
+                    `${endDate}T23:59:59.999`
+                );
             }
         }
 
         const currentPage = Math.max(Number(page) || 1, 1);
-        const pageLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+        const pageLimit = Math.min(
+            Math.max(Number(limit) || 20, 1),
+            100
+        );
         const skip = (currentPage - 1) * pageLimit;
 
         const [leads, total] = await Promise.all([
             Lead.find(filter)
                 .populate("company", "companyName companyCode")
-                .populate("assignedCounselor", "fullName email role")
-                .populate("createdBy", "fullName email role")
-                .sort({ leadDate: -1, createdAt: -1 })
+                .populate(
+                    "assignedCounselor",
+                    "fullName email role"
+                )
+                .populate(
+                    "createdBy",
+                    "fullName email role"
+                )
+
+                // UPDATED: Newest-created leads appear first
+                .sort({ createdAt: -1 })
+
                 .skip(skip)
                 .limit(pageLimit),
 
@@ -204,7 +226,8 @@ exports.getLeads = async (req, res) => {
                 page: currentPage,
                 limit: pageLimit,
                 totalPages: Math.ceil(total / pageLimit),
-                hasNextPage: currentPage < Math.ceil(total / pageLimit),
+                hasNextPage:
+                    currentPage < Math.ceil(total / pageLimit),
                 hasPreviousPage: currentPage > 1,
             },
         });
@@ -249,7 +272,8 @@ exports.createLead = async (req, res) => {
         ) {
             return res.status(400).json({
                 success: false,
-                message: "Full name and contact number are required",
+                message:
+                    "Full name and contact number are required",
             });
         }
 
@@ -280,7 +304,8 @@ exports.createLead = async (req, res) => {
         if (!hasCompanyAccess(req, targetCompany)) {
             return res.status(403).json({
                 success: false,
-                message: "You cannot create a lead for another company",
+                message:
+                    "You cannot create a lead for another company",
             });
         }
 
@@ -295,7 +320,8 @@ exports.createLead = async (req, res) => {
             if (!assignedUser) {
                 return res.status(400).json({
                     success: false,
-                    message: "Invalid or inactive employee/intern for this company",
+                    message:
+                        "Invalid or inactive employee/intern for this company",
                 });
             }
         }
@@ -315,21 +341,26 @@ exports.createLead = async (req, res) => {
             ? new Date(nextFollowUpDate)
             : getDefaultFollowUpDate(actualLeadDate);
 
-        if (Number.isNaN(actualNextFollowUpDate.getTime())) {
+        if (
+            Number.isNaN(actualNextFollowUpDate.getTime())
+        ) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid follow-up date",
             });
         }
 
-        const serialNumber = await getNextLeadSerialNumber(targetCompany);
+        const serialNumber =
+            await getNextLeadSerialNumber(targetCompany);
 
         const lead = await Lead.create({
             company: targetCompany,
             serialNumber,
             fullName: fullName.trim(),
             contactNumber: contactNumber.trim(),
-            email: email ? email.trim().toLowerCase() : undefined,
+            email: email
+                ? email.trim().toLowerCase()
+                : undefined,
             city,
             leadDate: actualLeadDate,
             courseInterested,
@@ -346,7 +377,10 @@ exports.createLead = async (req, res) => {
         });
 
         const populatedLead = await Lead.findById(lead._id)
-            .populate("assignedCounselor", "fullName email role")
+            .populate(
+                "assignedCounselor",
+                "fullName email role"
+            )
             .populate("createdBy", "fullName email role")
             .populate("company", "companyName companyCode");
 
@@ -416,7 +450,8 @@ exports.updateLead = async (req, res) => {
             if (!assignedUser) {
                 return res.status(400).json({
                     success: false,
-                    message: "Invalid or inactive employee/intern for this company",
+                    message:
+                        "Invalid or inactive employee/intern for this company",
                 });
             }
         }
@@ -424,7 +459,10 @@ exports.updateLead = async (req, res) => {
         const updateData = {};
 
         if (fullName !== undefined) {
-            if (typeof fullName !== "string" || !fullName.trim()) {
+            if (
+                typeof fullName !== "string" ||
+                !fullName.trim()
+            ) {
                 return res.status(400).json({
                     success: false,
                     message: "Full name cannot be empty",
@@ -441,7 +479,8 @@ exports.updateLead = async (req, res) => {
             ) {
                 return res.status(400).json({
                     success: false,
-                    message: "Contact number cannot be empty",
+                    message:
+                        "Contact number cannot be empty",
                 });
             }
 
@@ -455,12 +494,24 @@ exports.updateLead = async (req, res) => {
         }
 
         if (city !== undefined) updateData.city = city;
-        if (leadDate !== undefined) updateData.leadDate = leadDate;
-        if (courseInterested !== undefined) updateData.courseInterested = courseInterested;
-        if (inquiryType !== undefined) updateData.inquiryType = inquiryType;
-        if (leadSource !== undefined) updateData.leadSource = leadSource;
-        if (assignedCounselor !== undefined) updateData.assignedCounselor = assignedCounselor;
-        if (priority !== undefined) updateData.priority = priority;
+        if (leadDate !== undefined) {
+            updateData.leadDate = leadDate;
+        }
+        if (courseInterested !== undefined) {
+            updateData.courseInterested = courseInterested;
+        }
+        if (inquiryType !== undefined) {
+            updateData.inquiryType = inquiryType;
+        }
+        if (leadSource !== undefined) {
+            updateData.leadSource = leadSource;
+        }
+        if (assignedCounselor !== undefined) {
+            updateData.assignedCounselor = assignedCounselor;
+        }
+        if (priority !== undefined) {
+            updateData.priority = priority;
+        }
 
         if (status !== undefined) {
             const allowedStatuses = [
@@ -483,8 +534,12 @@ exports.updateLead = async (req, res) => {
         }
 
         if (notes !== undefined) updateData.notes = notes;
-        if (expectedFees !== undefined) updateData.expectedFees = expectedFees;
-        if (admissionDate !== undefined) updateData.admissionDate = admissionDate;
+        if (expectedFees !== undefined) {
+            updateData.expectedFees = expectedFees;
+        }
+        if (admissionDate !== undefined) {
+            updateData.admissionDate = admissionDate;
+        }
 
         if (nextFollowUpDate !== undefined) {
             if (nextFollowUpDate) {
@@ -499,9 +554,12 @@ exports.updateLead = async (req, res) => {
 
                 updateData.nextFollowUpDate = parsedDate;
             } else {
-                const baseDate = leadDate !== undefined
-                    ? new Date(leadDate)
-                    : lead.leadDate || lead.createdAt || new Date();
+                const baseDate =
+                    leadDate !== undefined
+                        ? new Date(leadDate)
+                        : lead.leadDate ||
+                          lead.createdAt ||
+                          new Date();
 
                 updateData.nextFollowUpDate =
                     getDefaultFollowUpDate(baseDate);
@@ -516,7 +574,10 @@ exports.updateLead = async (req, res) => {
                 runValidators: true,
             }
         )
-            .populate("assignedCounselor", "fullName email role")
+            .populate(
+                "assignedCounselor",
+                "fullName email role"
+            )
             .populate("createdBy", "fullName email role")
             .populate("company", "companyName companyCode");
 
@@ -535,8 +596,6 @@ exports.updateLead = async (req, res) => {
         });
     }
 };
-
-// UPDATE LEAD STATUS
 
 // UPDATE LEAD STATUS
 exports.updateLeadStatus = async (req, res) => {
@@ -582,8 +641,7 @@ exports.updateLeadStatus = async (req, res) => {
         }
 
         // Update only the status field.
-        // Avoid lead.save(), which validates the entire document
-        // and can fail if an older lead has no serialNumber.
+        // Avoid lead.save(), which validates the entire document.
         const updatedLead = await Lead.findByIdAndUpdate(
             leadId,
             { $set: { status } },
@@ -592,7 +650,10 @@ exports.updateLeadStatus = async (req, res) => {
                 runValidators: true,
             }
         )
-            .populate("assignedCounselor", "fullName email role")
+            .populate(
+                "assignedCounselor",
+                "fullName email role"
+            )
             .populate("company", "companyName companyCode");
 
         return res.status(200).json({
@@ -610,8 +671,6 @@ exports.updateLeadStatus = async (req, res) => {
         });
     }
 };
-
-// ADD COMMUNICATION
 
 // ADD COMMUNICATION
 exports.addCommunication = async (req, res) => {
@@ -634,7 +693,8 @@ exports.addCommunication = async (req, res) => {
         ) {
             return res.status(400).json({
                 success: false,
-                message: "Valid communication type and message are required",
+                message:
+                    "Valid communication type and message are required",
             });
         }
 
@@ -654,16 +714,20 @@ exports.addCommunication = async (req, res) => {
             });
         }
 
-        const communicationDate = date ? new Date(date) : new Date();
+        const communicationDate = date
+            ? new Date(date)
+            : new Date();
 
-        if (Number.isNaN(communicationDate.getTime())) {
+        if (
+            Number.isNaN(communicationDate.getTime())
+        ) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid communication date",
             });
         }
 
-        // Update only communicationHistory instead of calling lead.save().
+        // Update only communicationHistory.
         const updatedLead = await Lead.findByIdAndUpdate(
             leadId,
             {
@@ -680,7 +744,10 @@ exports.addCommunication = async (req, res) => {
                 runValidators: true,
             }
         )
-            .populate("assignedCounselor", "fullName email role")
+            .populate(
+                "assignedCounselor",
+                "fullName email role"
+            )
             .populate("company", "companyName companyCode");
 
         return res.status(200).json({
@@ -699,14 +766,7 @@ exports.addCommunication = async (req, res) => {
     }
 };
 
-
-
-
-
-/* ==========================================
-   UPDATE COMMUNICATION
-========================================== */
-
+// UPDATE COMMUNICATION
 exports.updateCommunication = async (req, res) => {
     try {
         const { leadId, communicationId } = req.params;
@@ -719,7 +779,10 @@ exports.updateCommunication = async (req, res) => {
             "meeting",
         ];
 
-        if (type !== undefined && !allowedTypes.includes(type)) {
+        if (
+            type !== undefined &&
+            !allowedTypes.includes(type)
+        ) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid communication type",
@@ -728,11 +791,15 @@ exports.updateCommunication = async (req, res) => {
 
         if (
             message !== undefined &&
-            (typeof message !== "string" || !message.trim())
+            (
+                typeof message !== "string" ||
+                !message.trim()
+            )
         ) {
             return res.status(400).json({
                 success: false,
-                message: "Communication message cannot be empty",
+                message:
+                    "Communication message cannot be empty",
             });
         }
 
@@ -741,7 +808,9 @@ exports.updateCommunication = async (req, res) => {
         if (date !== undefined) {
             communicationDate = new Date(date);
 
-            if (Number.isNaN(communicationDate.getTime())) {
+            if (
+                Number.isNaN(communicationDate.getTime())
+            ) {
                 return res.status(400).json({
                     success: false,
                     message: "Invalid communication date",
@@ -765,9 +834,8 @@ exports.updateCommunication = async (req, res) => {
             });
         }
 
-        const communication = lead.communicationHistory.id(
-            communicationId
-        );
+        const communication =
+            lead.communicationHistory.id(communicationId);
 
         if (!communication) {
             return res.status(404).json({
@@ -805,9 +873,15 @@ exports.updateCommunication = async (req, res) => {
                 "communicationHistory._id": communicationId,
             },
             { $set: updates },
-            { new: true, runValidators: true }
+            {
+                new: true,
+                runValidators: true,
+            }
         )
-            .populate("assignedCounselor", "fullName email role")
+            .populate(
+                "assignedCounselor",
+                "fullName email role"
+            )
             .populate("company", "companyName companyCode");
 
         return res.status(200).json({
@@ -826,11 +900,7 @@ exports.updateCommunication = async (req, res) => {
     }
 };
 
-
-/* ==========================================
-   DELETE COMMUNICATION
-========================================== */
-
+// DELETE COMMUNICATION
 exports.deleteCommunication = async (req, res) => {
     try {
         const { leadId, communicationId } = req.params;
@@ -872,7 +942,10 @@ exports.deleteCommunication = async (req, res) => {
             },
             { new: true }
         )
-            .populate("assignedCounselor", "fullName email role")
+            .populate(
+                "assignedCounselor",
+                "fullName email role"
+            )
             .populate("company", "companyName companyCode");
 
         return res.status(200).json({
