@@ -10,6 +10,7 @@ const {
     addCommunication,
     updateCommunication,
     deleteCommunication,
+    deleteLead,
 } = require("../controllers/leadController");
 
 const { protect } = require("../middlewares/authMiddleware");
@@ -31,6 +32,9 @@ router.put("/:leadId", ...leadAccess, updateLead);
 
 // Update Lead Status
 router.put("/:leadId/status", ...leadAccess, updateLeadStatus);
+
+// Delete Lead
+router.delete("/:leadId", ...leadAccess, deleteLead);
 
 // Add Communication
 router.post(

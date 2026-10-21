@@ -963,3 +963,46 @@ exports.deleteCommunication = async (req, res) => {
         });
     }
 };
+
+
+
+
+ // DELETE LEAD
+exports.deleteLead = async (req, res) => {
+    try {
+        const { leadId } = req.params;
+
+        const lead = await Lead.findById(leadId);
+
+        if (!lead) {
+            return res.status(404).json({
+                success: false,
+                message: "Lead not found",
+            });
+        }
+
+        // Ensure the user can only delete leads from their company.
+        if (!hasCompanyAccess(req, lead.company)) {
+            return res.status(403).json({
+                success: false,
+                message: "You do not have access to this lead",
+            });
+        }
+
+        await Lead.findByIdAndDelete(leadId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Lead deleted successfully",
+            leadId,
+        });
+    } catch (error) {
+        console.error("Delete Lead Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to delete lead",
+            error: error.message,
+        });
+    }
+};

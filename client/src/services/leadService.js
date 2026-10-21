@@ -73,3 +73,11 @@ export const deleteCommunication = async (
 
     return response.data;
 };
+
+
+
+// Delete Lead
+export const deleteLead = async (leadId) => {
+    const response = await api.delete(`/leads/${leadId}`);
+    return response.data;
+};

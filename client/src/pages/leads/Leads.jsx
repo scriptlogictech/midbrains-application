@@ -6,6 +6,7 @@ import {
     createLead,
     updateLead,
     updateLeadStatus,
+    deleteLead,
     addCommunication,
     updateCommunication,
     deleteCommunication,
@@ -572,6 +573,48 @@ const Leads = () => {
         } catch (err) {
             console.error("Delete Communication Error:", err);
             setError(err?.response?.data?.message || "Failed to delete communication");
+        }
+    };
+
+    // =========================
+    // DELETE LEAD
+    // =========================
+
+    const handleDeleteLead = async (lead) => {
+        if (!lead?._id) {
+            setError("Cannot delete this lead because its ID is missing.");
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Are you sure you want to permanently delete the lead "${lead.fullName || "this lead"}"? This action cannot be undone.`
+        );
+
+        if (!confirmed) return;
+
+        try {
+            setError("");
+            await deleteLead(lead._id);
+            setLeads((prev) => prev.filter((item) => item._id !== lead._id));
+
+            if (selectedLead?._id === lead._id) {
+                setSelectedLead(null);
+                setShowDetailsModal(false);
+                setShowCommunicationModal(false);
+            }
+
+            if (editingLead?._id === lead._id) {
+                setEditingLead(null);
+                setShowModal(false);
+            }
+
+            await fetchLeads();
+        } catch (err) {
+            console.error("Delete Lead Error:", err);
+            setError(
+                err?.response?.data?.message ||
+                "Failed to delete lead. Check that the backend delete endpoint is configured."
+            );
         }
     };
 
@@ -1146,6 +1189,15 @@ const handlePageChange = (page) => {
                                                             onClick={() => handleOpenCommunication(lead)}
                                                         >
                                                             <i className="bi bi-chat-left-text"></i>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="icon-btn lead-delete-btn"
+                                                            title="Delete Lead"
+                                                            aria-label={`Delete lead ${lead.fullName || ""}`}
+                                                            onClick={() => handleDeleteLead(lead)}
+                                                        >
+                                                            <i className="bi bi-trash3"></i>
                                                         </button>
                                                     </div>
                                                 </td>
