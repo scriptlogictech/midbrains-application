@@ -1,4 +1,4 @@
-
+const mongoose = require("mongoose");
 const Lead = require("../models/Lead");
 const User = require("../models/User");
 const LeadCounter = require("../models/LeadCounter");
@@ -116,7 +116,6 @@ const getNextLeadSerialNumber = async (companyId) => {
 };
 
 // GET LEADS
-// GET LEADS
 exports.getLeads = async (req, res) => {
     try {
         const {
@@ -233,16 +232,30 @@ exports.getLeads = async (req, res) => {
          * Status totals use the same company, search, priority,
          * inquiry type, counselor, and date filters.
          *
-         * We remove only the selected status filter so all status
-         * categories can display their counts together.
+         * Aggregation pipelines do not automatically cast string IDs
+         * to MongoDB ObjectIds, unlike regular Mongoose queries.
          *
-         * Pagination is not applied to the aggregation, so counts
-         * include leads from every page.
+         * We explicitly cast the company ID and counselor ID so
+         * the aggregation matches the correct documents.
+         *
+         * Pagination is not applied, so counts include every page.
          */
         const statusCountFilter = {
             ...filter,
+            company: new mongoose.Types.ObjectId(targetCompanyId),
         };
 
+        // Cast the counselor ID when that filter is active.
+        if (
+            assignedCounselor &&
+            mongoose.Types.ObjectId.isValid(assignedCounselor)
+        ) {
+            statusCountFilter.assignedCounselor =
+                new mongoose.Types.ObjectId(assignedCounselor);
+        }
+
+        // Remove only the selected status filter so all status
+        // categories can display their counts together.
         delete statusCountFilter.status;
 
         const [
@@ -589,21 +602,27 @@ exports.updateLead = async (req, res) => {
         }
 
         if (city !== undefined) updateData.city = city;
+
         if (leadDate !== undefined) {
             updateData.leadDate = leadDate;
         }
+
         if (courseInterested !== undefined) {
             updateData.courseInterested = courseInterested;
         }
+
         if (inquiryType !== undefined) {
             updateData.inquiryType = inquiryType;
         }
+
         if (leadSource !== undefined) {
             updateData.leadSource = leadSource;
         }
+
         if (assignedCounselor !== undefined) {
             updateData.assignedCounselor = assignedCounselor;
         }
+
         if (priority !== undefined) {
             updateData.priority = priority;
         }
@@ -629,9 +648,11 @@ exports.updateLead = async (req, res) => {
         }
 
         if (notes !== undefined) updateData.notes = notes;
+
         if (expectedFees !== undefined) {
             updateData.expectedFees = expectedFees;
         }
+
         if (admissionDate !== undefined) {
             updateData.admissionDate = admissionDate;
         }
@@ -1058,9 +1079,6 @@ exports.deleteCommunication = async (req, res) => {
         });
     }
 };
-
-
-
 
 // DELETE LEAD
 exports.deleteLead = async (req, res) => {
