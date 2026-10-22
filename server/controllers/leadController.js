@@ -197,26 +197,42 @@ exports.getLeads = async (req, res) => {
         );
         const skip = (currentPage - 1) * pageLimit;
 
-        const [leads, total] = await Promise.all([
+
+        const [leads, total, statusCounts] = await Promise.all([
             Lead.find(filter)
                 .populate("company", "companyName companyCode")
-                .populate(
-                    "assignedCounselor",
-                    "fullName email role"
-                )
-                .populate(
-                    "createdBy",
-                    "fullName email role"
-                )
-
-                // UPDATED: Newest-created leads appear first
+                .populate("assignedCounselor", "fullName email role")
+                .populate("createdBy", "fullName email role")
                 .sort({ createdAt: -1 })
-
                 .skip(skip)
                 .limit(pageLimit),
 
             Lead.countDocuments(filter),
+
+            Lead.aggregate([
+                { $match: filter },
+                {
+                    $group: {
+                        _id: "$status",
+                        count: { $sum: 1 },
+                    },
+                },
+            ]),
         ]);
+
+        const statusTotals = {
+            contacted: 0,
+            interested: 0,
+            enrolled: 0,
+            not_interested: 0,
+        };
+
+        statusCounts.forEach(({ _id, count }) => {
+            if (Object.prototype.hasOwnProperty.call(statusTotals, _id)) {
+                statusTotals[_id] = count;
+            }
+        });
+
 
         return res.status(200).json({
             success: true,
@@ -558,8 +574,8 @@ exports.updateLead = async (req, res) => {
                     leadDate !== undefined
                         ? new Date(leadDate)
                         : lead.leadDate ||
-                          lead.createdAt ||
-                          new Date();
+                        lead.createdAt ||
+                        new Date();
 
                 updateData.nextFollowUpDate =
                     getDefaultFollowUpDate(baseDate);
@@ -967,7 +983,7 @@ exports.deleteCommunication = async (req, res) => {
 
 
 
- // DELETE LEAD
+// DELETE LEAD
 exports.deleteLead = async (req, res) => {
     try {
         const { leadId } = req.params;
