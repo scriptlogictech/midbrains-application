@@ -116,6 +116,7 @@ const getNextLeadSerialNumber = async (companyId) => {
 };
 
 // GET LEADS
+// GET LEADS
 exports.getLeads = async (req, res) => {
     try {
         const {
@@ -147,16 +148,37 @@ exports.getLeads = async (req, res) => {
             });
         }
 
+        // Main filter for the leads displayed in the table.
         const filter = {
             company: targetCompanyId,
         };
 
         if (search.trim()) {
             filter.$or = [
-                { fullName: { $regex: search.trim(), $options: "i" } },
-                { contactNumber: { $regex: search.trim(), $options: "i" } },
-                { email: { $regex: search.trim(), $options: "i" } },
-                { city: { $regex: search.trim(), $options: "i" } },
+                {
+                    fullName: {
+                        $regex: search.trim(),
+                        $options: "i",
+                    },
+                },
+                {
+                    contactNumber: {
+                        $regex: search.trim(),
+                        $options: "i",
+                    },
+                },
+                {
+                    email: {
+                        $regex: search.trim(),
+                        $options: "i",
+                    },
+                },
+                {
+                    city: {
+                        $regex: search.trim(),
+                        $options: "i",
+                    },
+                },
                 {
                     courseInterested: {
                         $regex: search.trim(),
@@ -166,9 +188,17 @@ exports.getLeads = async (req, res) => {
             ];
         }
 
-        if (status) filter.status = status;
-        if (priority) filter.priority = priority;
-        if (inquiryType) filter.inquiryType = inquiryType;
+        if (status) {
+            filter.status = status;
+        }
+
+        if (priority) {
+            filter.priority = priority;
+        }
+
+        if (inquiryType) {
+            filter.inquiryType = inquiryType;
+        }
 
         if (assignedCounselor) {
             filter.assignedCounselor = assignedCounselor;
@@ -191,35 +221,72 @@ exports.getLeads = async (req, res) => {
         }
 
         const currentPage = Math.max(Number(page) || 1, 1);
+
         const pageLimit = Math.min(
             Math.max(Number(limit) || 20, 1),
             100
         );
+
         const skip = (currentPage - 1) * pageLimit;
 
+        /*
+         * Status totals use the same company, search, priority,
+         * inquiry type, counselor, and date filters.
+         *
+         * We remove only the selected status filter so all status
+         * categories can display their counts together.
+         *
+         * Pagination is not applied to the aggregation, so counts
+         * include leads from every page.
+         */
+        const statusCountFilter = {
+            ...filter,
+        };
 
-        const [leads, total, statusCounts] = await Promise.all([
+        delete statusCountFilter.status;
+
+        const [
+            leads,
+            total,
+            statusCounts,
+        ] = await Promise.all([
+            // Get leads for the current page.
             Lead.find(filter)
                 .populate("company", "companyName companyCode")
-                .populate("assignedCounselor", "fullName email role")
-                .populate("createdBy", "fullName email role")
-                .sort({ createdAt: -1 })
+                .populate(
+                    "assignedCounselor",
+                    "fullName email role"
+                )
+                .populate(
+                    "createdBy",
+                    "fullName email role"
+                )
+                .sort({
+                    createdAt: -1,
+                })
                 .skip(skip)
                 .limit(pageLimit),
 
+            // Total matching leads for pagination.
             Lead.countDocuments(filter),
 
+            // Count all matching leads by status across all pages.
             Lead.aggregate([
-                { $match: filter },
+                {
+                    $match: statusCountFilter,
+                },
                 {
                     $group: {
                         _id: "$status",
-                        count: { $sum: 1 },
+                        count: {
+                            $sum: 1,
+                        },
                     },
                 },
             ]),
         ]);
 
+        // Default counts.
         const statusTotals = {
             contacted: 0,
             interested: 0,
@@ -227,16 +294,25 @@ exports.getLeads = async (req, res) => {
             not_interested: 0,
         };
 
+        // Map MongoDB aggregation results to the status totals.
         statusCounts.forEach(({ _id, count }) => {
-            if (Object.prototype.hasOwnProperty.call(statusTotals, _id)) {
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    statusTotals,
+                    _id
+                )
+            ) {
                 statusTotals[_id] = count;
             }
         });
 
-
         return res.status(200).json({
             success: true,
+
+            // Leads for the current page.
             data: leads,
+
+            // Pagination information.
             pagination: {
                 total,
                 page: currentPage,
@@ -246,6 +322,9 @@ exports.getLeads = async (req, res) => {
                     currentPage < Math.ceil(total / pageLimit),
                 hasPreviousPage: currentPage > 1,
             },
+
+            // Counts across all matching pages.
+            statusTotals,
         });
     } catch (error) {
         console.error("Get Leads Error:", error);
