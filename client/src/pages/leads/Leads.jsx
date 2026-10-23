@@ -60,14 +60,22 @@ const Leads = () => {
     const { user } = useAuth();
     const { companyId: routeCompanyId } = useParams();
 
-    // Super Admin does not have a company assigned.
-    // For Super Admin, use the company ID from the dashboard URL first.
-    // For Employee / Intern, fall back to their assigned company.
+    // =========================================================
+    // COMPANY SCOPE
+    // Super Admin must use the company selected in the URL.
+    // Never fall back to localStorage for Super Admin, because it
+    // may contain a stale ID from a previously selected company.
+    // Employees and interns are scoped to their assigned company.
+    // =========================================================
+    const userCompanyId =
+        typeof user?.company === "object"
+            ? user?.company?._id
+            : user?.company;
+
     const companyId =
-        routeCompanyId ||
-        user?.company?._id ||
-        user?.company ||
-        localStorage.getItem("companyId");
+        user?.role === "super_admin"
+            ? routeCompanyId
+            : userCompanyId || routeCompanyId;
 
     // =========================
     // STATES
@@ -245,13 +253,42 @@ const Leads = () => {
     // =========================
 
     useEffect(() => {
-        if (!companyId) return;
+        // Clear company-specific data immediately when the selected
+        // company changes, so old-company rows are not shown while the
+        // next company's request is loading.
+        setLeads([]);
+        setEmployeesAndInterns([]);
+        setStatusTotals({
+            contacted: 0,
+            interested: 0,
+            enrolled: 0,
+            not_interested: 0,
+        });
+        setPagination({
+            page: 1,
+            limit: 10,
+            total: 0,
+            pages: 1,
+            totalPages: 1,
+            hasNextPage: false,
+            hasPreviousPage: false,
+        });
+
+        if (!companyId) {
+            setLoading(false);
+            setUserLoading(false);
+            setError("No company selected. Please select a company and try again.");
+            return;
+        }
 
         fetchEmployeesAndInterns();
     }, [companyId]);
 
     useEffect(() => {
-        if (!companyId) return;
+        if (!companyId) {
+            setLoading(false);
+            return;
+        }
 
         fetchLeads();
     }, [
