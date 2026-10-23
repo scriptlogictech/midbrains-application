@@ -3,47 +3,51 @@ const Lead = require("../models/Lead");
 const User = require("../models/User");
 const LeadCounter = require("../models/LeadCounter");
 
-// Get the logged-in user's company ID
+// Get the logged-in user's company ID safely
 const getUserCompanyId = (req) => {
-    if (!req.user || !req.user.company) {
+    const company = req?.user?.company;
+
+    if (!company) {
         return null;
     }
 
-    if (req.user.company._id) {
-        return req.user.company._id.toString();
+    // Company is a populated document
+    if (typeof company === "object" && company._id) {
+        return company._id.toString();
     }
 
-    return req.user.company.toString();
+    // Company is an ObjectId or string
+    return company.toString();
 };
 
-// Check company access
+// Check whether the user can access a company
 const hasCompanyAccess = (req, companyId) => {
     if (!req.user || !companyId) {
         return false;
     }
 
+    // Super Admin can access all companies
     if (req.user.role === "super_admin") {
         return true;
     }
 
     const userCompanyId = getUserCompanyId(req);
 
-    if (!userCompanyId) {
-        return false;
-    }
-
-    return userCompanyId === companyId.toString();
+    return Boolean(
+        userCompanyId &&
+        userCompanyId === companyId.toString()
+    );
 };
 
-// Get target company
+// Determine the company for the leads query
 const getTargetCompany = (req, requestedCompanyId) => {
-    if (req.user.role === "super_admin") {
+    // Super Admin can select a company or view all companies
+    if (req.user?.role === "super_admin") {
         return requestedCompanyId || null;
     }
 
-    const userCompanyId = getUserCompanyId(req);
-
-    return userCompanyId || null;
+    // Employees and interns must use their assigned company
+    return getUserCompanyId(req);
 };
 
 // Get default follow-up date
