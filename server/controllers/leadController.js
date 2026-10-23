@@ -139,6 +139,19 @@ exports.getLeads = async (req, res) => {
         // Other users are always scoped to their assigned company.
         const targetCompanyId = getTargetCompany(req, companyId);
 
+
+
+        console.log("========== LEAD COMPANY DEBUG ==========");
+console.log("User ID:", req.user?._id?.toString());
+console.log("Role:", req.user?.role);
+console.log(
+    "Assigned Company:",
+    getUserCompanyId(req)
+);
+console.log("Requested Company:", companyId);
+console.log("Target Company:", targetCompanyId);
+console.log("========================================");
+
         if (companyId && !mongoose.Types.ObjectId.isValid(companyId)) {
             return res.status(400).json({
                 success: false,
@@ -166,6 +179,8 @@ exports.getLeads = async (req, res) => {
         if (targetCompanyId) {
             filter.company = targetCompanyId;
         }
+
+        console.log("MongoDB Lead Filter:", filter);
 
         if (search.trim()) {
             filter.$or = [
