@@ -62,10 +62,11 @@ const Leads = () => {
 
     // =========================================================
     // COMPANY SCOPE
-    // Super Admin must use the company selected in the URL.
-    // Never fall back to localStorage for Super Admin, because it
-    // may contain a stale ID from a previously selected company.
+    // Super Admin sees leads from all companies by default.
     // Employees and interns are scoped to their assigned company.
+    // Keep routeCompanyId for company-specific actions such as
+    // creating a lead and loading the employee/intern list.
+    // The backend independently enforces this access scope.
     // =========================================================
     const userCompanyId =
         typeof user?.company === "object"
@@ -76,6 +77,11 @@ const Leads = () => {
         user?.role === "super_admin"
             ? routeCompanyId
             : userCompanyId || routeCompanyId;
+
+    // Do not send a company filter for Super Admin's default list.
+    // Axios omits an undefined companyId query parameter.
+    const leadFilterCompanyId =
+        user?.role === "super_admin" ? undefined : companyId;
 
     // =========================
     // STATES
@@ -163,13 +169,13 @@ const Leads = () => {
     // =========================
 
     const fetchLeads = async () => {
-        if (!companyId) return;
+        if (user?.role !== "super_admin" && !leadFilterCompanyId) return;
 
         try {
             setLoading(true);
             setError("");
 
-            const response = await getLeads(companyId, filters);
+            const response = await getLeads(leadFilterCompanyId, filters);
 
             const leadData = response?.data || response?.leads || [];
 
@@ -285,14 +291,15 @@ const Leads = () => {
     }, [companyId]);
 
     useEffect(() => {
-        if (!companyId) {
+        if (user?.role !== "super_admin" && !leadFilterCompanyId) {
             setLoading(false);
             return;
         }
 
         fetchLeads();
     }, [
-        companyId,
+        leadFilterCompanyId,
+        user?.role,
         filters.search,
         filters.status,
         filters.priority,

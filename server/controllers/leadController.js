@@ -131,26 +131,37 @@ exports.getLeads = async (req, res) => {
             companyId,
         } = req.query;
 
+        // Super Admin can view all companies or filter by companyId.
+        // Other users are always scoped to their assigned company.
         const targetCompanyId = getTargetCompany(req, companyId);
 
-        if (!targetCompanyId) {
+        if (companyId && !mongoose.Types.ObjectId.isValid(companyId)) {
             return res.status(400).json({
                 success: false,
-                message: "Company ID is required",
+                message: "Invalid company ID",
             });
         }
 
-        if (!hasCompanyAccess(req, targetCompanyId)) {
+        if (req.user.role !== "super_admin" && !targetCompanyId) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not assigned to a company",
+            });
+        }
+
+        if (targetCompanyId && !hasCompanyAccess(req, targetCompanyId)) {
             return res.status(403).json({
                 success: false,
                 message: "You do not have access to this company",
             });
         }
 
-        // Main filter for the leads displayed in the table.
-        const filter = {
-            company: targetCompanyId,
-        };
+        // No company condition means Super Admin sees all companies.
+        const filter = {};
+
+        if (targetCompanyId) {
+            filter.company = targetCompanyId;
+        }
 
         if (search.trim()) {
             filter.$or = [
@@ -228,24 +239,14 @@ exports.getLeads = async (req, res) => {
 
         const skip = (currentPage - 1) * pageLimit;
 
-        /*
-         * Status totals use the same company, search, priority,
-         * inquiry type, counselor, and date filters.
-         *
-         * Aggregation pipelines do not automatically cast string IDs
-         * to MongoDB ObjectIds, unlike regular Mongoose queries.
-         *
-         * We explicitly cast the company ID and counselor ID so
-         * the aggregation matches the correct documents.
-         *
-         * Pagination is not applied, so counts include every page.
-         */
-        const statusCountFilter = {
-            ...filter,
-            company: new mongoose.Types.ObjectId(targetCompanyId),
-        };
+        // Build status totals using the same filters, excluding pagination.
+        const statusCountFilter = { ...filter };
 
-        // Cast the counselor ID when that filter is active.
+        if (targetCompanyId) {
+            statusCountFilter.company =
+                new mongoose.Types.ObjectId(targetCompanyId);
+        }
+
         if (
             assignedCounselor &&
             mongoose.Types.ObjectId.isValid(assignedCounselor)
@@ -254,16 +255,10 @@ exports.getLeads = async (req, res) => {
                 new mongoose.Types.ObjectId(assignedCounselor);
         }
 
-        // Remove only the selected status filter so all status
-        // categories can display their counts together.
+        // Count each status regardless of the selected status filter.
         delete statusCountFilter.status;
 
-        const [
-            leads,
-            total,
-            statusCounts,
-        ] = await Promise.all([
-            // Get leads for the current page.
+        const [leads, total, statusCounts] = await Promise.all([
             Lead.find(filter)
                 .populate("company", "companyName companyCode")
                 .populate(
@@ -274,16 +269,12 @@ exports.getLeads = async (req, res) => {
                     "createdBy",
                     "fullName email role"
                 )
-                .sort({
-                    createdAt: -1,
-                })
+                .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(pageLimit),
 
-            // Total matching leads for pagination.
             Lead.countDocuments(filter),
 
-            // Count all matching leads by status across all pages.
             Lead.aggregate([
                 {
                     $match: statusCountFilter,
@@ -291,15 +282,12 @@ exports.getLeads = async (req, res) => {
                 {
                     $group: {
                         _id: "$status",
-                        count: {
-                            $sum: 1,
-                        },
+                        count: { $sum: 1 },
                     },
                 },
             ]),
         ]);
 
-        // Default counts.
         const statusTotals = {
             contacted: 0,
             interested: 0,
@@ -307,7 +295,6 @@ exports.getLeads = async (req, res) => {
             not_interested: 0,
         };
 
-        // Map MongoDB aggregation results to the status totals.
         statusCounts.forEach(({ _id, count }) => {
             if (
                 Object.prototype.hasOwnProperty.call(
@@ -321,11 +308,7 @@ exports.getLeads = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-
-            // Leads for the current page.
             data: leads,
-
-            // Pagination information.
             pagination: {
                 total,
                 page: currentPage,
@@ -335,8 +318,6 @@ exports.getLeads = async (req, res) => {
                     currentPage < Math.ceil(total / pageLimit),
                 hasPreviousPage: currentPage > 1,
             },
-
-            // Counts across all matching pages.
             statusTotals,
         });
     } catch (error) {
@@ -349,6 +330,9 @@ exports.getLeads = async (req, res) => {
         });
     }
 };
+
+
+
 
 // CREATE LEAD
 exports.createLead = async (req, res) => {
@@ -409,6 +393,13 @@ exports.createLead = async (req, res) => {
             targetCompany = userCompanyId;
         }
 
+        if (!mongoose.Types.ObjectId.isValid(targetCompany)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid company ID",
+            });
+        }
+
         if (!hasCompanyAccess(req, targetCompany)) {
             return res.status(403).json({
                 success: false,
@@ -445,7 +436,7 @@ exports.createLead = async (req, res) => {
             });
         }
 
-        const actualNextFollowUpDate = nextFollowUpDate
+        let actualNextFollowUpDate = nextFollowUpDate
             ? new Date(nextFollowUpDate)
             : getDefaultFollowUpDate(actualLeadDate);
 
@@ -454,7 +445,7 @@ exports.createLead = async (req, res) => {
         ) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid follow-up date",
+                message: "Invalid next follow-up date",
             });
         }
 
@@ -466,36 +457,41 @@ exports.createLead = async (req, res) => {
             serialNumber,
             fullName: fullName.trim(),
             contactNumber: contactNumber.trim(),
-            email: email
-                ? email.trim().toLowerCase()
-                : undefined,
-            city,
+            email: email?.trim() || undefined,
+            city: city?.trim() || undefined,
             leadDate: actualLeadDate,
-            courseInterested,
-            inquiryType,
-            leadSource,
-            assignedCounselor,
-            priority,
-            status: status ?? "",
+            courseInterested:
+                courseInterested?.trim() || undefined,
+            inquiryType: inquiryType || "course",
+            leadSource: leadSource || "other",
+            assignedCounselor: assignedCounselor || undefined,
+            priority: priority || "medium",
+            status: status || "contacted",
             nextFollowUpDate: actualNextFollowUpDate,
-            notes,
-            expectedFees,
-            admissionDate,
+            notes: notes?.trim() || undefined,
+            expectedFees:
+                expectedFees !== undefined &&
+                expectedFees !== ""
+                    ? Number(expectedFees)
+                    : undefined,
+            admissionDate: admissionDate
+                ? new Date(admissionDate)
+                : undefined,
             createdBy: req.user._id,
         });
 
         const populatedLead = await Lead.findById(lead._id)
+            .populate("company", "companyName companyCode")
             .populate(
                 "assignedCounselor",
                 "fullName email role"
             )
-            .populate("createdBy", "fullName email role")
-            .populate("company", "companyName companyCode");
+            .populate("createdBy", "fullName email role");
 
         return res.status(201).json({
             success: true,
             message: "Lead created successfully",
-            lead: populatedLead,
+            data: populatedLead,
         });
     } catch (error) {
         console.error("Create Lead Error:", error);
@@ -530,6 +526,7 @@ exports.updateLead = async (req, res) => {
         }
 
         const {
+            company,
             fullName,
             contactNumber,
             email,
@@ -546,6 +543,40 @@ exports.updateLead = async (req, res) => {
             expectedFees,
             admissionDate,
         } = req.body || {};
+
+        // Prevent moving a lead to a different company.
+        if (
+            company &&
+            company.toString() !== lead.company.toString()
+        ) {
+            return res.status(403).json({
+                success: false,
+                message: "A lead cannot be moved to another company",
+            });
+        }
+
+        if (
+            fullName !== undefined &&
+            (typeof fullName !== "string" || !fullName.trim())
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Full name cannot be empty",
+            });
+        }
+
+        if (
+            contactNumber !== undefined &&
+            (
+                typeof contactNumber !== "string" ||
+                !contactNumber.trim()
+            )
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Contact number cannot be empty",
+            });
+        }
 
         if (assignedCounselor) {
             const assignedUser = await User.findOne({
@@ -564,143 +595,144 @@ exports.updateLead = async (req, res) => {
             }
         }
 
-        const updateData = {};
+        const updates = {};
 
         if (fullName !== undefined) {
-            if (
-                typeof fullName !== "string" ||
-                !fullName.trim()
-            ) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Full name cannot be empty",
-                });
-            }
-
-            updateData.fullName = fullName.trim();
+            updates.fullName = fullName.trim();
         }
 
         if (contactNumber !== undefined) {
-            if (
-                typeof contactNumber !== "string" ||
-                !contactNumber.trim()
-            ) {
-                return res.status(400).json({
-                    success: false,
-                    message:
-                        "Contact number cannot be empty",
-                });
-            }
-
-            updateData.contactNumber = contactNumber.trim();
+            updates.contactNumber = contactNumber.trim();
         }
 
         if (email !== undefined) {
-            updateData.email = email
-                ? email.trim().toLowerCase()
-                : "";
+            updates.email = email.trim();
         }
 
-        if (city !== undefined) updateData.city = city;
+        if (city !== undefined) {
+            updates.city = city.trim();
+        }
 
         if (leadDate !== undefined) {
-            updateData.leadDate = leadDate;
-        }
+            const parsedDate = new Date(leadDate);
 
-        if (courseInterested !== undefined) {
-            updateData.courseInterested = courseInterested;
-        }
-
-        if (inquiryType !== undefined) {
-            updateData.inquiryType = inquiryType;
-        }
-
-        if (leadSource !== undefined) {
-            updateData.leadSource = leadSource;
-        }
-
-        if (assignedCounselor !== undefined) {
-            updateData.assignedCounselor = assignedCounselor;
-        }
-
-        if (priority !== undefined) {
-            updateData.priority = priority;
-        }
-
-        if (status !== undefined) {
-            const allowedStatuses = [
-                "",
-                "contacted",
-                "interested",
-                "not_interested",
-                "enrolled",
-            ];
-
-            if (!allowedStatuses.includes(status)) {
+            if (Number.isNaN(parsedDate.getTime())) {
                 return res.status(400).json({
                     success: false,
-                    message: "Invalid status",
-                    allowedStatuses,
+                    message: "Invalid lead date",
                 });
             }
 
-            updateData.status = status;
+            updates.leadDate = parsedDate;
         }
 
-        if (notes !== undefined) updateData.notes = notes;
-
-        if (expectedFees !== undefined) {
-            updateData.expectedFees = expectedFees;
+        if (courseInterested !== undefined) {
+            updates.courseInterested = courseInterested.trim();
         }
 
-        if (admissionDate !== undefined) {
-            updateData.admissionDate = admissionDate;
+        if (inquiryType !== undefined) {
+            updates.inquiryType = inquiryType;
+        }
+
+        if (leadSource !== undefined) {
+            updates.leadSource = leadSource;
+        }
+
+        if (assignedCounselor !== undefined) {
+            updates.assignedCounselor =
+                assignedCounselor || null;
+        }
+
+        if (priority !== undefined) {
+            updates.priority = priority;
+        }
+
+        if (status !== undefined) {
+            updates.status = status;
         }
 
         if (nextFollowUpDate !== undefined) {
-            if (nextFollowUpDate) {
+            if (nextFollowUpDate === "" || nextFollowUpDate === null) {
+                updates.nextFollowUpDate = null;
+            } else {
                 const parsedDate = new Date(nextFollowUpDate);
 
                 if (Number.isNaN(parsedDate.getTime())) {
                     return res.status(400).json({
                         success: false,
-                        message: "Invalid follow-up date",
+                        message: "Invalid next follow-up date",
                     });
                 }
 
-                updateData.nextFollowUpDate = parsedDate;
-            } else {
-                const baseDate =
-                    leadDate !== undefined
-                        ? new Date(leadDate)
-                        : lead.leadDate ||
-                        lead.createdAt ||
-                        new Date();
-
-                updateData.nextFollowUpDate =
-                    getDefaultFollowUpDate(baseDate);
+                updates.nextFollowUpDate = parsedDate;
             }
+        }
+
+        if (notes !== undefined) {
+            updates.notes = notes.trim();
+        }
+
+        if (expectedFees !== undefined) {
+            if (expectedFees === "" || expectedFees === null) {
+                updates.expectedFees = null;
+            } else {
+                const fees = Number(expectedFees);
+
+                if (!Number.isFinite(fees) || fees < 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message:
+                            "Expected fees must be a valid non-negative number",
+                    });
+                }
+
+                updates.expectedFees = fees;
+            }
+        }
+
+        if (admissionDate !== undefined) {
+            if (admissionDate === "" || admissionDate === null) {
+                updates.admissionDate = null;
+            } else {
+                const parsedDate = new Date(admissionDate);
+
+                if (Number.isNaN(parsedDate.getTime())) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Invalid admission date",
+                    });
+                }
+
+                updates.admissionDate = parsedDate;
+            }
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "No valid changes provided",
+            });
         }
 
         const updatedLead = await Lead.findByIdAndUpdate(
             leadId,
-            updateData,
+            { $set: updates },
             {
                 new: true,
                 runValidators: true,
             }
         )
+            .populate("company", "companyName companyCode")
             .populate(
                 "assignedCounselor",
                 "fullName email role"
             )
-            .populate("createdBy", "fullName email role")
-            .populate("company", "companyName companyCode");
+            .populate("createdBy", "fullName email role");
 
         return res.status(200).json({
             success: true,
             message: "Lead updated successfully",
-            lead: updatedLead,
+            data: updatedLead,
         });
     } catch (error) {
         console.error("Update Lead Error:", error);
@@ -712,6 +744,8 @@ exports.updateLead = async (req, res) => {
         });
     }
 };
+
+
 
 // UPDATE LEAD STATUS
 exports.updateLeadStatus = async (req, res) => {
@@ -727,12 +761,7 @@ exports.updateLeadStatus = async (req, res) => {
             "enrolled",
         ];
 
-        if (
-            status === undefined ||
-            status === null ||
-            typeof status !== "string" ||
-            !allowedStatuses.includes(status)
-        ) {
+        if (!allowedStatuses.includes(status)) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid status",
@@ -1015,6 +1044,8 @@ exports.updateCommunication = async (req, res) => {
         });
     }
 };
+
+
 
 // DELETE COMMUNICATION
 exports.deleteCommunication = async (req, res) => {
