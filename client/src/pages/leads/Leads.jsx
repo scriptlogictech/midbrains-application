@@ -78,10 +78,10 @@ const Leads = () => {
             ? routeCompanyId
             : userCompanyId || routeCompanyId;
 
-    // Do not send a company filter for Super Admin's default list.
-    // Axios omits an undefined companyId query parameter.
-    const leadFilterCompanyId =
-        user?.role === "super_admin" ? undefined : companyId;
+    // Use the selected company ID when viewing a company-specific page.
+    // On the global Super Admin leads page, companyId is undefined, so all
+    // companies' leads are returned. The backend enforces access independently.
+    const leadFilterCompanyId = companyId || undefined;
 
     // =========================
     // STATES
