@@ -1262,7 +1262,7 @@ const handlePageChange = (page) => {
                                                         >
                                                             <i className="bi bi-chat-left-text"></i>
                                                         </button>
-                                                        {/* <button
+                                                        <button
                                                             type="button"
                                                             className="icon-btn lead-delete-btn"
                                                             title="Delete Lead"
@@ -1270,7 +1270,7 @@ const handlePageChange = (page) => {
                                                             onClick={() => handleDeleteLead(lead)}
                                                         >
                                                             <i className="bi bi-trash3"></i>
-                                                        </button> */}
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
