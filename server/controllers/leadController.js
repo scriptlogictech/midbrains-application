@@ -46,8 +46,9 @@ const getTargetCompany = (req, requestedCompanyId) => {
         return requestedCompanyId || null;
     }
 
-    // Employees and interns must use their assigned company
-    return getUserCompanyId(req);
+    // Employees/interns: honour the selected company if provided,
+    // otherwise fall back to their assigned company
+    return requestedCompanyId || getUserCompanyId(req);
 };
 
 // Get default follow-up date
@@ -120,6 +121,7 @@ const getNextLeadSerialNumber = async (companyId) => {
 };
 
 // GET LEADS
+// GET LEADS
 exports.getLeads = async (req, res) => {
     try {
         const {
@@ -135,23 +137,6 @@ exports.getLeads = async (req, res) => {
             companyId,
         } = req.query;
 
-        // Super Admin can view all companies or filter by companyId.
-        // Other users are always scoped to their assigned company.
-        const targetCompanyId = getTargetCompany(req, companyId);
-
-
-
-        console.log("========== LEAD COMPANY DEBUG ==========");
-console.log("User ID:", req.user?._id?.toString());
-console.log("Role:", req.user?.role);
-console.log(
-    "Assigned Company:",
-    getUserCompanyId(req)
-);
-console.log("Requested Company:", companyId);
-console.log("Target Company:", targetCompanyId);
-console.log("========================================");
-
         if (companyId && !mongoose.Types.ObjectId.isValid(companyId)) {
             return res.status(400).json({
                 success: false,
@@ -159,10 +144,49 @@ console.log("========================================");
             });
         }
 
+        // Super Admin can view all companies or filter by companyId.
+        // Employees/interns can select a company, but only see leads
+        // of their own assigned company.
+        const targetCompanyId = getTargetCompany(req, companyId);
+
+        console.log("========== LEAD COMPANY DEBUG ==========");
+        console.log("User ID:", req.user?._id?.toString());
+        console.log("Role:", req.user?.role);
+        console.log("Assigned Company:", getUserCompanyId(req));
+        console.log("Requested Company:", companyId);
+        console.log("Target Company:", targetCompanyId);
+        console.log("========================================");
+
         if (req.user.role !== "super_admin" && !targetCompanyId) {
             return res.status(403).json({
                 success: false,
                 message: "You are not assigned to a company",
+            });
+        }
+
+        // NEW: employee/intern selected a company that is not theirs -> 0 leads
+        if (
+            req.user.role !== "super_admin" &&
+            companyId &&
+            companyId.toString() !== getUserCompanyId(req)
+        ) {
+            return res.status(200).json({
+                success: true,
+                data: [],
+                pagination: {
+                    total: 0,
+                    page: 1,
+                    limit: Number(limit) || 20,
+                    totalPages: 0,
+                    hasNextPage: false,
+                    hasPreviousPage: false,
+                },
+                statusTotals: {
+                    contacted: 0,
+                    interested: 0,
+                    enrolled: 0,
+                    not_interested: 0,
+                },
             });
         }
 
@@ -184,36 +208,11 @@ console.log("========================================");
 
         if (search.trim()) {
             filter.$or = [
-                {
-                    fullName: {
-                        $regex: search.trim(),
-                        $options: "i",
-                    },
-                },
-                {
-                    contactNumber: {
-                        $regex: search.trim(),
-                        $options: "i",
-                    },
-                },
-                {
-                    email: {
-                        $regex: search.trim(),
-                        $options: "i",
-                    },
-                },
-                {
-                    city: {
-                        $regex: search.trim(),
-                        $options: "i",
-                    },
-                },
-                {
-                    courseInterested: {
-                        $regex: search.trim(),
-                        $options: "i",
-                    },
-                },
+                { fullName: { $regex: search.trim(), $options: "i" } },
+                { contactNumber: { $regex: search.trim(), $options: "i" } },
+                { email: { $regex: search.trim(), $options: "i" } },
+                { city: { $regex: search.trim(), $options: "i" } },
+                { courseInterested: { $regex: search.trim(), $options: "i" } },
             ];
         }
 
@@ -237,15 +236,11 @@ console.log("========================================");
             filter.leadDate = {};
 
             if (startDate) {
-                filter.leadDate.$gte = new Date(
-                    `${startDate}T00:00:00`
-                );
+                filter.leadDate.$gte = new Date(`${startDate}T00:00:00`);
             }
 
             if (endDate) {
-                filter.leadDate.$lte = new Date(
-                    `${endDate}T23:59:59.999`
-                );
+                filter.leadDate.$lte = new Date(`${endDate}T23:59:59.999`);
             }
         }
 
@@ -280,14 +275,8 @@ console.log("========================================");
         const [leads, total, statusCounts] = await Promise.all([
             Lead.find(filter)
                 .populate("company", "companyName companyCode")
-                .populate(
-                    "assignedCounselor",
-                    "fullName email role"
-                )
-                .populate(
-                    "createdBy",
-                    "fullName email role"
-                )
+                .populate("assignedCounselor", "fullName email role")
+                .populate("createdBy", "fullName email role")
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(pageLimit),
@@ -295,9 +284,7 @@ console.log("========================================");
             Lead.countDocuments(filter),
 
             Lead.aggregate([
-                {
-                    $match: statusCountFilter,
-                },
+                { $match: statusCountFilter },
                 {
                     $group: {
                         _id: "$status",
@@ -315,12 +302,7 @@ console.log("========================================");
         };
 
         statusCounts.forEach(({ _id, count }) => {
-            if (
-                Object.prototype.hasOwnProperty.call(
-                    statusTotals,
-                    _id
-                )
-            ) {
+            if (Object.prototype.hasOwnProperty.call(statusTotals, _id)) {
                 statusTotals[_id] = count;
             }
         });
@@ -333,8 +315,7 @@ console.log("========================================");
                 page: currentPage,
                 limit: pageLimit,
                 totalPages: Math.ceil(total / pageLimit),
-                hasNextPage:
-                    currentPage < Math.ceil(total / pageLimit),
+                hasNextPage: currentPage < Math.ceil(total / pageLimit),
                 hasPreviousPage: currentPage > 1,
             },
             statusTotals,

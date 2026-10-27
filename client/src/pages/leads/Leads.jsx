@@ -74,9 +74,16 @@ const Leads = () => {
             : user?.company;
 
     const companyId =
-        user?.role === "super_admin"
-            ? routeCompanyId
-            : userCompanyId || routeCompanyId;
+    user?.role === "super_admin"
+        ? routeCompanyId
+        : routeCompanyId || userCompanyId;
+
+// True when an employee/intern is viewing a company that isn't theirs
+const isForeignCompany =
+    user?.role !== "super_admin" &&
+    Boolean(routeCompanyId) &&
+    Boolean(userCompanyId) &&
+    String(routeCompanyId) !== String(userCompanyId);
 
     // Use the selected company ID when viewing a company-specific page.
     // On the global Super Admin leads page, companyId is undefined, so all
@@ -899,13 +906,15 @@ const handlePageChange = (page) => {
                     </button>
 
                     <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={handleAddLead}
-                    >
-                        <i className="bi bi-plus-lg"></i>
-                        Add Lead
-                    </button>
+    type="button"
+    className="btn btn-primary"
+    onClick={handleAddLead}
+    disabled={isForeignCompany}
+    title={isForeignCompany ? "You can only add leads to your own company" : ""}
+>
+    <i className="bi bi-plus-lg"></i>
+    Add Lead
+</button>
                 </div>
             </div>
 
@@ -1080,23 +1089,25 @@ const handlePageChange = (page) => {
                     </div>
                 ) : leads.length === 0 ? (
                     <div className="empty-state">
-                        <i className="bi bi-people"></i>
+    <i className="bi bi-people"></i>
 
-                        <h3>No Leads Found</h3>
+    <h3>No Leads Found</h3>
 
-                        <p>
-                            No leads match your current
-                            filters.
-                        </p>
+    <p>
+        No leads match your current
+        filters.
+    </p>
 
-                        <button
-                            className="btn btn-primary"
-                            onClick={handleAddLead}
-                        >
-                            <i className="bi bi-plus-lg"></i>
-                            Add First Lead
-                        </button>
-                    </div>
+    <button
+        className="btn btn-primary"
+        onClick={handleAddLead}
+        disabled={isForeignCompany}
+        title={isForeignCompany ? "You can only add leads to your own company" : ""}
+    >
+        <i className="bi bi-plus-lg"></i>
+        Add First Lead
+    </button>
+</div>
                 ) : (
                     <>
                         <div className="table-responsive">
