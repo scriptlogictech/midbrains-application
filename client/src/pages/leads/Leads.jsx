@@ -59,6 +59,7 @@ const getLocalDateInputValue = (date = new Date()) => {
 const Leads = () => {
     const { user } = useAuth();
     const { companyId: routeCompanyId } = useParams();
+    const isIntern = user?.role === "intern";
 
     // =========================================================
     // COMPANY SCOPE
@@ -561,11 +562,13 @@ const isForeignCompany =
     };
 
     const handleEditCommunication = (item) => {
+        // Interns receive only communication record IDs from the backend.
+        // Start with blank fields so no existing communication content is exposed.
         setEditingCommunication(item);
         setCommunicationData({
-            type: item.type || "call",
-            message: item.message || "",
-            date: item.date
+            type: isIntern ? "call" : (item.type || "call"),
+            message: isIntern ? "" : (item.message || ""),
+            date: !isIntern && item.date
                 ? new Date(item.date).toISOString().slice(0, 10)
                 : new Date().toISOString().slice(0, 10),
         });
@@ -1122,7 +1125,7 @@ const handlePageChange = (page) => {
                                         <th>Assigned To</th>
                                         <th>Status</th>
                                         <th>Next Follow-up</th>
-                                        <th>Communication History</th>
+                                        {!isIntern && <th>Communication History</th>}
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -1207,40 +1210,41 @@ const handlePageChange = (page) => {
                                                 {/* Next Follow-up */}
                                                 <td>{formatDate(lead.nextFollowUpDate)}</td>
 
-                                                {/* Communication History */}
-                                                <td>
-                                                    {lead.communicationHistory?.length ? (
-                                                        <div className="main-communication-history">
-                                                            {lead.communicationHistory.map(
-                                                                (item, communicationIndex) => (
-                                                                    <div
-                                                                        className="main-communication-item"
-                                                                        key={
-                                                                            item._id ||
-                                                                            `${lead._id || lead.id}-communication-${communicationIndex}`
-                                                                        }
-                                                                    >
-                                                                        <span className="main-communication-type-icon" title={getCommunicationMeta(item.type).label}>
-                                                                            <i className={`bi ${getCommunicationMeta(item.type).icon}`}></i>
-                                                                        </span>
-                                                                        {item.date && (
-                                                                            <span className="main-communication-date">
-                                                                                {formatDate(item.date)}
+                                                {!isIntern && (
+                                                    <td>
+                                                        {lead.communicationHistory?.length ? (
+                                                            <div className="main-communication-history">
+                                                                {lead.communicationHistory.map(
+                                                                    (item, communicationIndex) => (
+                                                                        <div
+                                                                            className="main-communication-item"
+                                                                            key={
+                                                                                item._id ||
+                                                                                `${lead._id || lead.id}-communication-${communicationIndex}`
+                                                                            }
+                                                                        >
+                                                                            <span className="main-communication-type-icon" title={getCommunicationMeta(item.type).label}>
+                                                                                <i className={`bi ${getCommunicationMeta(item.type).icon}`}></i>
                                                                             </span>
-                                                                        )}
-                                                                        <span className="main-communication-message">
-                                                                            {item.message || "No message"}
-                                                                        </span>
-                                                                    </div>
-                                                                )
-                                                            )}
-                                                        </div>
-                                                    ) : (
-                                                        <span className="no-communication">
-                                                            No communication
-                                                        </span>
-                                                    )}
-                                                </td>
+                                                                            {item.date && (
+                                                                                <span className="main-communication-date">
+                                                                                    {formatDate(item.date)}
+                                                                                </span>
+                                                                            )}
+                                                                            <span className="main-communication-message">
+                                                                                {item.message || "No message"}
+                                                                            </span>
+                                                                        </div>
+                                                                    )
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="no-communication">
+                                                                No communication
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                )}
 
                                                 {/* Actions */}
                                                 <td>
@@ -1643,6 +1647,25 @@ const handlePageChange = (page) => {
                                     </div>
 
                                     {selectedLead?._id === editingLead._id && selectedLead.communicationHistory?.length ? (
+                                        isIntern ? (
+                                            <div className="communication-list">
+                                                {selectedLead.communicationHistory.map((item, index) => (
+                                                    <div className="communication-item" key={item._id || index}>
+                                                        <div className="communication-content">
+                                                            <strong>Communication record {index + 1}</strong>
+                                                            <div className="communication-entry-actions">
+                                                                <button type="button" className="icon-btn" title="Edit communication record" onClick={() => handleEditCommunication(item)}>
+                                                                    <i className="bi bi-pencil"></i>
+                                                                </button>
+                                                                <button type="button" className="icon-btn communication-delete-btn" title="Delete communication record" onClick={() => handleDeleteCommunication(item)}>
+                                                                    <i className="bi bi-trash3"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
                                         <div className="communication-list">
                                             {selectedLead.communicationHistory.map((item, index) => (
                                                 <div className="communication-item" key={item._id || index}>
@@ -1681,6 +1704,7 @@ const handlePageChange = (page) => {
                                                 </div>
                                             ))}
                                         </div>
+                                        )
                                     ) : (
                                         <p className="empty-text">No communication history available.</p>
                                     )}
@@ -1871,67 +1895,63 @@ const handlePageChange = (page) => {
                                 </p>
                             </div>
 
-                            {/* COMMUNICATION HISTORY */}
-
-                            <div className="detail-section communication-history-section">
-                                <div className="section-title-row">
-                                    <h3>Communication History</h3>
-
-                                    <button
-                                        className="btn btn-primary btn-sm"
-                                        onClick={() => {
-                                            setShowDetailsModal(false);
-                                            handleOpenCommunication(selectedLead);
-                                        }}
-                                    >
-                                        <i className="bi bi-plus-lg"></i>
-                                        Add
-                                    </button>
-                                </div>
-
-                                {selectedLead.communicationHistory?.length ? (
-                                    <div className="communication-list">
-                                        {selectedLead.communicationHistory.map(
-                                            (item, index) => (
-                                                <div
-                                                    className="communication-item"
-                                                    key={item._id || index}
-                                                >
+                            {/* COMMUNICATION HISTORY: hidden from Interns; generic record controls remain available */}
+                            {!isIntern ? (
+                                <div className="detail-section communication-history-section">
+                                    <div className="section-title-row">
+                                        <h3>Communication History</h3>
+                                        <button className="btn btn-primary btn-sm" onClick={() => { setShowDetailsModal(false); handleOpenCommunication(selectedLead); }}>
+                                            <i className="bi bi-plus-lg"></i> Add
+                                        </button>
+                                    </div>
+                                    {selectedLead.communicationHistory?.length ? (
+                                        <div className="communication-list">
+                                            {selectedLead.communicationHistory.map((item, index) => (
+                                                <div className="communication-item" key={item._id || index}>
                                                     <div className="communication-type-icon" title={getCommunicationMeta(item.type).label}>
                                                         <i className={`bi ${getCommunicationMeta(item.type).icon}`}></i>
                                                     </div>
-                                                    {item.date && (
-                                                        <span className="communication-date-inline">
-                                                            {formatDate(item.date)}
-                                                        </span>
-                                                    )}
-
+                                                    {item.date && <span className="communication-date-inline">{formatDate(item.date)}</span>}
                                                     <div className="communication-content">
                                                         <div className="communication-message-row">
-                                                            <div className="communication-entry-heading">
-                                                                <strong>{getCommunicationMeta(item.type).label}</strong>
-                                                            </div>
+                                                            <div className="communication-entry-heading"><strong>{getCommunicationMeta(item.type).label}</strong></div>
                                                             <p>{item.message || "No message"}</p>
                                                         </div>
                                                         <div className="communication-entry-actions">
-                                                            <button type="button" className="icon-btn" title="Edit communication" onClick={() => handleEditCommunication(item)}>
-                                                                <i className="bi bi-pencil"></i>
-                                                            </button>
-                                                            <button type="button" className="icon-btn communication-delete-btn" title="Delete communication" onClick={() => handleDeleteCommunication(item)}>
-                                                                <i className="bi bi-trash3"></i>
-                                                            </button>
+                                                            <button type="button" className="icon-btn" title="Edit communication" onClick={() => handleEditCommunication(item)}><i className="bi bi-pencil"></i></button>
+                                                            <button type="button" className="icon-btn communication-delete-btn" title="Delete communication" onClick={() => handleDeleteCommunication(item)}><i className="bi bi-trash3"></i></button>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            )
-                                        )}
+                                            ))}
+                                        </div>
+                                    ) : <p className="empty-text">No communication history available.</p>}
+                                </div>
+                            ) : (
+                                <div className="detail-section">
+                                    <div className="section-title-row">
+                                        <h3>Manage Communication Records</h3>
+                                        <button className="btn btn-primary btn-sm" onClick={() => { setShowDetailsModal(false); handleOpenCommunication(selectedLead); }}>
+                                            <i className="bi bi-plus-lg"></i> Add
+                                        </button>
                                     </div>
-                                ) : (
-                                    <p className="empty-text">
-                                        No communication history available.
-                                    </p>
-                                )}
-                            </div>
+                                    {selectedLead.communicationHistory?.length ? (
+                                        <div className="communication-list">
+                                            {selectedLead.communicationHistory.map((item, index) => (
+                                                <div className="communication-item" key={item._id || index}>
+                                                    <div className="communication-content">
+                                                        <strong>Communication record {index + 1}</strong>
+                                                        <div className="communication-entry-actions">
+                                                            <button type="button" className="icon-btn" title="Edit communication record" onClick={() => handleEditCommunication(item)}><i className="bi bi-pencil"></i></button>
+                                                            <button type="button" className="icon-btn communication-delete-btn" title="Delete communication record" onClick={() => handleDeleteCommunication(item)}><i className="bi bi-trash3"></i></button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : <p className="empty-text">No communication records available.</p>}
+                                </div>
+                            )}
 
                         </div>
 

@@ -3,33 +3,47 @@ const Lead = require("../models/Lead");
 const User = require("../models/User");
 const LeadCounter = require("../models/LeadCounter");
 
+// Remove communication content from Intern API responses while retaining
+// record IDs so Interns can still edit or delete a record without viewing it.
+const sanitizeLeadForRole = (req, lead) => {
+    if (!lead) return lead;
+
+    const plainLead =
+        typeof lead.toObject === "function"
+            ? lead.toObject()
+            : { ...lead };
+
+    if (req.user?.role === "intern") {
+        plainLead.communicationHistory =
+            (plainLead.communicationHistory || []).map((item) => ({
+                _id: item?._id,
+            }));
+    }
+
+    return plainLead;
+};
+
+const sanitizeLeadsForRole = (req, leads) =>
+    (leads || []).map((lead) => sanitizeLeadForRole(req, lead));
+
 // Get the logged-in user's company ID safely
 const getUserCompanyId = (req) => {
     const company = req?.user?.company;
 
-    if (!company) {
-        return null;
-    }
+    if (!company) return null;
 
-    // Company is a populated document
     if (typeof company === "object" && company._id) {
         return company._id.toString();
     }
 
-    // Company is an ObjectId or string
     return company.toString();
 };
 
 // Check whether the user can access a company
 const hasCompanyAccess = (req, companyId) => {
-    if (!req.user || !companyId) {
-        return false;
-    }
+    if (!req.user || !companyId) return false;
 
-    // Super Admin can access all companies
-    if (req.user.role === "super_admin") {
-        return true;
-    }
+    if (req.user.role === "super_admin") return true;
 
     const userCompanyId = getUserCompanyId(req);
 
@@ -41,13 +55,10 @@ const hasCompanyAccess = (req, companyId) => {
 
 // Determine the company for the leads query
 const getTargetCompany = (req, requestedCompanyId) => {
-    // Super Admin can select a company or view all companies
     if (req.user?.role === "super_admin") {
         return requestedCompanyId || null;
     }
 
-    // Employees/interns: honour the selected company if provided,
-    // otherwise fall back to their assigned company
     return requestedCompanyId || getUserCompanyId(req);
 };
 
@@ -57,7 +68,6 @@ const getDefaultFollowUpDate = (leadDate = new Date()) => {
 
     followUpDate.setDate(followUpDate.getDate() + 1);
 
-    // Skip Sunday
     if (followUpDate.getDay() === 0) {
         followUpDate.setDate(followUpDate.getDate() + 1);
     }
@@ -88,9 +98,7 @@ const getNextLeadSerialNumber = async (companyId) => {
                 lastNumber: highestNumber,
             });
         } catch (error) {
-            if (error.code !== 11000) {
-                throw error;
-            }
+            if (error.code !== 11000) throw error;
 
             counter = await LeadCounter.findOne({
                 company: companyId,
@@ -121,7 +129,6 @@ const getNextLeadSerialNumber = async (companyId) => {
 };
 
 // GET LEADS
-// GET LEADS
 exports.getLeads = async (req, res) => {
     try {
         const {
@@ -137,16 +144,16 @@ exports.getLeads = async (req, res) => {
             companyId,
         } = req.query;
 
-        if (companyId && !mongoose.Types.ObjectId.isValid(companyId)) {
+        if (
+            companyId &&
+            !mongoose.Types.ObjectId.isValid(companyId)
+        ) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid company ID",
             });
         }
 
-        // Super Admin can view all companies or filter by companyId.
-        // Employees/interns can select a company, but only see leads
-        // of their own assigned company.
         const targetCompanyId = getTargetCompany(req, companyId);
 
         console.log("========== LEAD COMPANY DEBUG ==========");
@@ -157,14 +164,17 @@ exports.getLeads = async (req, res) => {
         console.log("Target Company:", targetCompanyId);
         console.log("========================================");
 
-        if (req.user.role !== "super_admin" && !targetCompanyId) {
+        if (
+            req.user.role !== "super_admin" &&
+            !targetCompanyId
+        ) {
             return res.status(403).json({
                 success: false,
                 message: "You are not assigned to a company",
             });
         }
 
-        // NEW: employee/intern selected a company that is not theirs -> 0 leads
+        // Employee/intern selected a company that is not theirs.
         if (
             req.user.role !== "super_admin" &&
             companyId &&
@@ -190,14 +200,16 @@ exports.getLeads = async (req, res) => {
             });
         }
 
-        if (targetCompanyId && !hasCompanyAccess(req, targetCompanyId)) {
+        if (
+            targetCompanyId &&
+            !hasCompanyAccess(req, targetCompanyId)
+        ) {
             return res.status(403).json({
                 success: false,
                 message: "You do not have access to this company",
             });
         }
 
-        // No company condition means Super Admin sees all companies.
         const filter = {};
 
         if (targetCompanyId) {
@@ -216,17 +228,9 @@ exports.getLeads = async (req, res) => {
             ];
         }
 
-        if (status) {
-            filter.status = status;
-        }
-
-        if (priority) {
-            filter.priority = priority;
-        }
-
-        if (inquiryType) {
-            filter.inquiryType = inquiryType;
-        }
+        if (status) filter.status = status;
+        if (priority) filter.priority = priority;
+        if (inquiryType) filter.inquiryType = inquiryType;
 
         if (assignedCounselor) {
             filter.assignedCounselor = assignedCounselor;
@@ -236,11 +240,13 @@ exports.getLeads = async (req, res) => {
             filter.leadDate = {};
 
             if (startDate) {
-                filter.leadDate.$gte = new Date(`${startDate}T00:00:00`);
+                filter.leadDate.$gte =
+                    new Date(`${startDate}T00:00:00`);
             }
 
             if (endDate) {
-                filter.leadDate.$lte = new Date(`${endDate}T23:59:59.999`);
+                filter.leadDate.$lte =
+                    new Date(`${endDate}T23:59:59.999`);
             }
         }
 
@@ -253,7 +259,6 @@ exports.getLeads = async (req, res) => {
 
         const skip = (currentPage - 1) * pageLimit;
 
-        // Build status totals using the same filters, excluding pagination.
         const statusCountFilter = { ...filter };
 
         if (targetCompanyId) {
@@ -269,7 +274,6 @@ exports.getLeads = async (req, res) => {
                 new mongoose.Types.ObjectId(assignedCounselor);
         }
 
-        // Count each status regardless of the selected status filter.
         delete statusCountFilter.status;
 
         const [leads, total, statusCounts] = await Promise.all([
@@ -302,20 +306,26 @@ exports.getLeads = async (req, res) => {
         };
 
         statusCounts.forEach(({ _id, count }) => {
-            if (Object.prototype.hasOwnProperty.call(statusTotals, _id)) {
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    statusTotals,
+                    _id
+                )
+            ) {
                 statusTotals[_id] = count;
             }
         });
 
         return res.status(200).json({
             success: true,
-            data: leads,
+            data: sanitizeLeadsForRole(req, leads),
             pagination: {
                 total,
                 page: currentPage,
                 limit: pageLimit,
                 totalPages: Math.ceil(total / pageLimit),
-                hasNextPage: currentPage < Math.ceil(total / pageLimit),
+                hasNextPage:
+                    currentPage < Math.ceil(total / pageLimit),
                 hasPreviousPage: currentPage > 1,
             },
             statusTotals,
@@ -330,9 +340,6 @@ exports.getLeads = async (req, res) => {
         });
     }
 };
-
-
-
 
 // CREATE LEAD
 exports.createLead = async (req, res) => {
@@ -364,8 +371,7 @@ exports.createLead = async (req, res) => {
         ) {
             return res.status(400).json({
                 success: false,
-                message:
-                    "Full name and contact number are required",
+                message: "Full name and contact number are required",
             });
         }
 
@@ -403,8 +409,7 @@ exports.createLead = async (req, res) => {
         if (!hasCompanyAccess(req, targetCompany)) {
             return res.status(403).json({
                 success: false,
-                message:
-                    "You cannot create a lead for another company",
+                message: "You cannot create a lead for another company",
             });
         }
 
@@ -419,8 +424,7 @@ exports.createLead = async (req, res) => {
             if (!assignedUser) {
                 return res.status(400).json({
                     success: false,
-                    message:
-                        "Invalid or inactive employee/intern for this company",
+                    message: "Invalid or inactive employee/intern for this company",
                 });
             }
         }
@@ -440,9 +444,7 @@ exports.createLead = async (req, res) => {
             ? new Date(nextFollowUpDate)
             : getDefaultFollowUpDate(actualLeadDate);
 
-        if (
-            Number.isNaN(actualNextFollowUpDate.getTime())
-        ) {
+        if (Number.isNaN(actualNextFollowUpDate.getTime())) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid next follow-up date",
@@ -460,8 +462,7 @@ exports.createLead = async (req, res) => {
             email: email?.trim() || undefined,
             city: city?.trim() || undefined,
             leadDate: actualLeadDate,
-            courseInterested:
-                courseInterested?.trim() || undefined,
+            courseInterested: courseInterested?.trim() || undefined,
             inquiryType: inquiryType || "course",
             leadSource: leadSource || "other",
             assignedCounselor: assignedCounselor || undefined,
@@ -470,8 +471,7 @@ exports.createLead = async (req, res) => {
             nextFollowUpDate: actualNextFollowUpDate,
             notes: notes?.trim() || undefined,
             expectedFees:
-                expectedFees !== undefined &&
-                expectedFees !== ""
+                expectedFees !== undefined && expectedFees !== ""
                     ? Number(expectedFees)
                     : undefined,
             admissionDate: admissionDate
@@ -482,16 +482,13 @@ exports.createLead = async (req, res) => {
 
         const populatedLead = await Lead.findById(lead._id)
             .populate("company", "companyName companyCode")
-            .populate(
-                "assignedCounselor",
-                "fullName email role"
-            )
+            .populate("assignedCounselor", "fullName email role")
             .populate("createdBy", "fullName email role");
 
         return res.status(201).json({
             success: true,
             message: "Lead created successfully",
-            data: populatedLead,
+            data: sanitizeLeadForRole(req, populatedLead),
         });
     } catch (error) {
         console.error("Create Lead Error:", error);
@@ -544,7 +541,6 @@ exports.updateLead = async (req, res) => {
             admissionDate,
         } = req.body || {};
 
-        // Prevent moving a lead to a different company.
         if (
             company &&
             company.toString() !== lead.company.toString()
@@ -589,29 +585,17 @@ exports.updateLead = async (req, res) => {
             if (!assignedUser) {
                 return res.status(400).json({
                     success: false,
-                    message:
-                        "Invalid or inactive employee/intern for this company",
+                    message: "Invalid or inactive employee/intern for this company",
                 });
             }
         }
 
         const updates = {};
 
-        if (fullName !== undefined) {
-            updates.fullName = fullName.trim();
-        }
-
-        if (contactNumber !== undefined) {
-            updates.contactNumber = contactNumber.trim();
-        }
-
-        if (email !== undefined) {
-            updates.email = email.trim();
-        }
-
-        if (city !== undefined) {
-            updates.city = city.trim();
-        }
+        if (fullName !== undefined) updates.fullName = fullName.trim();
+        if (contactNumber !== undefined) updates.contactNumber = contactNumber.trim();
+        if (email !== undefined) updates.email = email.trim();
+        if (city !== undefined) updates.city = city.trim();
 
         if (leadDate !== undefined) {
             const parsedDate = new Date(leadDate);
@@ -630,26 +614,15 @@ exports.updateLead = async (req, res) => {
             updates.courseInterested = courseInterested.trim();
         }
 
-        if (inquiryType !== undefined) {
-            updates.inquiryType = inquiryType;
-        }
-
-        if (leadSource !== undefined) {
-            updates.leadSource = leadSource;
-        }
+        if (inquiryType !== undefined) updates.inquiryType = inquiryType;
+        if (leadSource !== undefined) updates.leadSource = leadSource;
 
         if (assignedCounselor !== undefined) {
-            updates.assignedCounselor =
-                assignedCounselor || null;
+            updates.assignedCounselor = assignedCounselor || null;
         }
 
-        if (priority !== undefined) {
-            updates.priority = priority;
-        }
-
-        if (status !== undefined) {
-            updates.status = status;
-        }
+        if (priority !== undefined) updates.priority = priority;
+        if (status !== undefined) updates.status = status;
 
         if (nextFollowUpDate !== undefined) {
             if (nextFollowUpDate === "" || nextFollowUpDate === null) {
@@ -668,9 +641,7 @@ exports.updateLead = async (req, res) => {
             }
         }
 
-        if (notes !== undefined) {
-            updates.notes = notes.trim();
-        }
+        if (notes !== undefined) updates.notes = notes.trim();
 
         if (expectedFees !== undefined) {
             if (expectedFees === "" || expectedFees === null) {
@@ -681,8 +652,7 @@ exports.updateLead = async (req, res) => {
                 if (!Number.isFinite(fees) || fees < 0) {
                     return res.status(400).json({
                         success: false,
-                        message:
-                            "Expected fees must be a valid non-negative number",
+                        message: "Expected fees must be a valid non-negative number",
                     });
                 }
 
@@ -723,16 +693,13 @@ exports.updateLead = async (req, res) => {
             }
         )
             .populate("company", "companyName companyCode")
-            .populate(
-                "assignedCounselor",
-                "fullName email role"
-            )
+            .populate("assignedCounselor", "fullName email role")
             .populate("createdBy", "fullName email role");
 
         return res.status(200).json({
             success: true,
             message: "Lead updated successfully",
-            data: updatedLead,
+            data: sanitizeLeadForRole(req, updatedLead),
         });
     } catch (error) {
         console.error("Update Lead Error:", error);
@@ -744,7 +711,6 @@ exports.updateLead = async (req, res) => {
         });
     }
 };
-
 
 
 // UPDATE LEAD STATUS
@@ -785,8 +751,6 @@ exports.updateLeadStatus = async (req, res) => {
             });
         }
 
-        // Update only the status field.
-        // Avoid lead.save(), which validates the entire document.
         const updatedLead = await Lead.findByIdAndUpdate(
             leadId,
             { $set: { status } },
@@ -795,16 +759,13 @@ exports.updateLeadStatus = async (req, res) => {
                 runValidators: true,
             }
         )
-            .populate(
-                "assignedCounselor",
-                "fullName email role"
-            )
+            .populate("assignedCounselor", "fullName email role")
             .populate("company", "companyName companyCode");
 
         return res.status(200).json({
             success: true,
             message: "Lead status updated successfully",
-            lead: updatedLead,
+            lead: sanitizeLeadForRole(req, updatedLead),
         });
     } catch (error) {
         console.error("Update Lead Status Error:", error);
@@ -838,8 +799,7 @@ exports.addCommunication = async (req, res) => {
         ) {
             return res.status(400).json({
                 success: false,
-                message:
-                    "Valid communication type and message are required",
+                message: "Valid communication type and message are required",
             });
         }
 
@@ -863,16 +823,13 @@ exports.addCommunication = async (req, res) => {
             ? new Date(date)
             : new Date();
 
-        if (
-            Number.isNaN(communicationDate.getTime())
-        ) {
+        if (Number.isNaN(communicationDate.getTime())) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid communication date",
             });
         }
 
-        // Update only communicationHistory.
         const updatedLead = await Lead.findByIdAndUpdate(
             leadId,
             {
@@ -889,16 +846,13 @@ exports.addCommunication = async (req, res) => {
                 runValidators: true,
             }
         )
-            .populate(
-                "assignedCounselor",
-                "fullName email role"
-            )
+            .populate("assignedCounselor", "fullName email role")
             .populate("company", "companyName companyCode");
 
         return res.status(200).json({
             success: true,
             message: "Communication added successfully",
-            lead: updatedLead,
+            lead: sanitizeLeadForRole(req, updatedLead),
         });
     } catch (error) {
         console.error("Add Communication Error:", error);
@@ -943,8 +897,7 @@ exports.updateCommunication = async (req, res) => {
         ) {
             return res.status(400).json({
                 success: false,
-                message:
-                    "Communication message cannot be empty",
+                message: "Communication message cannot be empty",
             });
         }
 
@@ -953,9 +906,7 @@ exports.updateCommunication = async (req, res) => {
         if (date !== undefined) {
             communicationDate = new Date(date);
 
-            if (
-                Number.isNaN(communicationDate.getTime())
-            ) {
+            if (Number.isNaN(communicationDate.getTime())) {
                 return res.status(400).json({
                     success: false,
                     message: "Invalid communication date",
@@ -1023,16 +974,13 @@ exports.updateCommunication = async (req, res) => {
                 runValidators: true,
             }
         )
-            .populate(
-                "assignedCounselor",
-                "fullName email role"
-            )
+            .populate("assignedCounselor", "fullName email role")
             .populate("company", "companyName companyCode");
 
         return res.status(200).json({
             success: true,
             message: "Communication updated successfully",
-            lead: updatedLead,
+            lead: sanitizeLeadForRole(req, updatedLead),
         });
     } catch (error) {
         console.error("Update Communication Error:", error);
@@ -1044,8 +992,6 @@ exports.updateCommunication = async (req, res) => {
         });
     }
 };
-
-
 
 // DELETE COMMUNICATION
 exports.deleteCommunication = async (req, res) => {
@@ -1089,16 +1035,13 @@ exports.deleteCommunication = async (req, res) => {
             },
             { new: true }
         )
-            .populate(
-                "assignedCounselor",
-                "fullName email role"
-            )
+            .populate("assignedCounselor", "fullName email role")
             .populate("company", "companyName companyCode");
 
         return res.status(200).json({
             success: true,
             message: "Communication deleted successfully",
-            lead: updatedLead,
+            lead: sanitizeLeadForRole(req, updatedLead),
         });
     } catch (error) {
         console.error("Delete Communication Error:", error);
@@ -1125,7 +1068,6 @@ exports.deleteLead = async (req, res) => {
             });
         }
 
-        // Ensure the user can only delete leads from their company.
         if (!hasCompanyAccess(req, lead.company)) {
             return res.status(403).json({
                 success: false,
