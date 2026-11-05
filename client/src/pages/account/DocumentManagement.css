@@ -384,3 +384,16 @@
         padding: 17px;
     }
 }
+
+
+
+.document-admin-actions .document-admin-delete {
+    color: #dc2626;
+    border-color: #fecaca;
+    background: #fff;
+}
+
+.document-admin-actions .document-admin-delete:hover {
+    background: #fee2e2;
+    border-color: #dc2626;
+}

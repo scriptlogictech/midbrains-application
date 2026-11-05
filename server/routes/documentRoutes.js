@@ -12,6 +12,7 @@ const {
     getDocumentAccess,
     reviewDocument,
     deleteMyDocument,
+    adminDeleteDocument
 } = require("../controllers/documentController");
 
 // Employee / Intern: upload their own document
@@ -85,5 +86,14 @@ router.use((error, req, res, next) => {
 
     next();
 });
+
+
+// Super Admin: Delete any user's document
+router.delete(
+    "/admin/:id",
+    protect,
+    authorizeRoles("super_admin"),
+    adminDeleteDocument
+);
 
 module.exports = router;

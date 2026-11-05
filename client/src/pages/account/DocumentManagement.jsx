@@ -4,6 +4,7 @@ import {
     getAllDocuments,
     getDocumentAccess,
     reviewDocument,
+    adminDeleteDocument,
 } from "../../services/documentService";
 import "./DocumentManagement.css";
 
@@ -138,6 +139,31 @@ const DocumentManagement = () => {
     const rejectedCount = documents.filter(
         (doc) => doc.status === "rejected"
     ).length;
+
+
+    const handleAdminDelete = async (document) => {
+    const confirmed = window.confirm(
+        `Are you sure you want to permanently delete ${document.fileName} uploaded by ${document.user?.fullName}?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+        await adminDeleteDocument(document._id);
+
+        setMessage("Document deleted successfully.");
+
+        setSelectedDocument(null);
+
+        await loadDocuments();
+
+    } catch (error) {
+        setMessage(
+            error.response?.data?.message ||
+            "Unable to delete document."
+        );
+    }
+};
 
     return (
         <div className="document-admin-page">
@@ -283,23 +309,33 @@ const DocumentManagement = () => {
 
                                     <td>
                                         <div className="document-admin-actions">
-                                            <button
-                                                onClick={() => handleView(doc)}
-                                                title="View document"
-                                            >
-                                                <i className="bi bi-eye" />
-                                            </button>
 
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedDocument(doc);
-                                                    setRemark(doc.adminRemark || "");
-                                                }}
-                                                title="Review document"
-                                            >
-                                                <i className="bi bi-pencil-square" />
-                                            </button>
-                                        </div>
+    <button
+        onClick={() => handleView(doc)}
+        title="View document"
+    >
+        <i className="bi bi-eye" />
+    </button>
+
+    <button
+        onClick={() => {
+            setSelectedDocument(doc);
+            setRemark(doc.adminRemark || "");
+        }}
+        title="Review document"
+    >
+        <i className="bi bi-pencil-square" />
+    </button>
+
+    <button
+        className="document-admin-delete"
+        onClick={() => handleAdminDelete(doc)}
+        title="Delete document"
+    >
+        <i className="bi bi-trash" />
+    </button>
+
+</div>
                                     </td>
                                 </tr>
                             ))}

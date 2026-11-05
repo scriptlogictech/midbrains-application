@@ -500,3 +500,57 @@ exports.deleteMyDocument = async (req, res) => {
         });
     }
 };
+
+
+
+
+
+// =====================================================
+// ADMIN: DELETE ANY USER DOCUMENT
+// DELETE /api/documents/admin/:id
+// Super Admin only
+// =====================================================
+
+exports.adminDeleteDocument = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid document ID",
+            });
+        }
+
+        const document = await Document.findById(id);
+
+        if (!document) {
+            return res.status(404).json({
+                success: false,
+                message: "Document not found",
+            });
+        }
+
+        // Delete from Cloudinary
+        await cloudinary.uploader.destroy(document.publicId, {
+            resource_type: "image",
+            type: "authenticated",
+        });
+
+        // Delete document record from MongoDB
+        await document.deleteOne();
+
+        return res.status(200).json({
+            success: true,
+            message: "Document deleted successfully by admin",
+        });
+
+    } catch (error) {
+        console.error("Admin Delete Document Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Unable to delete document",
+        });
+    }
+};

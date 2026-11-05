@@ -70,3 +70,14 @@ export const deleteDocument = async (documentId) => {
 
     return response.data;
 };
+
+
+
+// Super Admin: Delete any user's document
+export const adminDeleteDocument = async (documentId) => {
+    const response = await api.delete(
+        `/documents/admin/${documentId}`
+    );
+
+    return response.data;
+};
