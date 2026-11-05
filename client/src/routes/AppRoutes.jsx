@@ -31,11 +31,17 @@ import Users from "../pages/users/Users";
 
 import InstagramReelData from "../pages/instagramReelData/InstagramReelData";
 
+
+import MyAccount from "../pages/account/MyAccount";
+import DocumentManagement from "../pages/account/DocumentManagement";
+
 // Work Management
 import WorkManagement from "../pages/work/WorkManagement";
 import MyWork from "../pages/work/MyWork";
 
 import { useAuth } from "../context/AuthContext";
+
+
 
 
 // =====================================================
@@ -449,6 +455,41 @@ const AppRoutes = () => {
                         </RoleRoute>
                     }
                 />
+
+
+
+
+                {/* MY ACCOUNT - ALL ROLES */}
+<Route
+    path="/dashboard/:companyId/account"
+    element={
+        <RoleRoute
+            allowedRoles={[
+                "super_admin",
+                "employee",
+                "intern",
+            ]}
+        >
+            <DashboardLayout>
+                <MyAccount />
+            </DashboardLayout>
+        </RoleRoute>
+    }
+/>
+
+{/* DOCUMENT MANAGEMENT - SUPER ADMIN ONLY */}
+<Route
+    path="/dashboard/:companyId/document-management"
+    element={
+        <RoleRoute
+            allowedRoles={["super_admin"]}
+        >
+            <DashboardLayout>
+                <DocumentManagement />
+            </DashboardLayout>
+        </RoleRoute>
+    }
+/>
 
 
                 {/* =================================================

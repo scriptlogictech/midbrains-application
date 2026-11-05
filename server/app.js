@@ -21,6 +21,7 @@ const instagramReelDataRoutes = require("./routes/instagramReelDataRoutes");
 const userRoutes = require("./routes/userRoutes");
 const workTaskRoutes = require("./routes/workTaskRoutes");
 const workLogRoutes = require("./routes/workLogRoutes");
+const documentRoutes = require("./routes/documentRoutes");
 
 // Middleware
 app.use(cors());
@@ -56,6 +57,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/work-tasks", workTaskRoutes);
 
 app.use("/api/work-logs", workLogRoutes);
+
+app.use("/api/documents", documentRoutes);
 
 app.use(
     "/api/instagram-reel-data",
