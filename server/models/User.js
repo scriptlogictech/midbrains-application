@@ -40,6 +40,22 @@ const userSchema = new mongoose.Schema(
         lastLogin: {
             type: Date,
         },
+        phone: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+
+        address: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+
+        dateOfBirth: {
+            type: Date,
+            default: null,
+        },
     },
     {
         timestamps: true,
