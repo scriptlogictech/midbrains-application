@@ -1,9 +1,11 @@
+
 const express = require("express");
 const router = express.Router();
 
 const {
     createAdmission,
     getAdmissions,
+    getCompanyAdmissions, // Added
     getAdmissionById,
     updateAdmission,
     deleteAdmission,
@@ -11,14 +13,6 @@ const {
 
 const { protect } = require("../middlewares/authMiddleware");
 const { authorizeRoles } = require("../middlewares/roleMiddleware");
-
-/*
-|--------------------------------------------------------------------------
-| Admission Management
-|--------------------------------------------------------------------------
-| Super Admin and Employee can manage admissions.
-|--------------------------------------------------------------------------
-*/
 
 // Create Admission
 router.post(
@@ -34,6 +28,14 @@ router.get(
     protect,
     authorizeRoles("super_admin", "employee"),
     getAdmissions
+);
+
+// Get Admissions by Company
+router.get(
+    "/company/:companyId",
+    protect,
+    authorizeRoles("super_admin", "employee"),
+    getCompanyAdmissions
 );
 
 // Get Admission By ID
