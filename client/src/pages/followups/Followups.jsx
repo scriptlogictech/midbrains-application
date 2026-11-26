@@ -23,6 +23,7 @@ const Followups = () => {
     const [userLoading, setUserLoading] = useState(false);
 
     const [activeTab, setActiveTab] = useState("today");
+    const [showFilters, setShowFilters] = useState(false);
 
     // Filters matching the Leads page.
     const [search, setSearch] = useState("");
@@ -374,7 +375,28 @@ const Followups = () => {
                 ))}
             </div>
 
-            {/* FILTERS - SAME FILTER OPTIONS AS LEADS PAGE */}
+            {/* FILTER TOGGLE */}
+            <div
+                className="followup-filter-toolbar"
+                style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    margin: "16px 0",
+                }}
+            >
+                <button
+                    type="button"
+                    className="btn btn-outline-primary followup-filter-toggle"
+                    onClick={() => setShowFilters((current) => !current)}
+                    aria-expanded={showFilters}
+                >
+                    <i className={`bi ${showFilters ? "bi-x-lg" : "bi-funnel"}`}></i>
+                    {showFilters ? "Close Filters" : "Filter"}
+                </button>
+            </div>
+
+            {/* FILTERS - OPEN ONLY WHEN THE FILTER BUTTON IS CLICKED */}
+            {showFilters && (
             <div className="filters-card">
 
                 <div className="filter-group search-group">
@@ -492,6 +514,8 @@ const Followups = () => {
                     </button>
                 </div>
             </div>
+            )}
+
 
             {/* TABLE CARD */}
             <div className="table-card">
@@ -659,5 +683,6 @@ const Followups = () => {
             </div>
         </div>
     );
-}
+};
+
 export default Followups;
