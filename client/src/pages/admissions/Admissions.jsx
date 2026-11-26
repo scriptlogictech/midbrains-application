@@ -98,61 +98,69 @@ const Admissions = () => {
   };
 
   // ========================================
-  // FETCH CONVERTED LEADS
+  // FETCH ENROLLED LEADS
   // ========================================
 
- const fetchLeads = async () => {
-  if (!companyId) return;
+  const fetchLeads = async () => {
+    if (!companyId) return;
 
-  try {
-    setLoadingLeads(true);
+    try {
+      setLoadingLeads(true);
 
-    let currentPage = 1;
-    let allConvertedLeads = [];
-    let hasNextPage = true;
+      let currentPage = 1;
+      let allEnrolledLeads = [];
+      let hasNextPage = true;
 
-    while (hasNextPage) {
-      const response = await getLeads(companyId, {
-        status: "converted",
-        page: currentPage,
-        limit: 100,
-      });
+      while (hasNextPage) {
+        const response = await getLeads(companyId, {
+          status: "enrolled",
+          page: currentPage,
+          limit: 100,
+        });
 
-      const pageLeads =
-        response?.data ||
-        response?.leads ||
-        [];
+        // Support common API response shapes:
+        // { data: [...] }, { leads: [...] },
+        // { data: { leads: [...] } }
+        const pageLeads =
+          (Array.isArray(response?.data) && response.data) ||
+          (Array.isArray(response?.leads) && response.leads) ||
+          (Array.isArray(response?.data?.leads) && response.data.leads) ||
+          [];
 
-      if (Array.isArray(pageLeads)) {
-        allConvertedLeads = [
-          ...allConvertedLeads,
+        allEnrolledLeads = [
+          ...allEnrolledLeads,
           ...pageLeads,
         ];
+
+        hasNextPage = Boolean(
+          response?.pagination?.hasNextPage ??
+          response?.data?.pagination?.hasNextPage ??
+          response?.hasNextPage ??
+          false
+        );
+
+        currentPage++;
+
+        // Safety guard against a malformed pagination response
+        // causing an endless request loop.
+        if (currentPage > 500) {
+          console.warn("Stopped enrolled-lead pagination after 500 pages.");
+          break;
+        }
       }
 
-      hasNextPage =
-        response?.hasNextPage || false;
-
-      currentPage++;
+      setLeads(allEnrolledLeads);
+    } catch (err) {
+      console.error("Failed to load enrolled leads:", err);
+      setLeads([]);
+      setError(
+        err.response?.data?.message ||
+          "Failed to load enrolled leads."
+      );
+    } finally {
+      setLoadingLeads(false);
     }
-
-    setLeads(allConvertedLeads);
-  } catch (err) {
-    console.error(
-      "Failed to load converted leads:",
-      err
-    );
-
-    setLeads([]);
-
-    setError(
-      err.response?.data?.message ||
-        "Failed to load converted leads."
-    );
-  } finally {
-    setLoadingLeads(false);
-  }
-};
+  };
 
   // ========================================
   // INITIAL LOAD
@@ -242,7 +250,7 @@ const Admissions = () => {
 
     setShowModal(true);
 
-    // Refresh converted leads when opening
+    // Refresh enrolled leads when opening
     fetchLeads();
   };
 
@@ -292,7 +300,7 @@ const Admissions = () => {
 
     if (!formData.lead) {
       setError(
-        "Please select a converted lead."
+        "Please select an enrolled lead."
       );
 
       return;
@@ -1303,8 +1311,8 @@ const Admissions = () => {
                       <option value="">
 
                         {loadingLeads
-                          ? "Loading converted leads..."
-                          : "Select a converted lead"}
+                          ? "Loading enrolled leads..."
+                          : "Select an enrolled lead"}
 
                       </option>
 
@@ -1342,7 +1350,7 @@ const Admissions = () => {
 
                         <small className="text-danger">
 
-                          No converted leads
+                          No enrolled leads
                           available for this
                           company.
 
@@ -1354,7 +1362,7 @@ const Admissions = () => {
 
                       <small className="text-muted">
 
-                        Only converted leads
+                        Only enrolled leads
                         from the current company
                         are shown.
 
