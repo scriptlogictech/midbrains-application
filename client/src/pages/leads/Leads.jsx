@@ -357,6 +357,9 @@ const isForeignCompany =
         setFormData((prev) => ({
             ...prev,
             [name]: value,
+            ...(name === "status" && value === "not_interested"
+                ? { nextFollowUpDate: "" }
+                : {}),
         }));
     };
 
@@ -397,11 +400,14 @@ const isForeignCompany =
                 : lead.createdAt
                     ? getLocalDateInputValue(new Date(lead.createdAt))
                     : getLocalDateInputValue(),
-            nextFollowUpDate: lead.nextFollowUpDate
-                ? new Date(lead.nextFollowUpDate)
-                    .toISOString()
-                    .split("T")[0]
-                : "",
+            nextFollowUpDate:
+                lead.status === "not_interested"
+                    ? ""
+                    : lead.nextFollowUpDate
+                        ? new Date(lead.nextFollowUpDate)
+                            .toISOString()
+                            .split("T")[0]
+                        : "",
             notes: lead.notes || "",
             expectedFees:
                 lead.expectedFees !== undefined &&
@@ -462,7 +468,11 @@ const isForeignCompany =
                 delete payload.leadDate;
             }
 
-            if (!payload.nextFollowUpDate) {
+            // A Not Interested lead must not retain a follow-up date.
+            // Send null so the backend clears any previously saved date.
+            if (payload.status === "not_interested") {
+                payload.nextFollowUpDate = null;
+            } else if (!payload.nextFollowUpDate) {
                 delete payload.nextFollowUpDate;
             }
 
@@ -511,6 +521,9 @@ const isForeignCompany =
                 setSelectedLead((prev) => ({
                     ...prev,
                     status,
+                    ...(status === "not_interested"
+                        ? { nextFollowUpDate: null }
+                        : {}),
                 }));
             }
         } catch (err) {
@@ -1208,7 +1221,11 @@ const handlePageChange = (page) => {
                                                 </td>
 
                                                 {/* Next Follow-up */}
-                                                <td>{formatDate(lead.nextFollowUpDate)}</td>
+                                                <td>
+                                                    {lead.status === "not_interested"
+                                                        ? ""
+                                                        : formatDate(lead.nextFollowUpDate)}
+                                                </td>
 
                                                 {!isIntern && (
                                                     <td>
@@ -1856,7 +1873,9 @@ const handlePageChange = (page) => {
                                 <div className="detail-item">
                                     <label>Next Follow-up</label>
                                     <strong>
-                                        {formatDate(selectedLead.nextFollowUpDate)}
+                                        {selectedLead.status === "not_interested"
+                                            ? ""
+                                            : formatDate(selectedLead.nextFollowUpDate)}
                                     </strong>
                                 </div>
 

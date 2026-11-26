@@ -1,0 +1,291 @@
+
+/*
+   Reuse the exact Leads page design.
+   Assumes Followups and Leads folders are siblings.
+*/
+@import "../Leads/Leads.css";
+
+/* FOLLOW-UPS PAGE */
+.followups-page {
+    min-height: 100%;
+}
+
+/* REFRESH BUTTON */
+.followups-page .refresh-btn {
+    white-space: nowrap;
+}
+
+/* FOLLOW-UP TABS */
+.followups-page .followup-tabs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 5px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    width: fit-content;
+    max-width: 100%;
+}
+
+.followups-page .followup-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 40px;
+    padding: 9px 16px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: #6b7280;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.followups-page .followup-tab:hover {
+    background: #f7f8fc;
+    color: #2563eb;
+}
+
+.followups-page .followup-tab.active {
+    background: #eff6ff;
+    border-color: #dbeafe;
+    color: #2563eb;
+}
+
+.followups-page .followup-tab-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.followups-page .followup-tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 23px;
+    height: 23px;
+    padding: 0 6px;
+    border-radius: 20px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.followups-page .followup-tab.active .followup-tab-count {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+/* TABLE LABEL */
+.followups-page .followup-current-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 11px;
+    border-radius: 20px;
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.followups-page .followup-current-label.missed {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.followups-page .followup-current-label.upcoming {
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+/* STATUS BADGES */
+.followups-page .followup-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    padding: 5px 8px;
+    border-radius: 20px;
+    background: #f3f4f6;
+    color: #4b5563;
+    font-size: 10px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.followups-page .followup-status-badge.new {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.followups-page .followup-status-badge.contacted {
+    background: #f5f3ff;
+    color: #7c3aed;
+}
+
+.followups-page .followup-status-badge.interested {
+    background: #ecfeff;
+    color: #0891b2;
+}
+
+.followups-page .followup-status-badge.follow_up {
+    background: #fffbeb;
+    color: #b45309;
+}
+
+.followups-page .followup-status-badge.converted {
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+.followups-page .followup-status-badge.not_interested {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.followups-page .followup-status-badge.closed {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+/* FOLLOW-UP DATE */
+.followups-page .followup-date {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.followups-page .followup-date strong {
+    color: #374151;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.followups-page .followup-date span {
+    color: #8a93a3;
+    font-size: 10px;
+}
+
+/* TABLE COLUMN WIDTHS */
+.followups-page .followups-table th:nth-child(1),
+.followups-page .followups-table td:nth-child(1) {
+    width: 5%;
+}
+
+.followups-page .followups-table th:nth-child(2),
+.followups-page .followups-table td:nth-child(2) {
+    width: 15%;
+}
+
+.followups-page .followups-table th:nth-child(3),
+.followups-page .followups-table td:nth-child(3) {
+    width: 12%;
+}
+
+.followups-page .followups-table th:nth-child(4),
+.followups-page .followups-table td:nth-child(4) {
+    width: 12%;
+}
+
+.followups-page .followups-table th:nth-child(5),
+.followups-page .followups-table td:nth-child(5) {
+    width: 9%;
+}
+
+.followups-page .followups-table th:nth-child(6),
+.followups-page .followups-table td:nth-child(6) {
+    width: 11%;
+}
+
+.followups-page .followups-table th:nth-child(7),
+.followups-page .followups-table td:nth-child(7) {
+    width: 13%;
+}
+
+.followups-page .followups-table th:nth-child(8),
+.followups-page .followups-table td:nth-child(8) {
+    width: 14%;
+}
+
+.followups-page .followups-table th:nth-child(9),
+.followups-page .followups-table td:nth-child(9) {
+    width: 9%;
+}
+
+/* VIEW BUTTON */
+.followups-page .view-btn {
+    border: 1px solid #dbeafe;
+    border-radius: 7px;
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.followups-page .view-btn:hover {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+/* EMPTY STATE */
+.followups-page .followup-empty-state {
+    padding: 55px 20px;
+}
+
+.followups-page .followup-empty-state > i {
+    color: #9ca3af;
+    font-size: 42px;
+}
+
+/* LOADING */
+.followups-page .followups-loading {
+    display: flex;
+    min-height: 300px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    color: #6b7280;
+}
+
+.followups-page .followups-loading p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 600px) {
+    .followups-page .followup-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
+        gap: 4px;
+    }
+
+    .followups-page .followup-tab {
+        flex-direction: column;
+        gap: 5px;
+        padding: 9px 5px;
+        font-size: 11px;
+    }
+
+    .followups-page .followup-tab-label {
+        gap: 5px;
+    }
+
+    .followups-page .table-header {
+        align-items: flex-start;
+    }
+
+    .followups-page .followup-current-label {
+        font-size: 9px;
+    }
+}
