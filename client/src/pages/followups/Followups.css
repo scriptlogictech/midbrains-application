@@ -3,7 +3,7 @@
    Reuse the exact Leads page design.
    Assumes Followups and Leads folders are siblings.
 */
-@import "../Leads/Leads.css";
+@import "../leads/Leads.css";
 
 /* FOLLOW-UPS PAGE */
 .followups-page {
