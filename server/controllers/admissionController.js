@@ -141,12 +141,12 @@ exports.createAdmission = async (req, res) => {
 
         if (
             existingLead.status !==
-            "converted"
+            "enrolled"
         ) {
             return res.status(400).json({
                 success: false,
                 message:
-                    "Only converted leads can be admitted",
+                    "Only enrolled leads can be admitted",
             });
         }
 
