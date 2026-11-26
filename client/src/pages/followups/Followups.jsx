@@ -659,6 +659,5 @@ const Followups = () => {
             </div>
         </div>
     );
-};
-
+}
 export default Followups;
