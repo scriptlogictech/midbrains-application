@@ -1930,3 +1930,32 @@
     font-weight: 700;
     color: #1f2937;
 }
+
+
+/* Leads — clearer workspace hierarchy */
+.leads-page .page-header { margin-bottom: 22px; }
+.leads-page .page-header h1 { color: #111f4b; font-size: 27px; font-weight: 780; letter-spacing: -.6px; }
+.leads-page .page-header p { color: #697586; }
+.leads-page .filters-card {
+  padding: 20px; border: 1px solid #e6eaf0; border-radius: 16px;
+  background: #fff; box-shadow: 0 6px 20px rgba(23,32,51,.045);
+}
+.leads-page .filter-group label { color: #536078; font-size: 11px; font-weight: 750; }
+.leads-page .filter-group select,
+.leads-page .search-input input {
+  min-height: 42px; border: 1px solid #dfe4ec; border-radius: 9px;
+}
+.leads-page .table-card {
+  border: 1px solid #e6eaf0; border-radius: 16px; overflow: hidden;
+  background: #fff; box-shadow: 0 7px 22px rgba(23,32,51,.05);
+}
+.leads-page .table-header { padding: 19px 21px; border-bottom: 1px solid #edf0f4; }
+.leads-page .table-header h3 { color: #111f4b; font-weight: 760; }
+.leads-page .leads-table th {
+  padding-top: 14px; padding-bottom: 14px; background: #f5f7fa;
+  color: #526078; font-size: 10px; letter-spacing: .45px; text-transform: uppercase;
+}
+.leads-page .leads-table td { padding-top: 14px; padding-bottom: 14px; }
+.leads-page .leads-table tbody tr:hover td { background: #fbf8f1; }
+.leads-page .btn-primary { background: #111f4b; border-color: #111f4b; }
+.leads-page .btn-primary:hover { background: #26396d; border-color: #26396d; }

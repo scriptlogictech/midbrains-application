@@ -1209,3 +1209,176 @@
   }
 
 }
+
+
+/* Login — cohesive premium brand finish */
+.login-page { background: #f3f5f9; }
+.login-container { border-radius: 22px; box-shadow: 0 24px 70px rgba(17,31,75,.14); overflow: hidden; }
+.login-brand-section { background: linear-gradient(145deg, #101d49, #1e3269); }
+.login-brand-content h1 { letter-spacing: -.8px; }
+.crm-badge { border-color: rgba(229,197,139,.35); color: #f0d7a9; }
+.login-form-section { background: #fff; }
+.login-form-header h2 { color: #111f4b; font-weight: 780; }
+.input-wrapper input { border-radius: 10px; }
+.input-wrapper input:focus { border-color: #c79a4a; box-shadow: 0 0 0 3px rgba(199,154,74,.13); }
+.login-button { background: #111f4b; border-radius: 10px; }
+.login-button:hover:not(:disabled) { background: #26396d; }
+
+
+/* =========================================================
+   LOGIN LEFT PANEL FIX — readable brand content
+   Fixes text/image overlap and restores strong contrast.
+========================================================= */
+
+.login-brand-section {
+  position: relative;
+  isolation: isolate;
+  display: block;
+  background: linear-gradient(145deg, #101d49 0%, #172d63 100%) !important;
+  padding: 34px 42px 82px;
+}
+
+/* Keep the building as a distinct visual panel on the right. */
+.login-building {
+  z-index: 0;
+  top: 0;
+  right: 0;
+  width: 41%;
+  height: 100%;
+}
+.login-building img {
+  object-position: center center;
+}
+
+/* Fade the image into the navy panel instead of washing out the copy. */
+.building-fade {
+  z-index: 1;
+  width: 48%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    #142858 0%,
+    rgba(20, 40, 88, .96) 10%,
+    rgba(20, 40, 88, .72) 30%,
+    rgba(20, 40, 88, .20) 66%,
+    rgba(20, 40, 88, 0) 100%
+  );
+}
+
+/* Content stays inside the readable navy column. */
+.login-brand-content {
+  z-index: 3;
+  width: 59%;
+  max-width: 520px;
+}
+.login-brand-logo {
+  margin-bottom: 18px;
+}
+.login-brand-logo img {
+  width: 220px;
+  max-height: 112px;
+  object-fit: contain;
+}
+.crm-badge {
+  margin-bottom: 20px;
+  color: #f1d59f;
+  background: rgba(255,255,255,.10);
+  border: 1px solid rgba(229,197,139,.30);
+}
+.login-brand-content h1 {
+  max-width: 440px;
+  color: #fff;
+  font-size: clamp(30px, 3vw, 40px);
+  line-height: 1.12;
+  letter-spacing: -1.2px;
+  overflow-wrap: normal;
+}
+.login-brand-content h1 span {
+  color: #e2b45f;
+}
+.brand-description {
+  max-width: 440px;
+  color: rgba(255,255,255,.78);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.login-features {
+  max-width: 440px;
+  gap: 11px;
+  margin-top: 22px;
+}
+.login-feature {
+  gap: 12px;
+}
+.feature-icon {
+  width: 43px;
+  height: 43px;
+  min-width: 43px;
+  border-radius: 11px;
+  color: #172b5b;
+  background: #f4ead6;
+  box-shadow: 0 5px 14px rgba(0,0,0,.13);
+  font-size: 16px;
+}
+.feature-content strong {
+  color: #fff;
+  font-size: 12px;
+}
+.feature-content span {
+  color: rgba(255,255,255,.72);
+  font-size: 11px;
+}
+.brand-footer {
+  z-index: 5;
+  left: 42px;
+  right: 42px;
+  bottom: 18px;
+  color: rgba(255,255,255,.88);
+  font-size: 10px;
+}
+.gold-curve {
+  z-index: 2;
+  bottom: -145px;
+}
+.navy-curve {
+  z-index: 4;
+  bottom: -157px;
+}
+
+/* Keep the form panel visually separate and uncluttered. */
+.login-form-section {
+  background: #fff;
+}
+.login-form-wrapper {
+  max-width: 490px;
+}
+
+/* Tablet: give the text more width and soften the photo presence. */
+@media (max-width: 1100px) and (min-width: 851px) {
+  .login-brand-section {
+    padding: 30px 32px 78px;
+  }
+  .login-brand-content {
+    width: 63%;
+  }
+  .login-building {
+    width: 37%;
+  }
+  .building-fade {
+    width: 45%;
+  }
+  .login-brand-content h1 {
+    font-size: 32px;
+  }
+  .brand-footer {
+    left: 32px;
+    right: 32px;
+  }
+}
+
+/* Small screens already switch to the single-column login form. */
+@media (max-width: 850px) {
+  .login-brand-section {
+    display: none;
+  }
+}

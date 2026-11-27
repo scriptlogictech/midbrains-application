@@ -397,3 +397,23 @@
     background: #fee2e2;
     border-color: #dc2626;
 }
+
+
+/* Document management — review console */
+.document-admin-header h2 { color: #111f4b; font-weight: 780; letter-spacing: -.5px; }
+.document-stat-card, .document-admin-table-wrapper {
+  border: 1px solid #e6eaf0; border-radius: 15px; background: #fff;
+  box-shadow: 0 6px 20px rgba(23,32,51,.045);
+}
+.document-admin-filters {
+  padding: 17px; border: 1px solid #e6eaf0; border-radius: 14px;
+  background: #fff; box-shadow: 0 5px 18px rgba(23,32,51,.035);
+}
+.document-admin-table th {
+  background: #f5f7fa; color: #526078; font-size: 10px;
+  font-weight: 750; letter-spacing: .4px; text-transform: uppercase;
+}
+.document-admin-table tbody tr:hover { background: #fbf8f1; }
+.document-review-modal { border-radius: 17px; box-shadow: 0 24px 70px rgba(17,31,75,.2); }
+.document-review-heading { border-bottom: 1px solid #edf0f4; }
+.document-review-heading h3 { color: #111f4b; }

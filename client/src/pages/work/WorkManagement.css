@@ -497,3 +497,17 @@
     width: 100%;
   }
 }
+
+
+/* Work management — timeline workspace */
+.work-section {
+  border: 1px solid #e6eaf0; border-radius: 16px; background: #fff;
+  box-shadow: 0 7px 22px rgba(23,32,51,.045);
+}
+.section-header h2 { color: #111f4b; font-weight: 780; }
+.work-timeline-header { border-bottom: 1px solid #edf0f4; }
+.timeline-heading-row { background: #f5f7fa; }
+.timeline-employee-column { color: #526078; }
+.timeline-hour { color: #758197; }
+.timeline-cell { border-color: #edf0f4; }
+.timeline-task-block { border-radius: 8px; box-shadow: 0 2px 6px rgba(23,32,51,.08); }

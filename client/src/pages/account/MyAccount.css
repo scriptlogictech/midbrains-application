@@ -450,3 +450,19 @@
         flex-direction: column;
     }
 }
+
+
+/* Account — profile and document surfaces */
+.account-page-header h2 { color: #111f4b; font-weight: 780; letter-spacing: -.5px; }
+.account-profile-card, .account-document-card {
+  border: 1px solid #e6eaf0; border-radius: 16px; background: #fff;
+  box-shadow: 0 7px 22px rgba(23,32,51,.045);
+}
+.account-profile-heading h3 { color: #111f4b; }
+.account-section-title h3 { color: #111f4b; font-weight: 750; }
+.account-field label { color: #536078; font-weight: 700; }
+.account-field input, .account-field select, .account-field textarea {
+  border-color: #dfe4ec; border-radius: 9px;
+}
+.account-primary-btn { background: #111f4b; border-radius: 9px; }
+.account-primary-btn:hover { background: #26396d; }

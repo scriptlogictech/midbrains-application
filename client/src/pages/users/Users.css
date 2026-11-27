@@ -767,3 +767,26 @@
         width: 100%;
     }
 }
+
+
+/* User management — refined admin tables and summary cards */
+.users-header h2 { color: #111f4b; font-weight: 780; letter-spacing: -.5px; }
+.user-summary-card {
+  border: 1px solid #e6eaf0; border-radius: 15px; background: #fff;
+  box-shadow: 0 6px 20px rgba(23,32,51,.045);
+}
+.user-summary-card:hover { transform: translateY(-3px); box-shadow: 0 13px 28px rgba(23,32,51,.08); }
+.users-filter-card, .users-table-card {
+  border: 1px solid #e6eaf0; border-radius: 16px; background: #fff;
+  box-shadow: 0 7px 22px rgba(23,32,51,.045);
+}
+.users-table-header { padding: 19px 21px; border-bottom: 1px solid #edf0f4; }
+.users-table-header h5 { color: #111f4b; font-weight: 760; }
+.users-table thead th {
+  background: #f5f7fa; color: #526078; font-size: 10px;
+  font-weight: 750; letter-spacing: .4px; text-transform: uppercase;
+}
+.users-table tbody tr:hover { background: #fbf8f1; }
+.users-modal { border-radius: 17px; box-shadow: 0 24px 70px rgba(17,31,75,.2); }
+.users-modal-header { border-bottom: 1px solid #edf0f4; }
+.users-modal-header h4 { color: #111f4b; }

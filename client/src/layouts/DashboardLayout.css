@@ -11,3 +11,14 @@
   object-fit: contain;
   display: block;
 }
+
+
+/* MIDBRAINS SIDEBAR — premium navigation treatment */
+.sidebar-brand {
+  min-height: 88px;
+  height: 88px;
+  padding: 14px 22px;
+  background: #fff;
+  border-bottom: 1px solid #e6eaf0;
+}
+.sidebar-logo { width: 158px; max-height: 58px; object-fit: contain; }
