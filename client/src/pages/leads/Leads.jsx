@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
     getLeads,
@@ -59,6 +59,7 @@ const getLocalDateInputValue = (date = new Date()) => {
 const Leads = () => {
     const { user } = useAuth();
     const { companyId: routeCompanyId } = useParams();
+    const location = useLocation();
     const isIntern = user?.role === "intern";
 
     // =========================================================
@@ -118,6 +119,16 @@ const isForeignCompany =
 
     const [editingLead, setEditingLead] = useState(null);
     const [selectedLead, setSelectedLead] = useState(null);
+
+    // Open the exact lead selected on the Follow-ups page.
+    useEffect(() => {
+        const leadFromFollowUps = location.state?.openLead;
+
+        if (leadFromFollowUps?._id) {
+            setSelectedLead(leadFromFollowUps);
+            setShowDetailsModal(true);
+        }
+    }, [location.key, location.state]);
 
     // =========================
     // FILTER STATES

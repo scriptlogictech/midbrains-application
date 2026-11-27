@@ -263,11 +263,18 @@ const Followups = () => {
     };
 
     // VIEW LEAD
-    const handleViewLead = (leadId) => {
+    // Pass the selected lead to the Leads page so it opens that exact lead.
+    const handleViewLead = (lead) => {
+        const leadId = lead?._id;
         if (!leadId) return;
 
         navigate(
-            `/dashboard/${companyId}/leads?leadId=${leadId}`
+            `/dashboard/${companyId}/leads?leadId=${leadId}`,
+            {
+                state: {
+                    openLead: lead,
+                },
+            }
         );
     };
 
@@ -667,7 +674,7 @@ const Followups = () => {
                                                     className="icon-btn view-btn"
                                                     title="View Lead"
                                                     onClick={() =>
-                                                        handleViewLead(lead._id)
+                                                        handleViewLead(lead)
                                                     }
                                                 >
                                                     <i className="bi bi-eye"></i>
