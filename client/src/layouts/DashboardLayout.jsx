@@ -113,17 +113,6 @@ const DashboardLayout = ({ children }) => {
     roles: ["super_admin"],
 },
 
-    // ==========================================
-    // Instagram Reel Data
-    // Super Admin Only
-    // ==========================================
-
-    {
-      label: "Instagram Reel Data",
-      icon: "bi-instagram",
-      path: `/dashboard/${companyId}/instagram-reel-data`,
-      roles: ["super_admin"],
-    },
 
     {
       label: "My Work",
