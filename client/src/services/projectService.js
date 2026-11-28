@@ -1,3 +1,4 @@
+
 import api from "./api";
 
 // Create Project
@@ -7,13 +8,21 @@ export const createProject = async (projectData) => {
 };
 
 // Get All Projects
-export const getProjects = async () => {
-  const response = await api.get("/projects");
+// Optional companyId is used by Super Admin
+export const getProjects = async (companyId) => {
+  const response = await api.get("/projects", {
+    params: companyId ? { companyId } : {},
+  });
+
   return response.data;
 };
 
 // Get Projects By Company
 export const getCompanyProjects = async (companyId) => {
+  if (!companyId) {
+    throw new Error("Company ID is required");
+  }
+
   const response = await api.get("/projects", {
     params: { companyId },
   });
@@ -23,10 +32,7 @@ export const getCompanyProjects = async (companyId) => {
 
 // Get Project By ID
 export const getProjectById = async (projectId) => {
-  const response = await api.get(
-    `/projects/${projectId}`
-  );
-
+  const response = await api.get(`/projects/${projectId}`);
   return response.data;
 };
 
@@ -55,9 +61,6 @@ export const updateProjectStatus = async (
 
 // Delete Project
 export const deleteProject = async (projectId) => {
-  const response = await api.delete(
-    `/projects/${projectId}`
-  );
-
+  const response = await api.delete(`/projects/${projectId}`);
   return response.data;
 };

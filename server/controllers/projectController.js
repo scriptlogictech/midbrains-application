@@ -3,23 +3,51 @@ const mongoose = require("mongoose");
 const Project = require("../models/Project");
 const cloudinary = require("../config/cloudinary");
 
-// Get company ID based on logged-in user
+// ==========================================
+// GET COMPANY ID
+// ==========================================
 const getCompanyId = (req) => {
-  if (req.user.role === "super_admin") {
-    return req.body.company || req.query.companyId || req.params.companyId;
+  if (!req.user) {
+    throw new Error("Authenticated user not found in request");
   }
 
-  return req.user.company?._id || req.user.company;
+  // Super Admin selects a company
+  if (req.user.role === "super_admin") {
+    return (
+      req.body?.company ||
+      req.query?.companyId ||
+      req.query?.company ||
+      req.params?.companyId ||
+      null
+    );
+  }
+
+  // Employee gets their assigned company
+  const company = req.user.company;
+
+  if (!company) {
+    return null;
+  }
+
+  return company._id || company;
 };
 
-// Validate MongoDB ObjectId
-const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+// ==========================================
+// VALIDATE MONGODB OBJECT ID
+// ==========================================
+const isValidId = (id) => {
+  return mongoose.Types.ObjectId.isValid(id);
+};
 
-// Parse arrays sent through multipart/form-data
+// ==========================================
+// PARSE ARRAY
+// ==========================================
 const parseArray = (value) => {
   if (!value) return [];
 
-  if (Array.isArray(value)) return value;
+  if (Array.isArray(value)) {
+    return value;
+  }
 
   try {
     const parsed = JSON.parse(value);
@@ -29,7 +57,9 @@ const parseArray = (value) => {
   }
 };
 
-// Upload one image buffer to Cloudinary
+// ==========================================
+// CLOUDINARY IMAGE UPLOAD
+// ==========================================
 const uploadToCloudinary = (file) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -38,7 +68,16 @@ const uploadToCloudinary = (file) => {
         resource_type: "image",
       },
       (error, result) => {
-        if (error) return reject(error);
+        if (error) {
+          return reject(error);
+        }
+
+        if (!result?.secure_url) {
+          return reject(
+            new Error("Cloudinary did not return an image URL")
+          );
+        }
+
         resolve(result.secure_url);
       }
     );
@@ -47,15 +86,27 @@ const uploadToCloudinary = (file) => {
   });
 };
 
-// Upload all selected project screenshots
+// Upload multiple screenshots
 const uploadProjectScreenshots = async (files = []) => {
+  if (!files || !files.length) {
+    return [];
+  }
+
   return Promise.all(files.map(uploadToCloudinary));
 };
 
-
+// ==========================================
 // CREATE PROJECT
+// ==========================================
 exports.createProject = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user not found",
+      });
+    }
+
     const {
       projectName,
       projectCategory,
@@ -63,7 +114,7 @@ exports.createProject = async (req, res) => {
       projectOutcomes,
       projectUrl,
       isPublished,
-    } = req.body;
+    } = req.body || {};
 
     const company = getCompanyId(req);
 
@@ -74,16 +125,22 @@ exports.createProject = async (req, res) => {
       });
     }
 
-    if (!projectName?.trim() ||
-        !projectCategory?.trim() ||
-        !projectDescription?.trim()) {
+    if (
+      typeof projectName !== "string" ||
+      !projectName.trim() ||
+      typeof projectCategory !== "string" ||
+      !projectCategory.trim() ||
+      typeof projectDescription !== "string" ||
+      !projectDescription.trim()
+    ) {
       return res.status(400).json({
         success: false,
         message: "Project name, category and description are required",
       });
     }
 
-    const uploadedScreenshots = await uploadProjectScreenshots(req.files);
+    const uploadedScreenshots =
+      await uploadProjectScreenshots(req.files);
 
     const project = await Project.create({
       company,
@@ -92,8 +149,10 @@ exports.createProject = async (req, res) => {
       projectDescription: projectDescription.trim(),
       projectOutcomes: parseArray(projectOutcomes),
       projectScreenshots: uploadedScreenshots,
-      projectUrl: projectUrl?.trim() || "",
-      isPublished: isPublished !== "false" && isPublished !== false,
+      projectUrl:
+        typeof projectUrl === "string" ? projectUrl.trim() : "",
+      isPublished:
+        isPublished !== "false" && isPublished !== false,
       createdBy: req.user._id,
     });
 
@@ -113,11 +172,29 @@ exports.createProject = async (req, res) => {
   }
 };
 
-
+// ==========================================
 // GET ALL PROJECTS
+// ==========================================
 exports.getProjects = async (req, res) => {
   try {
+    console.log("========== GET PROJECTS DEBUG ==========");
+    console.log("User exists:", !!req.user);
+    console.log("User ID:", req.user?._id);
+    console.log("User Role:", req.user?.role);
+    console.log("User Company:", req.user?.company);
+    console.log("Query Parameters:", req.query);
+    console.log("========================================");
+
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user not found",
+      });
+    }
+
     const company = getCompanyId(req);
+
+    console.log("Selected Company ID:", company);
 
     if (!company || !isValidId(company)) {
       return res.status(400).json({
@@ -126,15 +203,22 @@ exports.getProjects = async (req, res) => {
       });
     }
 
-    const filter = { company };
+    const filter = {
+      company: new mongoose.Types.ObjectId(company),
+    };
 
+    // Employees can only see published projects
     if (req.user.role !== "super_admin") {
       filter.isPublished = true;
     }
 
+    console.log("Project Query Filter:", filter);
+
     const projects = await Project.find(filter)
       .populate("createdBy", "name email")
       .sort({ createdAt: -1 });
+
+    console.log("Projects Found:", projects.length);
 
     return res.status(200).json({
       success: true,
@@ -152,10 +236,18 @@ exports.getProjects = async (req, res) => {
   }
 };
 
-
+// ==========================================
 // GET SINGLE PROJECT
+// ==========================================
 exports.getProjectById = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user not found",
+      });
+    }
+
     const { id } = req.params;
 
     if (!isValidId(id)) {
@@ -165,12 +257,14 @@ exports.getProjectById = async (req, res) => {
       });
     }
 
-    const filter = { _id: id };
+    const filter = {
+      _id: id,
+    };
 
     if (req.user.role !== "super_admin") {
       const company = getCompanyId(req);
 
-      if (!company) {
+      if (!company || !isValidId(company)) {
         return res.status(400).json({
           success: false,
           message: "Company information not found",
@@ -206,8 +300,9 @@ exports.getProjectById = async (req, res) => {
   }
 };
 
-
+// ==========================================
 // UPDATE PROJECT
+// ==========================================
 exports.updateProject = async (req, res) => {
   try {
     const { id } = req.params;
@@ -235,30 +330,36 @@ exports.updateProject = async (req, res) => {
       "projectUrl",
     ];
 
-    allowedFields.forEach((field) => {
+    for (const field of allowedFields) {
       if (req.body[field] !== undefined) {
-        project[field] = req.body[field];
-      }
-    });
+        if (
+          typeof req.body[field] !== "string"
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: `${field} must be a string`,
+          });
+        }
 
-    if (req.body.projectName !== undefined &&
-        !req.body.projectName.trim()) {
+        project[field] = req.body[field].trim();
+      }
+    }
+
+    if (!project.projectName) {
       return res.status(400).json({
         success: false,
         message: "Project name cannot be empty",
       });
     }
 
-    if (req.body.projectCategory !== undefined &&
-        !req.body.projectCategory.trim()) {
+    if (!project.projectCategory) {
       return res.status(400).json({
         success: false,
         message: "Project category cannot be empty",
       });
     }
 
-    if (req.body.projectDescription !== undefined &&
-        !req.body.projectDescription.trim()) {
+    if (!project.projectDescription) {
       return res.status(400).json({
         success: false,
         message: "Project description cannot be empty",
@@ -266,7 +367,9 @@ exports.updateProject = async (req, res) => {
     }
 
     if (req.body.projectOutcomes !== undefined) {
-      project.projectOutcomes = parseArray(req.body.projectOutcomes);
+      project.projectOutcomes = parseArray(
+        req.body.projectOutcomes
+      );
     }
 
     if (req.body.isPublished !== undefined) {
@@ -275,8 +378,9 @@ exports.updateProject = async (req, res) => {
         req.body.isPublished !== false;
     }
 
-    // Keep existing screenshots and append newly uploaded ones
-    const newScreenshots = await uploadProjectScreenshots(req.files);
+    // Preserve existing screenshots and append new uploads
+    const newScreenshots =
+      await uploadProjectScreenshots(req.files);
 
     project.projectScreenshots = [
       ...(project.projectScreenshots || []),
@@ -301,8 +405,9 @@ exports.updateProject = async (req, res) => {
   }
 };
 
-
+// ==========================================
 // DELETE PROJECT
+// ==========================================
 exports.deleteProject = async (req, res) => {
   try {
     const { id } = req.params;
