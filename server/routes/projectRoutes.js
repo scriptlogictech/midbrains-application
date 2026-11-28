@@ -15,7 +15,7 @@ const {
   authorizeRoles,
 } = require("../middlewares/authMiddleware");
 
-const projectUpload = require("../middleware/projectUploadMiddleware");
+const projectUpload = require("../middlewares/projectUploadMiddleware");
 
 // Create Project - Super Admin only
 router.post(
