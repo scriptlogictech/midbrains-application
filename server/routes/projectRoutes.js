@@ -13,7 +13,7 @@ const {
 const {
   protect,
   authorizeRoles,
-} = require("../middleware/authMiddleware");
+} = require("../middlewares/authMiddleware");
 
 const projectUpload = require("../middleware/projectUploadMiddleware");
 
