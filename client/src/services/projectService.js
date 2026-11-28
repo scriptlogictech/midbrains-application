@@ -14,9 +14,9 @@ export const getProjects = async () => {
 
 // Get Projects By Company
 export const getCompanyProjects = async (companyId) => {
-  const response = await api.get(
-    `/projects/company/${companyId}`
-  );
+  const response = await api.get("/projects", {
+    params: { companyId },
+  });
 
   return response.data;
 };

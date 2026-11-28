@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 
 const projectSchema = new mongoose.Schema(
@@ -8,98 +9,51 @@ const projectSchema = new mongoose.Schema(
       required: true
     },
 
-    clientName: {
+    projectName: {
       type: String,
       required: true,
       trim: true
     },
 
-    clientCompany: {
+    projectCategory: {
       type: String,
+      required: true,
       trim: true
-    },
-
-    contactNumber: {
-      type: String,
-      required: true
-    },
-
-    email: {
-      type: String,
-      lowercase: true,
-      trim: true
-    },
-
-    projectTitle: {
-      type: String,
-      required: true
     },
 
     projectDescription: {
-      type: String
-    },
-
-    technology: {
-      type: String
-    },
-
-    assignedDeveloper: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User"
-    },
-
-    startDate: {
-      type: Date,
-      required: true
-    },
-
-    deadline: {
-      type: Date,
-      required: true
-    },
-
-    budget: {
-      type: Number,
-      default: 0
-    },
-
-    paidAmount: {
-      type: Number,
-      default: 0
-    },
-
-    paymentStatus: {
       type: String,
-      enum: ["pending", "partial", "paid"],
-      default: "pending"
+      required: true,
+      trim: true
     },
 
-    projectStatus: {
+    projectOutcomes: [
+      {
+        type: String,
+        trim: true
+      }
+    ],
+
+    projectScreenshots: [
+      {
+        type: String
+      }
+    ],
+
+    projectUrl: {
       type: String,
-      enum: [
-        "pending",
-        "in_progress",
-        "testing",
-        "completed",
-        "delivered",
-        "cancelled"
-      ],
-      default: "pending"
-    },
-
-    deliveryDate: {
-      type: Date
-    },
-
-    remarks: {
-      type: String
+      trim: true
     },
 
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User"
-    }
+    },
 
+    isPublished: {
+      type: Boolean,
+      default: true
+    }
   },
   {
     timestamps: true

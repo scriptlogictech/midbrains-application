@@ -1,83 +1,62 @@
+
 const express = require("express");
 const router = express.Router();
 
 const {
-    createProject,
-    getProjects,
-    getCompanyProjects,
-    getProjectById,
-    updateProject,
-    updateProjectStatus,
-    deleteProject,
+  createProject,
+  getProjects,
+  getProjectById,
+  updateProject,
+  deleteProject,
 } = require("../controllers/projectController");
 
-const { protect } = require("../middlewares/authMiddleware");
-const { authorizeRoles } = require("../middlewares/roleMiddleware");
+const {
+  protect,
+  authorizeRoles,
+} = require("../middleware/authMiddleware");
 
-/*
-|--------------------------------------------------------------------------
-| Project Management
-|--------------------------------------------------------------------------
-| Super Admin and Employee can manage projects.
-| Interns do not have access to this module.
-|--------------------------------------------------------------------------
-*/
+const projectUpload = require("../middleware/projectUploadMiddleware");
 
-// Create Project
+// Create Project - Super Admin only
 router.post(
-    "/",
-    protect,
-    authorizeRoles("super_admin", "employee"),
-    createProject
+  "/",
+  protect,
+  authorizeRoles("super_admin"),
+  projectUpload.array("projectScreenshots", 10),
+  createProject
 );
 
-// Get All Projects
-router.get(
-    "/",
-    protect,
-    authorizeRoles("super_admin", "employee"),
-    getProjects
-);
-
-// Get Projects By Company
-// IMPORTANT: Keep this route before /:id
-router.get(
-    "/company/:companyId",
-    protect,
-    authorizeRoles("super_admin", "employee"),
-    getCompanyProjects
-);
-
-// Get Project By ID
-router.get(
-    "/:id",
-    protect,
-    authorizeRoles("super_admin", "employee"),
-    getProjectById
-);
-
-// Update Project Status
+// Update Project - Super Admin only
 router.put(
-    "/:id/status",
-    protect,
-    authorizeRoles("super_admin", "employee"),
-    updateProjectStatus
+  "/:id",
+  protect,
+  authorizeRoles("super_admin"),
+  projectUpload.array("projectScreenshots", 10),
+  updateProject
 );
 
-// Update Project
-router.put(
-    "/:id",
-    protect,
-    authorizeRoles("super_admin", "employee"),
-    updateProject
+// View Projects - Super Admin and Employee
+router.get(
+  "/",
+  protect,
+  authorizeRoles("super_admin", "employee"),
+  getProjects
 );
 
-// Delete Project
+// View Project Details
+router.get(
+  "/:id",
+  protect,
+  authorizeRoles("super_admin", "employee"),
+  getProjectById
+);
+
+// Delete Project - Super Admin only
 router.delete(
-    "/:id",
-    protect,
-    authorizeRoles("super_admin", "employee"),
-    deleteProject
+  "/:id",
+  protect,
+  authorizeRoles("super_admin"),
+  deleteProject
 );
 
 module.exports = router;

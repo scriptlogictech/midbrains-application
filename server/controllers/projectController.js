@@ -1,928 +1,339 @@
+
+const mongoose = require("mongoose");
 const Project = require("../models/Project");
-const User = require("../models/User");
+const cloudinary = require("../config/cloudinary");
 
-// ==========================================
-// Helper: Check Company Access
-// ==========================================
+// Get company ID based on logged-in user
+const getCompanyId = (req) => {
+  if (req.user.role === "super_admin") {
+    return req.body.company || req.query.companyId || req.params.companyId;
+  }
 
-const hasCompanyAccess = (req, companyId) => {
-    if (!req.user || !companyId) {
-        return false;
-    }
+  return req.user.company?._id || req.user.company;
+};
 
-    // Super Admin can access all companies
-    if (req.user.role === "super_admin") {
-        return true;
-    }
+// Validate MongoDB ObjectId
+const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
-    // Employee can access only own company
-    return (
-        req.user.company &&
-        req.user.company.toString() ===
-            companyId.toString()
+// Parse arrays sent through multipart/form-data
+const parseArray = (value) => {
+  if (!value) return [];
+
+  if (Array.isArray(value)) return value;
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [value];
+  }
+};
+
+// Upload one image buffer to Cloudinary
+const uploadToCloudinary = (file) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: "projects",
+        resource_type: "image",
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result.secure_url);
+      }
     );
+
+    stream.end(file.buffer);
+  });
 };
 
-// ==========================================
-// Helper: Populate Project
-// ==========================================
-
-const populateProject = async (projectId) => {
-    return await Project.findById(projectId)
-        .populate(
-            "assignedDeveloper",
-            "fullName email role isActive"
-        )
-        .populate(
-            "company",
-            "companyName companyCode"
-        )
-        .populate(
-            "createdBy",
-            "fullName email role"
-        );
+// Upload all selected project screenshots
+const uploadProjectScreenshots = async (files = []) => {
+  return Promise.all(files.map(uploadToCloudinary));
 };
 
-// ==========================================
-// Create Project
-// ==========================================
 
+// CREATE PROJECT
 exports.createProject = async (req, res) => {
-    try {
-        const {
-            company,
-            clientName,
-            clientCompany,
-            contactNumber,
-            email,
-            projectTitle,
-            projectDescription,
-            technology,
-            assignedDeveloper,
-            startDate,
-            deadline,
-            budget,
-            paidAmount,
-            paymentStatus,
-            projectStatus,
-            deliveryDate,
-            remarks,
-        } = req.body || {};
+  try {
+    const {
+      projectName,
+      projectCategory,
+      projectDescription,
+      projectOutcomes,
+      projectUrl,
+      isPublished,
+    } = req.body;
 
-        // ==========================================
-        // Required Fields
-        // ==========================================
+    const company = getCompanyId(req);
 
-        if (
-            !company ||
-            !clientName ||
-            !contactNumber ||
-            !projectTitle ||
-            !startDate ||
-            !deadline
-        ) {
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Company, client name, contact number, project title, start date and deadline are required",
-            });
-        }
-
-        // ==========================================
-        // Company Access
-        // ==========================================
-
-        if (!hasCompanyAccess(req, company)) {
-            return res.status(403).json({
-                success: false,
-                message:
-                    "You cannot create a project for another company",
-            });
-        }
-
-        // ==========================================
-        // Validate Assigned Developer
-        // ==========================================
-
-        if (assignedDeveloper) {
-            const developer = await User.findOne({
-                _id: assignedDeveloper,
-                company,
-                role: "employee",
-                isActive: true,
-            });
-
-            if (!developer) {
-                return res.status(400).json({
-                    success: false,
-                    message:
-                        "Invalid or inactive employee selected for this project",
-                });
-            }
-        }
-
-        // ==========================================
-        // Validate Dates
-        // ==========================================
-
-        if (
-            new Date(deadline) <
-            new Date(startDate)
-        ) {
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Deadline cannot be before start date",
-            });
-        }
-
-        // ==========================================
-        // Validate Payment Status
-        // ==========================================
-
-        const allowedPaymentStatuses = [
-            "pending",
-            "partial",
-            "paid",
-        ];
-
-        if (
-            paymentStatus &&
-            !allowedPaymentStatuses.includes(
-                paymentStatus
-            )
-        ) {
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Invalid payment status",
-            });
-        }
-
-        // ==========================================
-        // Validate Project Status
-        // ==========================================
-
-        const allowedProjectStatuses = [
-            "pending",
-            "in_progress",
-            "testing",
-            "completed",
-            "delivered",
-            "cancelled",
-        ];
-
-        if (
-            projectStatus &&
-            !allowedProjectStatuses.includes(
-                projectStatus
-            )
-        ) {
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Invalid project status",
-            });
-        }
-
-        // ==========================================
-        // Create Project
-        // ==========================================
-
-        const project =
-            await Project.create({
-                company,
-                clientName: clientName.trim(),
-                clientCompany:
-                    clientCompany
-                        ? clientCompany.trim()
-                        : undefined,
-                contactNumber:
-                    contactNumber.trim(),
-                email: email
-                    ? email.toLowerCase().trim()
-                    : undefined,
-                projectTitle:
-                    projectTitle.trim(),
-                projectDescription:
-                    projectDescription
-                        ? projectDescription.trim()
-                        : undefined,
-                technology:
-                    technology
-                        ? technology.trim()
-                        : undefined,
-                assignedDeveloper:
-                    assignedDeveloper ||
-                    undefined,
-                startDate,
-                deadline,
-                budget:
-                    budget !== undefined &&
-                    budget !== null
-                        ? Number(budget)
-                        : 0,
-                paidAmount:
-                    paidAmount !== undefined &&
-                    paidAmount !== null
-                        ? Number(paidAmount)
-                        : 0,
-                paymentStatus:
-                    paymentStatus || "pending",
-                projectStatus:
-                    projectStatus || "pending",
-                deliveryDate:
-                    deliveryDate || undefined,
-                remarks: remarks
-                    ? remarks.trim()
-                    : undefined,
-                createdBy: req.user._id,
-            });
-
-        const populatedProject =
-            await populateProject(project._id);
-
-        return res.status(201).json({
-            success: true,
-            message:
-                "Project created successfully",
-            project: populatedProject,
-        });
-    } catch (error) {
-        console.error(
-            "Create Project Error:",
-            error
-        );
-
-        return res.status(500).json({
-            success: false,
-            message:
-                "Failed to create project",
-            error: error.message,
-        });
+    if (!company || !isValidId(company)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please select a valid company",
+      });
     }
+
+    if (!projectName?.trim() ||
+        !projectCategory?.trim() ||
+        !projectDescription?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Project name, category and description are required",
+      });
+    }
+
+    const uploadedScreenshots = await uploadProjectScreenshots(req.files);
+
+    const project = await Project.create({
+      company,
+      projectName: projectName.trim(),
+      projectCategory: projectCategory.trim(),
+      projectDescription: projectDescription.trim(),
+      projectOutcomes: parseArray(projectOutcomes),
+      projectScreenshots: uploadedScreenshots,
+      projectUrl: projectUrl?.trim() || "",
+      isPublished: isPublished !== "false" && isPublished !== false,
+      createdBy: req.user._id,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Project created successfully",
+      data: project,
+    });
+  } catch (error) {
+    console.error("Create Project Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create project",
+      error: error.message,
+    });
+  }
 };
 
-// ==========================================
-// Get All Projects
-// ==========================================
 
+// GET ALL PROJECTS
 exports.getProjects = async (req, res) => {
-    try {
-        let filter = {};
+  try {
+    const company = getCompanyId(req);
 
-        // ==========================================
-        // Employee → Own Company Only
-        // Super Admin → All Companies
-        // ==========================================
-
-        if (req.user.role !== "super_admin") {
-            if (!req.user.company) {
-                return res.status(403).json({
-                    success: false,
-                    message:
-                        "User is not assigned to a company",
-                });
-            }
-
-            filter.company = req.user.company;
-        }
-
-        const projects =
-            await Project.find(filter)
-                .populate(
-                    "assignedDeveloper",
-                    "fullName email role isActive"
-                )
-                .populate(
-                    "company",
-                    "companyName companyCode"
-                )
-                .populate(
-                    "createdBy",
-                    "fullName email role"
-                )
-                .sort({
-                    createdAt: -1,
-                });
-
-        return res.status(200).json({
-            success: true,
-            projects,
-        });
-    } catch (error) {
-        console.error(
-            "Get Projects Error:",
-            error
-        );
-
-        return res.status(500).json({
-            success: false,
-            message:
-                "Failed to fetch projects",
-            error: error.message,
-        });
+    if (!company || !isValidId(company)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please select a valid company using companyId",
+      });
     }
+
+    const filter = { company };
+
+    if (req.user.role !== "super_admin") {
+      filter.isPublished = true;
+    }
+
+    const projects = await Project.find(filter)
+      .populate("createdBy", "name email")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: projects.length,
+      data: projects,
+    });
+  } catch (error) {
+    console.error("Get Projects Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch projects",
+      error: error.message,
+    });
+  }
 };
 
-// ==========================================
-// Get Company Projects
-// ==========================================
 
-exports.getCompanyProjects = async (
-    req,
-    res
-) => {
-    try {
-        const { companyId } = req.params;
+// GET SINGLE PROJECT
+exports.getProjectById = async (req, res) => {
+  try {
+    const { id } = req.params;
 
-        if (!companyId) {
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Company ID is required",
-            });
-        }
-
-        // ==========================================
-        // Company Access
-        // ==========================================
-
-        if (!hasCompanyAccess(req, companyId)) {
-            return res.status(403).json({
-                success: false,
-                message:
-                    "You do not have access to this company",
-            });
-        }
-
-        const projects =
-            await Project.find({
-                company: companyId,
-            })
-                .populate(
-                    "assignedDeveloper",
-                    "fullName email role isActive"
-                )
-                .populate(
-                    "company",
-                    "companyName companyCode"
-                )
-                .populate(
-                    "createdBy",
-                    "fullName email role"
-                )
-                .sort({
-                    createdAt: -1,
-                });
-
-        return res.status(200).json({
-            success: true,
-            projects,
-        });
-    } catch (error) {
-        console.error(
-            "Get Company Projects Error:",
-            error
-        );
-
-        return res.status(500).json({
-            success: false,
-            message:
-                "Failed to fetch company projects",
-            error: error.message,
-        });
+    if (!isValidId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid project ID",
+      });
     }
+
+    const filter = { _id: id };
+
+    if (req.user.role !== "super_admin") {
+      const company = getCompanyId(req);
+
+      if (!company) {
+        return res.status(400).json({
+          success: false,
+          message: "Company information not found",
+        });
+      }
+
+      filter.company = company;
+      filter.isPublished = true;
+    }
+
+    const project = await Project.findOne(filter)
+      .populate("createdBy", "name email");
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: project,
+    });
+  } catch (error) {
+    console.error("Get Project Details Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch project details",
+      error: error.message,
+    });
+  }
 };
 
-// ==========================================
-// Get Project By ID
-// ==========================================
 
-exports.getProjectById = async (
-    req,
-    res
-) => {
-    try {
-        const { id } = req.params;
+// UPDATE PROJECT
+exports.updateProject = async (req, res) => {
+  try {
+    const { id } = req.params;
 
-        const project =
-            await Project.findById(id);
-
-        if (!project) {
-            return res.status(404).json({
-                success: false,
-                message: "Project not found",
-            });
-        }
-
-        // ==========================================
-        // Company Access
-        // ==========================================
-
-        if (
-            !hasCompanyAccess(
-                req,
-                project.company
-            )
-        ) {
-            return res.status(403).json({
-                success: false,
-                message:
-                    "You do not have access to this project",
-            });
-        }
-
-        const populatedProject =
-            await populateProject(project._id);
-
-        return res.status(200).json({
-            success: true,
-            project: populatedProject,
-        });
-    } catch (error) {
-        console.error(
-            "Get Project By ID Error:",
-            error
-        );
-
-        return res.status(500).json({
-            success: false,
-            message:
-                "Failed to fetch project",
-            error: error.message,
-        });
+    if (!isValidId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid project ID",
+      });
     }
+
+    const project = await Project.findById(id);
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found",
+      });
+    }
+
+    const allowedFields = [
+      "projectName",
+      "projectCategory",
+      "projectDescription",
+      "projectUrl",
+    ];
+
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        project[field] = req.body[field];
+      }
+    });
+
+    if (req.body.projectName !== undefined &&
+        !req.body.projectName.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Project name cannot be empty",
+      });
+    }
+
+    if (req.body.projectCategory !== undefined &&
+        !req.body.projectCategory.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Project category cannot be empty",
+      });
+    }
+
+    if (req.body.projectDescription !== undefined &&
+        !req.body.projectDescription.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Project description cannot be empty",
+      });
+    }
+
+    if (req.body.projectOutcomes !== undefined) {
+      project.projectOutcomes = parseArray(req.body.projectOutcomes);
+    }
+
+    if (req.body.isPublished !== undefined) {
+      project.isPublished =
+        req.body.isPublished !== "false" &&
+        req.body.isPublished !== false;
+    }
+
+    // Keep existing screenshots and append newly uploaded ones
+    const newScreenshots = await uploadProjectScreenshots(req.files);
+
+    project.projectScreenshots = [
+      ...(project.projectScreenshots || []),
+      ...newScreenshots,
+    ];
+
+    await project.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Project updated successfully",
+      data: project,
+    });
+  } catch (error) {
+    console.error("Update Project Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update project",
+      error: error.message,
+    });
+  }
 };
 
-// ==========================================
-// Update Project
-// ==========================================
 
-exports.updateProject = async (
-    req,
-    res
-) => {
-    try {
-        const { id } = req.params;
+// DELETE PROJECT
+exports.deleteProject = async (req, res) => {
+  try {
+    const { id } = req.params;
 
-        const project =
-            await Project.findById(id);
-
-        if (!project) {
-            return res.status(404).json({
-                success: false,
-                message: "Project not found",
-            });
-        }
-
-        // ==========================================
-        // Company Access
-        // ==========================================
-
-        if (
-            !hasCompanyAccess(
-                req,
-                project.company
-            )
-        ) {
-            return res.status(403).json({
-                success: false,
-                message:
-                    "You do not have access to this project",
-            });
-        }
-
-        const {
-            company,
-            clientName,
-            clientCompany,
-            contactNumber,
-            email,
-            projectTitle,
-            projectDescription,
-            technology,
-            assignedDeveloper,
-            startDate,
-            deadline,
-            budget,
-            paidAmount,
-            paymentStatus,
-            projectStatus,
-            deliveryDate,
-            remarks,
-        } = req.body || {};
-
-        // ==========================================
-        // Prevent Company Change
-        // ==========================================
-
-        if (
-            company &&
-            company.toString() !==
-                project.company.toString()
-        ) {
-            return res.status(403).json({
-                success: false,
-                message:
-                    "You cannot move the project to another company",
-            });
-        }
-
-        // ==========================================
-        // Validate Assigned Developer
-        // ==========================================
-
-        if (assignedDeveloper) {
-            const developer =
-                await User.findOne({
-                    _id: assignedDeveloper,
-                    company: project.company,
-                    role: "employee",
-                    isActive: true,
-                });
-
-            if (!developer) {
-                return res.status(400).json({
-                    success: false,
-                    message:
-                        "Invalid or inactive employee selected for this project",
-                });
-            }
-
-            project.assignedDeveloper =
-                assignedDeveloper;
-        } else if (
-            assignedDeveloper === null
-        ) {
-            project.assignedDeveloper =
-                undefined;
-        }
-
-        // ==========================================
-        // Update Fields
-        // ==========================================
-
-        if (clientName !== undefined) {
-            project.clientName =
-                clientName.trim();
-        }
-
-        if (
-            clientCompany !== undefined
-        ) {
-            project.clientCompany =
-                clientCompany
-                    ? clientCompany.trim()
-                    : undefined;
-        }
-
-        if (
-            contactNumber !== undefined
-        ) {
-            project.contactNumber =
-                contactNumber.trim();
-        }
-
-        if (email !== undefined) {
-            project.email = email
-                ? email.toLowerCase().trim()
-                : undefined;
-        }
-
-        if (projectTitle !== undefined) {
-            project.projectTitle =
-                projectTitle.trim();
-        }
-
-        if (
-            projectDescription !==
-            undefined
-        ) {
-            project.projectDescription =
-                projectDescription
-                    ? projectDescription.trim()
-                    : undefined;
-        }
-
-        if (technology !== undefined) {
-            project.technology =
-                technology
-                    ? technology.trim()
-                    : undefined;
-        }
-
-        if (startDate !== undefined) {
-            project.startDate = startDate;
-        }
-
-        if (deadline !== undefined) {
-            project.deadline = deadline;
-        }
-
-        // ==========================================
-        // Validate Dates
-        // ==========================================
-
-        if (
-            new Date(project.deadline) <
-            new Date(project.startDate)
-        ) {
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Deadline cannot be before start date",
-            });
-        }
-
-        if (budget !== undefined) {
-            project.budget =
-                Number(budget);
-        }
-
-        if (paidAmount !== undefined) {
-            project.paidAmount =
-                Number(paidAmount);
-        }
-
-        // ==========================================
-        // Payment Status
-        // ==========================================
-
-        const allowedPaymentStatuses = [
-            "pending",
-            "partial",
-            "paid",
-        ];
-
-        if (
-            paymentStatus &&
-            !allowedPaymentStatuses.includes(
-                paymentStatus
-            )
-        ) {
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Invalid payment status",
-            });
-        }
-
-        if (paymentStatus !== undefined) {
-            project.paymentStatus =
-                paymentStatus;
-        }
-
-        // ==========================================
-        // Project Status
-        // ==========================================
-
-        const allowedProjectStatuses = [
-            "pending",
-            "in_progress",
-            "testing",
-            "completed",
-            "delivered",
-            "cancelled",
-        ];
-
-        if (
-            projectStatus &&
-            !allowedProjectStatuses.includes(
-                projectStatus
-            )
-        ) {
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Invalid project status",
-            });
-        }
-
-        if (projectStatus !== undefined) {
-            project.projectStatus =
-                projectStatus;
-        }
-
-        if (deliveryDate !== undefined) {
-            project.deliveryDate =
-                deliveryDate || undefined;
-        }
-
-        if (remarks !== undefined) {
-            project.remarks = remarks
-                ? remarks.trim()
-                : undefined;
-        }
-
-        // Automatically set delivery date
-        // when status becomes delivered.
-        if (
-            project.projectStatus ===
-                "delivered" &&
-            !project.deliveryDate
-        ) {
-            project.deliveryDate =
-                new Date();
-        }
-
-        await project.save();
-
-        const updatedProject =
-            await populateProject(project._id);
-
-        return res.status(200).json({
-            success: true,
-            message:
-                "Project updated successfully",
-            project: updatedProject,
-        });
-    } catch (error) {
-        console.error(
-            "Update Project Error:",
-            error
-        );
-
-        return res.status(500).json({
-            success: false,
-            message:
-                "Failed to update project",
-            error: error.message,
-        });
+    if (!isValidId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid project ID",
+      });
     }
-};
 
-// ==========================================
-// Update Project Status
-// ==========================================
+    const project = await Project.findByIdAndDelete(id);
 
-exports.updateProjectStatus = async (
-    req,
-    res
-) => {
-    try {
-        const { id } = req.params;
-        const { projectStatus } =
-            req.body || {};
-
-        if (!projectStatus) {
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Project status is required",
-            });
-        }
-
-        const project =
-            await Project.findById(id);
-
-        if (!project) {
-            return res.status(404).json({
-                success: false,
-                message: "Project not found",
-            });
-        }
-
-        // ==========================================
-        // Company Access
-        // ==========================================
-
-        if (
-            !hasCompanyAccess(
-                req,
-                project.company
-            )
-        ) {
-            return res.status(403).json({
-                success: false,
-                message:
-                    "You do not have access to this project",
-            });
-        }
-
-        // ==========================================
-        // Validate Status
-        // ==========================================
-
-        const allowedStatuses = [
-            "pending",
-            "in_progress",
-            "testing",
-            "completed",
-            "delivered",
-            "cancelled",
-        ];
-
-        if (
-            !allowedStatuses.includes(
-                projectStatus
-            )
-        ) {
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Invalid project status",
-            });
-        }
-
-        project.projectStatus =
-            projectStatus;
-
-        // ==========================================
-        // Delivery Date
-        // ==========================================
-
-        if (
-            projectStatus ===
-                "delivered" &&
-            !project.deliveryDate
-        ) {
-            project.deliveryDate =
-                new Date();
-        }
-
-        await project.save();
-
-        const updatedProject =
-            await populateProject(project._id);
-
-        return res.status(200).json({
-            success: true,
-            message:
-                "Project status updated successfully",
-            project: updatedProject,
-        });
-    } catch (error) {
-        console.error(
-            "Update Project Status Error:",
-            error
-        );
-
-        return res.status(500).json({
-            success: false,
-            message:
-                "Failed to update project status",
-            error: error.message,
-        });
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found",
+      });
     }
-};
 
-// ==========================================
-// Delete Project
-// ==========================================
+    return res.status(200).json({
+      success: true,
+      message: "Project deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete Project Error:", error);
 
-exports.deleteProject = async (
-    req,
-    res
-) => {
-    try {
-        const { id } = req.params;
-
-        const project =
-            await Project.findById(id);
-
-        if (!project) {
-            return res.status(404).json({
-                success: false,
-                message: "Project not found",
-            });
-        }
-
-        // ==========================================
-        // Company Access
-        // ==========================================
-
-        if (
-            !hasCompanyAccess(
-                req,
-                project.company
-            )
-        ) {
-            return res.status(403).json({
-                success: false,
-                message:
-                    "You do not have access to this project",
-            });
-        }
-
-        await Project.findByIdAndDelete(id);
-
-        return res.status(200).json({
-            success: true,
-            message:
-                "Project deleted successfully",
-        });
-    } catch (error) {
-        console.error(
-            "Delete Project Error:",
-            error
-        );
-
-        return res.status(500).json({
-            success: false,
-            message:
-                "Failed to delete project",
-            error: error.message,
-        });
-    }
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete project",
+      error: error.message,
+    });
+  }
 };
